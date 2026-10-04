@@ -96,8 +96,30 @@ final class StarterUITests: XCTestCase {
         XCTAssertTrue(walkRow.waitForExistence(timeout: 5))
         walkRow.tap()
 
+        // AC-003: the detail names the origin and never writes an unmeasured
+        // distance as "0". Both strings are matched as substrings because a
+        // LabeledContent row is exposed as one label, not two static texts.
+        let origin = app.staticTexts.matching(
+            NSPredicate(format: "label CONTAINS[c] %@", "Saisie manuelle")
+        ).firstMatch
+        XCTAssertTrue(
+            origin.waitForExistence(timeout: 5),
+            "le détail n'affiche pas l'origine « Saisie manuelle »"
+        )
+        let unmeasured = app.staticTexts.matching(
+            NSPredicate(format: "label CONTAINS[c] %@", "Non mesurée")
+        ).firstMatch
+        XCTAssertTrue(
+            unmeasured.waitForExistence(timeout: 5),
+            "la distance non mesurée doit s'écrire « Non mesurée », jamais « 0 »"
+        )
+
         let deleteWalk = app.buttons["walk.delete"]
         XCTAssertTrue(deleteWalk.waitForExistence(timeout: 5))
+        XCTAssertTrue(
+            deleteWalk.label.hasPrefix("Supprimer la balade"),
+            "AC-007 : le bouton de suppression doit nommer la balade, pas seulement « Supprimer »"
+        )
         deleteWalk.tap()
         let confirmWalk = app.buttons["Supprimer définitivement"]
         XCTAssertTrue(confirmWalk.waitForExistence(timeout: 5))
