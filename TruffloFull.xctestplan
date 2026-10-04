@@ -1,0 +1,32 @@
+{
+  "configurations" : [
+    {
+      "id" : "A1000000-0000-4000-8000-000000000002",
+      "name" : "Default",
+      "options" : {
+
+      }
+    }
+  ],
+  "defaultOptions" : {
+    "testInteropMode" : "complete",
+    "testTimeoutsEnabled" : true
+  },
+  "testTargets" : [
+    {
+      "target" : {
+        "containerPath" : "container:trufflo.xcodeproj",
+        "identifier" : "BB0C656830725E2100B57184",
+        "name" : "truffloTests"
+      }
+    },
+    {
+      "target" : {
+        "containerPath" : "container:trufflo.xcodeproj",
+        "identifier" : "BB0C657230725E2100B57184",
+        "name" : "truffloUITests"
+      }
+    }
+  ],
+  "version" : 1
+}

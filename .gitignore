@@ -1,0 +1,5 @@
+# Local agent state, not part of the project
+.agent/
+
+# macOS
+.DS_Store

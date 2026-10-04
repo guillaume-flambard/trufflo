@@ -1,32 +1,35 @@
-//
-//  truffloApp.swift
-//  trufflo
-//
-//  Created by Guillaume Flambard on 04/10/2026.
-//
-
+import Foundation
 import SwiftUI
 import SwiftData
 
 @main
-struct truffloApp: App {
-    var sharedModelContainer: ModelContainer = {
-        let schema = Schema([
-            Item.self,
-        ])
-        let modelConfiguration = ModelConfiguration(schema: schema, isStoredInMemoryOnly: false)
+@MainActor
+struct TruffloApp: App {
+    private let boot: Result<ModelContainer, Error>
 
-        do {
-            return try ModelContainer(for: schema, configurations: [modelConfiguration])
-        } catch {
-            fatalError("Could not create ModelContainer: \(error)")
-        }
-    }()
+    init() {
+        #if DEBUG
+        let inMemory = ProcessInfo.processInfo.arguments.contains("--uitesting")
+        #else
+        let inMemory = false
+        #endif
+        boot = Result { try PersistenceFactory.make(inMemory: inMemory) }
+    }
 
     var body: some Scene {
         WindowGroup {
-            ContentView()
+            switch boot {
+            case .success(let container):
+                StarterRootView()
+                    .modelContainer(container)
+            case .failure:
+                // Never replace a failed persistent store with a silent, empty memory store.
+                ContentUnavailableView(
+                    "Journal indisponible",
+                    systemImage: "externaldrive.badge.exclamationmark",
+                    description: Text("Le stockage n'a pas pu être ouvert. Vos données ne sont pas effacées. Fermez puis rouvrez l'application ; si le problème persiste, conservez l'installation pour le diagnostic.")
+                )
+            }
         }
-        .modelContainer(sharedModelContainer)
     }
 }
