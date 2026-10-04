@@ -1,0 +1,554 @@
+// !$*UTF8*$!
+{
+	archiveVersion = 1;
+	classes = {
+	};
+	objectVersion = 110;
+	objects = {
+
+/* Begin PBXContainerItemProxy section */
+		BB0C656A30725E2100B57184 /* PBXContainerItemProxy */ = {
+			isa = PBXContainerItemProxy;
+			containerPortal = BB0C655230725E1F00B57184 /* Project object */;
+			proxyType = 1;
+			remoteGlobalIDString = BB0C655930725E1F00B57184;
+			remoteInfo = trufflo;
+		};
+		BB0C657430725E2100B57184 /* PBXContainerItemProxy */ = {
+			isa = PBXContainerItemProxy;
+			containerPortal = BB0C655230725E1F00B57184 /* Project object */;
+			proxyType = 1;
+			remoteGlobalIDString = BB0C655930725E1F00B57184;
+			remoteInfo = trufflo;
+		};
+/* End PBXContainerItemProxy section */
+
+/* Begin PBXFileReference section */
+		BB0C655A30725E1F00B57184 /* trufflo.app */ = {isa = PBXFileReference; explicitFileType = wrapper.application; includeInIndex = 0; path = trufflo.app; sourceTree = BUILT_PRODUCTS_DIR; };
+		BB0C656930725E2100B57184 /* truffloTests.xctest */ = {isa = PBXFileReference; explicitFileType = wrapper.cfbundle; includeInIndex = 0; path = truffloTests.xctest; sourceTree = BUILT_PRODUCTS_DIR; };
+		BB0C657330725E2100B57184 /* truffloUITests.xctest */ = {isa = PBXFileReference; explicitFileType = wrapper.cfbundle; includeInIndex = 0; path = truffloUITests.xctest; sourceTree = BUILT_PRODUCTS_DIR; };
+/* End PBXFileReference section */
+
+/* Begin PBXFileSystemSynchronizedRootGroup section */
+		BB0C655C30725E1F00B57184 /* trufflo */ = {
+			isa = PBXFileSystemSynchronizedRootGroup;
+			path = trufflo;
+			sourceTree = "<group>";
+		};
+		BB0C656C30725E2100B57184 /* truffloTests */ = {
+			isa = PBXFileSystemSynchronizedRootGroup;
+			path = truffloTests;
+			sourceTree = "<group>";
+		};
+		BB0C657630725E2100B57184 /* truffloUITests */ = {
+			isa = PBXFileSystemSynchronizedRootGroup;
+			path = truffloUITests;
+			sourceTree = "<group>";
+		};
+/* End PBXFileSystemSynchronizedRootGroup section */
+
+/* Begin PBXFrameworksBuildPhase section */
+		BB0C655730725E1F00B57184 /* Frameworks */ = {
+			isa = PBXFrameworksBuildPhase;
+			files = (
+			);
+		};
+		BB0C656630725E2100B57184 /* Frameworks */ = {
+			isa = PBXFrameworksBuildPhase;
+			files = (
+			);
+		};
+		BB0C657030725E2100B57184 /* Frameworks */ = {
+			isa = PBXFrameworksBuildPhase;
+			files = (
+			);
+		};
+/* End PBXFrameworksBuildPhase section */
+
+/* Begin PBXGroup section */
+		BB0C655130725E1F00B57184 = {
+			isa = PBXGroup;
+			children = (
+				BB0C655C30725E1F00B57184 /* trufflo */,
+				BB0C656C30725E2100B57184 /* truffloTests */,
+				BB0C657630725E2100B57184 /* truffloUITests */,
+				BB0C655B30725E1F00B57184 /* Products */,
+			);
+			sourceTree = "<group>";
+		};
+		BB0C655B30725E1F00B57184 /* Products */ = {
+			isa = PBXGroup;
+			children = (
+				BB0C655A30725E1F00B57184 /* trufflo.app */,
+				BB0C656930725E2100B57184 /* truffloTests.xctest */,
+				BB0C657330725E2100B57184 /* truffloUITests.xctest */,
+			);
+			name = Products;
+			sourceTree = "<group>";
+		};
+/* End PBXGroup section */
+
+/* Begin PBXNativeTarget section */
+		BB0C655930725E1F00B57184 /* trufflo */ = {
+			isa = PBXNativeTarget;
+			buildConfigurationList = BB0C657B30725E2100B57184 /* Build configuration list for PBXNativeTarget "trufflo" */;
+			buildPhases = (
+				BB0C655630725E1F00B57184 /* Sources */,
+				BB0C655730725E1F00B57184 /* Frameworks */,
+				BB0C655830725E1F00B57184 /* Resources */,
+			);
+			buildRules = (
+			);
+			fileSystemSynchronizedGroups = (
+				BB0C655C30725E1F00B57184 /* trufflo */,
+			);
+			name = trufflo;
+			productName = trufflo;
+			productReference = BB0C655A30725E1F00B57184 /* trufflo.app */;
+			productType = "com.apple.product-type.application";
+		};
+		BB0C656830725E2100B57184 /* truffloTests */ = {
+			isa = PBXNativeTarget;
+			buildConfigurationList = BB0C657E30725E2100B57184 /* Build configuration list for PBXNativeTarget "truffloTests" */;
+			buildPhases = (
+				BB0C656530725E2100B57184 /* Sources */,
+				BB0C656630725E2100B57184 /* Frameworks */,
+				BB0C656730725E2100B57184 /* Resources */,
+			);
+			buildRules = (
+			);
+			dependencies = (
+				BB0C656B30725E2100B57184 /* PBXTargetDependency */,
+			);
+			fileSystemSynchronizedGroups = (
+				BB0C656C30725E2100B57184 /* truffloTests */,
+			);
+			name = truffloTests;
+			productName = truffloTests;
+			productReference = BB0C656930725E2100B57184 /* truffloTests.xctest */;
+			productType = "com.apple.product-type.bundle.unit-test";
+		};
+		BB0C657230725E2100B57184 /* truffloUITests */ = {
+			isa = PBXNativeTarget;
+			buildConfigurationList = BB0C658130725E2100B57184 /* Build configuration list for PBXNativeTarget "truffloUITests" */;
+			buildPhases = (
+				BB0C656F30725E2100B57184 /* Sources */,
+				BB0C657030725E2100B57184 /* Frameworks */,
+				BB0C657130725E2100B57184 /* Resources */,
+			);
+			buildRules = (
+			);
+			dependencies = (
+				BB0C657530725E2100B57184 /* PBXTargetDependency */,
+			);
+			fileSystemSynchronizedGroups = (
+				BB0C657630725E2100B57184 /* truffloUITests */,
+			);
+			name = truffloUITests;
+			productName = truffloUITests;
+			productReference = BB0C657330725E2100B57184 /* truffloUITests.xctest */;
+			productType = "com.apple.product-type.bundle.ui-testing";
+		};
+/* End PBXNativeTarget section */
+
+/* Begin PBXProject section */
+		BB0C655230725E1F00B57184 /* Project object */ = {
+			isa = PBXProject;
+			attributes = {
+				BuildIndependentTargetsInParallel = 1;
+				LastSwiftUpdateCheck = 2700;
+				LastUpgradeCheck = 2700;
+				TargetAttributes = {
+					BB0C655930725E1F00B57184 = {
+						CreatedOnToolsVersion = 27.0;
+					};
+					BB0C656830725E2100B57184 = {
+						CreatedOnToolsVersion = 27.0;
+						TestTargetID = BB0C655930725E1F00B57184;
+					};
+					BB0C657230725E2100B57184 = {
+						CreatedOnToolsVersion = 27.0;
+						TestTargetID = BB0C655930725E1F00B57184;
+					};
+				};
+			};
+			buildConfigurationList = BB0C655530725E1F00B57184 /* Build configuration list for PBXProject "trufflo" */;
+			developmentRegion = en;
+			hasScannedForEncodings = 0;
+			knownRegions = (
+				en,
+				Base,
+			);
+			mainGroup = BB0C655130725E1F00B57184;
+			minimizedProjectReferenceProxies = 1;
+			preferredProjectObjectVersion = 77;
+			productRefGroup = BB0C655B30725E1F00B57184 /* Products */;
+			projectDirPath = "";
+			projectRoot = "";
+			targets = (
+				BB0C655930725E1F00B57184 /* trufflo */,
+				BB0C656830725E2100B57184 /* truffloTests */,
+				BB0C657230725E2100B57184 /* truffloUITests */,
+			);
+		};
+/* End PBXProject section */
+
+/* Begin PBXResourcesBuildPhase section */
+		BB0C655830725E1F00B57184 /* Resources */ = {
+			isa = PBXResourcesBuildPhase;
+			files = (
+			);
+		};
+		BB0C656730725E2100B57184 /* Resources */ = {
+			isa = PBXResourcesBuildPhase;
+			files = (
+			);
+		};
+		BB0C657130725E2100B57184 /* Resources */ = {
+			isa = PBXResourcesBuildPhase;
+			files = (
+			);
+		};
+/* End PBXResourcesBuildPhase section */
+
+/* Begin PBXSourcesBuildPhase section */
+		BB0C655630725E1F00B57184 /* Sources */ = {
+			isa = PBXSourcesBuildPhase;
+			files = (
+			);
+		};
+		BB0C656530725E2100B57184 /* Sources */ = {
+			isa = PBXSourcesBuildPhase;
+			files = (
+			);
+		};
+		BB0C656F30725E2100B57184 /* Sources */ = {
+			isa = PBXSourcesBuildPhase;
+			files = (
+			);
+		};
+/* End PBXSourcesBuildPhase section */
+
+/* Begin PBXTargetDependency section */
+		BB0C656B30725E2100B57184 /* PBXTargetDependency */ = {
+			isa = PBXTargetDependency;
+			target = BB0C655930725E1F00B57184 /* trufflo */;
+			targetProxy = BB0C656A30725E2100B57184 /* PBXContainerItemProxy */;
+		};
+		BB0C657530725E2100B57184 /* PBXTargetDependency */ = {
+			isa = PBXTargetDependency;
+			target = BB0C655930725E1F00B57184 /* trufflo */;
+			targetProxy = BB0C657430725E2100B57184 /* PBXContainerItemProxy */;
+		};
+/* End PBXTargetDependency section */
+
+/* Begin XCBuildConfiguration section */
+		BB0C657930725E2100B57184 /* Debug configuration for PBXProject "trufflo" */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				ALWAYS_SEARCH_USER_PATHS = NO;
+				ASSETCATALOG_COMPILER_GENERATE_SWIFT_ASSET_SYMBOL_EXTENSIONS = YES;
+				CLANG_ANALYZER_NONNULL = YES;
+				CLANG_ANALYZER_NUMBER_OBJECT_CONVERSION = YES_AGGRESSIVE;
+				CLANG_CXX_LANGUAGE_STANDARD = "gnu++20";
+				CLANG_ENABLE_MODULES = YES;
+				CLANG_ENABLE_OBJC_ARC = YES;
+				CLANG_ENABLE_OBJC_WEAK = YES;
+				CLANG_WARN_BLOCK_CAPTURE_AUTORELEASING = YES;
+				CLANG_WARN_BOOL_CONVERSION = YES;
+				CLANG_WARN_COMMA = YES;
+				CLANG_WARN_CONSTANT_CONVERSION = YES;
+				CLANG_WARN_DEPRECATED_OBJC_IMPLEMENTATIONS = YES;
+				CLANG_WARN_DIRECT_OBJC_ISA_USAGE = YES_ERROR;
+				CLANG_WARN_DOCUMENTATION_COMMENTS = YES;
+				CLANG_WARN_EMPTY_BODY = YES;
+				CLANG_WARN_ENUM_CONVERSION = YES;
+				CLANG_WARN_INFINITE_RECURSION = YES;
+				CLANG_WARN_INT_CONVERSION = YES;
+				CLANG_WARN_NON_LITERAL_NULL_CONVERSION = YES;
+				CLANG_WARN_OBJC_IMPLICIT_RETAIN_SELF = YES;
+				CLANG_WARN_OBJC_LITERAL_CONVERSION = YES;
+				CLANG_WARN_OBJC_ROOT_CLASS = YES_ERROR;
+				CLANG_WARN_QUOTED_INCLUDE_IN_FRAMEWORK_HEADER = YES;
+				CLANG_WARN_RANGE_LOOP_ANALYSIS = YES;
+				CLANG_WARN_STRICT_PROTOTYPES = YES;
+				CLANG_WARN_SUSPICIOUS_MOVE = YES;
+				CLANG_WARN_UNGUARDED_AVAILABILITY = YES_AGGRESSIVE;
+				CLANG_WARN_UNREACHABLE_CODE = YES;
+				CLANG_WARN__DUPLICATE_METHOD_MATCH = YES;
+				COPY_PHASE_STRIP = NO;
+				DEBUG_INFORMATION_FORMAT = dwarf;
+				DEVELOPMENT_TEAM = Q52VN4UT34;
+				ENABLE_STRICT_OBJC_MSGSEND = YES;
+				ENABLE_TESTABILITY = YES;
+				ENABLE_USER_SCRIPT_SANDBOXING = YES;
+				GCC_C_LANGUAGE_STANDARD = gnu17;
+				GCC_DYNAMIC_NO_PIC = NO;
+				GCC_NO_COMMON_BLOCKS = YES;
+				GCC_OPTIMIZATION_LEVEL = 0;
+				GCC_PREPROCESSOR_DEFINITIONS = (
+					"DEBUG=1",
+					"$(inherited)",
+				);
+				GCC_WARN_64_TO_32_BIT_CONVERSION = YES;
+				GCC_WARN_ABOUT_RETURN_TYPE = YES_ERROR;
+				GCC_WARN_UNDECLARED_SELECTOR = YES;
+				GCC_WARN_UNINITIALIZED_AUTOS = YES_AGGRESSIVE;
+				GCC_WARN_UNUSED_FUNCTION = YES;
+				GCC_WARN_UNUSED_VARIABLE = YES;
+				IPHONEOS_DEPLOYMENT_TARGET = 27.0;
+				LOCALIZATION_PREFERS_STRING_CATALOGS = YES;
+				MTL_ENABLE_DEBUG_INFO = INCLUDE_SOURCE;
+				MTL_FAST_MATH = YES;
+				ONLY_ACTIVE_ARCH = YES;
+				SDKROOT = iphoneos;
+				SWIFT_ACTIVE_COMPILATION_CONDITIONS = "DEBUG $(inherited)";
+				SWIFT_OPTIMIZATION_LEVEL = "-Onone";
+			};
+			name = Debug;
+		};
+		BB0C657A30725E2100B57184 /* Release configuration for PBXProject "trufflo" */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				ALWAYS_SEARCH_USER_PATHS = NO;
+				ASSETCATALOG_COMPILER_GENERATE_SWIFT_ASSET_SYMBOL_EXTENSIONS = YES;
+				CLANG_ANALYZER_NONNULL = YES;
+				CLANG_ANALYZER_NUMBER_OBJECT_CONVERSION = YES_AGGRESSIVE;
+				CLANG_CXX_LANGUAGE_STANDARD = "gnu++20";
+				CLANG_ENABLE_MODULES = YES;
+				CLANG_ENABLE_OBJC_ARC = YES;
+				CLANG_ENABLE_OBJC_WEAK = YES;
+				CLANG_WARN_BLOCK_CAPTURE_AUTORELEASING = YES;
+				CLANG_WARN_BOOL_CONVERSION = YES;
+				CLANG_WARN_COMMA = YES;
+				CLANG_WARN_CONSTANT_CONVERSION = YES;
+				CLANG_WARN_DEPRECATED_OBJC_IMPLEMENTATIONS = YES;
+				CLANG_WARN_DIRECT_OBJC_ISA_USAGE = YES_ERROR;
+				CLANG_WARN_DOCUMENTATION_COMMENTS = YES;
+				CLANG_WARN_EMPTY_BODY = YES;
+				CLANG_WARN_ENUM_CONVERSION = YES;
+				CLANG_WARN_INFINITE_RECURSION = YES;
+				CLANG_WARN_INT_CONVERSION = YES;
+				CLANG_WARN_NON_LITERAL_NULL_CONVERSION = YES;
+				CLANG_WARN_OBJC_IMPLICIT_RETAIN_SELF = YES;
+				CLANG_WARN_OBJC_LITERAL_CONVERSION = YES;
+				CLANG_WARN_OBJC_ROOT_CLASS = YES_ERROR;
+				CLANG_WARN_QUOTED_INCLUDE_IN_FRAMEWORK_HEADER = YES;
+				CLANG_WARN_RANGE_LOOP_ANALYSIS = YES;
+				CLANG_WARN_STRICT_PROTOTYPES = YES;
+				CLANG_WARN_SUSPICIOUS_MOVE = YES;
+				CLANG_WARN_UNGUARDED_AVAILABILITY = YES_AGGRESSIVE;
+				CLANG_WARN_UNREACHABLE_CODE = YES;
+				CLANG_WARN__DUPLICATE_METHOD_MATCH = YES;
+				COPY_PHASE_STRIP = NO;
+				DEBUG_INFORMATION_FORMAT = "dwarf-with-dsym";
+				DEVELOPMENT_TEAM = Q52VN4UT34;
+				ENABLE_NS_ASSERTIONS = NO;
+				ENABLE_STRICT_OBJC_MSGSEND = YES;
+				ENABLE_USER_SCRIPT_SANDBOXING = YES;
+				GCC_C_LANGUAGE_STANDARD = gnu17;
+				GCC_NO_COMMON_BLOCKS = YES;
+				GCC_WARN_64_TO_32_BIT_CONVERSION = YES;
+				GCC_WARN_ABOUT_RETURN_TYPE = YES_ERROR;
+				GCC_WARN_UNDECLARED_SELECTOR = YES;
+				GCC_WARN_UNINITIALIZED_AUTOS = YES_AGGRESSIVE;
+				GCC_WARN_UNUSED_FUNCTION = YES;
+				GCC_WARN_UNUSED_VARIABLE = YES;
+				IPHONEOS_DEPLOYMENT_TARGET = 27.0;
+				LOCALIZATION_PREFERS_STRING_CATALOGS = YES;
+				MTL_ENABLE_DEBUG_INFO = NO;
+				MTL_FAST_MATH = YES;
+				SDKROOT = iphoneos;
+				SWIFT_COMPILATION_MODE = wholemodule;
+				VALIDATE_PRODUCT = YES;
+			};
+			name = Release;
+		};
+		BB0C657C30725E2100B57184 /* Debug configuration for PBXNativeTarget "trufflo" */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				ASSETCATALOG_COMPILER_APPICON_NAME = AppIcon;
+				ASSETCATALOG_COMPILER_GLOBAL_ACCENT_COLOR_NAME = AccentColor;
+				CODE_SIGN_STYLE = Automatic;
+				CURRENT_PROJECT_VERSION = 1;
+				DEVELOPMENT_TEAM = Q52VN4UT34;
+				ENABLE_PREVIEWS = YES;
+				GENERATE_INFOPLIST_FILE = YES;
+				INFOPLIST_KEY_UIApplicationSceneManifest_Generation = YES;
+				INFOPLIST_KEY_UIApplicationSupportsIndirectInputEvents = YES;
+				INFOPLIST_KEY_UILaunchScreen_Generation = YES;
+				INFOPLIST_KEY_UISupportedInterfaceOrientations_iPad = "UIInterfaceOrientationPortrait UIInterfaceOrientationPortraitUpsideDown UIInterfaceOrientationLandscapeLeft UIInterfaceOrientationLandscapeRight";
+				INFOPLIST_KEY_UISupportedInterfaceOrientations_iPhone = "UIInterfaceOrientationPortrait UIInterfaceOrientationLandscapeLeft UIInterfaceOrientationLandscapeRight";
+				LD_RUNPATH_SEARCH_PATHS = (
+					"$(inherited)",
+					"@executable_path/Frameworks",
+				);
+				MARKETING_VERSION = 1.0;
+				PRODUCT_BUNDLE_IDENTIFIER = dev.memolabs.trufflo;
+				PRODUCT_NAME = "$(TARGET_NAME)";
+				STRING_CATALOG_GENERATE_SYMBOLS = YES;
+				SWIFT_APPROACHABLE_CONCURRENCY = YES;
+				SWIFT_DEFAULT_ACTOR_ISOLATION = MainActor;
+				SWIFT_EMIT_LOC_STRINGS = YES;
+				SWIFT_UPCOMING_FEATURE_MEMBER_IMPORT_VISIBILITY = YES;
+				SWIFT_VERSION = 5.0;
+				TARGETED_DEVICE_FAMILY = "1,2";
+			};
+			name = Debug;
+		};
+		BB0C657D30725E2100B57184 /* Release configuration for PBXNativeTarget "trufflo" */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				ASSETCATALOG_COMPILER_APPICON_NAME = AppIcon;
+				ASSETCATALOG_COMPILER_GLOBAL_ACCENT_COLOR_NAME = AccentColor;
+				CODE_SIGN_STYLE = Automatic;
+				CURRENT_PROJECT_VERSION = 1;
+				DEVELOPMENT_TEAM = Q52VN4UT34;
+				ENABLE_PREVIEWS = YES;
+				GENERATE_INFOPLIST_FILE = YES;
+				INFOPLIST_KEY_UIApplicationSceneManifest_Generation = YES;
+				INFOPLIST_KEY_UIApplicationSupportsIndirectInputEvents = YES;
+				INFOPLIST_KEY_UILaunchScreen_Generation = YES;
+				INFOPLIST_KEY_UISupportedInterfaceOrientations_iPad = "UIInterfaceOrientationPortrait UIInterfaceOrientationPortraitUpsideDown UIInterfaceOrientationLandscapeLeft UIInterfaceOrientationLandscapeRight";
+				INFOPLIST_KEY_UISupportedInterfaceOrientations_iPhone = "UIInterfaceOrientationPortrait UIInterfaceOrientationLandscapeLeft UIInterfaceOrientationLandscapeRight";
+				LD_RUNPATH_SEARCH_PATHS = (
+					"$(inherited)",
+					"@executable_path/Frameworks",
+				);
+				MARKETING_VERSION = 1.0;
+				PRODUCT_BUNDLE_IDENTIFIER = dev.memolabs.trufflo;
+				PRODUCT_NAME = "$(TARGET_NAME)";
+				STRING_CATALOG_GENERATE_SYMBOLS = YES;
+				SWIFT_APPROACHABLE_CONCURRENCY = YES;
+				SWIFT_DEFAULT_ACTOR_ISOLATION = MainActor;
+				SWIFT_EMIT_LOC_STRINGS = YES;
+				SWIFT_UPCOMING_FEATURE_MEMBER_IMPORT_VISIBILITY = YES;
+				SWIFT_VERSION = 5.0;
+				TARGETED_DEVICE_FAMILY = "1,2";
+			};
+			name = Release;
+		};
+		BB0C657F30725E2100B57184 /* Debug configuration for PBXNativeTarget "truffloTests" */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				BUNDLE_LOADER = "$(TEST_HOST)";
+				CODE_SIGN_STYLE = Automatic;
+				CURRENT_PROJECT_VERSION = 1;
+				DEVELOPMENT_TEAM = Q52VN4UT34;
+				GENERATE_INFOPLIST_FILE = YES;
+				IPHONEOS_DEPLOYMENT_TARGET = 27.0;
+				MARKETING_VERSION = 1.0;
+				PRODUCT_BUNDLE_IDENTIFIER = dev.memolabs.truffloTests;
+				PRODUCT_NAME = "$(TARGET_NAME)";
+				STRING_CATALOG_GENERATE_SYMBOLS = NO;
+				SWIFT_APPROACHABLE_CONCURRENCY = YES;
+				SWIFT_EMIT_LOC_STRINGS = NO;
+				SWIFT_UPCOMING_FEATURE_MEMBER_IMPORT_VISIBILITY = YES;
+				SWIFT_VERSION = 5.0;
+				TARGETED_DEVICE_FAMILY = "1,2";
+				TEST_HOST = "$(BUILT_PRODUCTS_DIR)/trufflo.app/$(BUNDLE_EXECUTABLE_FOLDER_PATH)/trufflo";
+			};
+			name = Debug;
+		};
+		BB0C658030725E2100B57184 /* Release configuration for PBXNativeTarget "truffloTests" */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				BUNDLE_LOADER = "$(TEST_HOST)";
+				CODE_SIGN_STYLE = Automatic;
+				CURRENT_PROJECT_VERSION = 1;
+				DEVELOPMENT_TEAM = Q52VN4UT34;
+				GENERATE_INFOPLIST_FILE = YES;
+				IPHONEOS_DEPLOYMENT_TARGET = 27.0;
+				MARKETING_VERSION = 1.0;
+				PRODUCT_BUNDLE_IDENTIFIER = dev.memolabs.truffloTests;
+				PRODUCT_NAME = "$(TARGET_NAME)";
+				STRING_CATALOG_GENERATE_SYMBOLS = NO;
+				SWIFT_APPROACHABLE_CONCURRENCY = YES;
+				SWIFT_EMIT_LOC_STRINGS = NO;
+				SWIFT_UPCOMING_FEATURE_MEMBER_IMPORT_VISIBILITY = YES;
+				SWIFT_VERSION = 5.0;
+				TARGETED_DEVICE_FAMILY = "1,2";
+				TEST_HOST = "$(BUILT_PRODUCTS_DIR)/trufflo.app/$(BUNDLE_EXECUTABLE_FOLDER_PATH)/trufflo";
+			};
+			name = Release;
+		};
+		BB0C658230725E2100B57184 /* Debug configuration for PBXNativeTarget "truffloUITests" */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				CODE_SIGN_STYLE = Automatic;
+				CURRENT_PROJECT_VERSION = 1;
+				DEVELOPMENT_TEAM = Q52VN4UT34;
+				GENERATE_INFOPLIST_FILE = YES;
+				MARKETING_VERSION = 1.0;
+				PRODUCT_BUNDLE_IDENTIFIER = dev.memolabs.truffloUITests;
+				PRODUCT_NAME = "$(TARGET_NAME)";
+				STRING_CATALOG_GENERATE_SYMBOLS = NO;
+				SWIFT_APPROACHABLE_CONCURRENCY = YES;
+				SWIFT_EMIT_LOC_STRINGS = NO;
+				SWIFT_UPCOMING_FEATURE_MEMBER_IMPORT_VISIBILITY = YES;
+				SWIFT_VERSION = 5.0;
+				TARGETED_DEVICE_FAMILY = "1,2";
+				TEST_TARGET_NAME = trufflo;
+			};
+			name = Debug;
+		};
+		BB0C658330725E2100B57184 /* Release configuration for PBXNativeTarget "truffloUITests" */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				CODE_SIGN_STYLE = Automatic;
+				CURRENT_PROJECT_VERSION = 1;
+				DEVELOPMENT_TEAM = Q52VN4UT34;
+				GENERATE_INFOPLIST_FILE = YES;
+				MARKETING_VERSION = 1.0;
+				PRODUCT_BUNDLE_IDENTIFIER = dev.memolabs.truffloUITests;
+				PRODUCT_NAME = "$(TARGET_NAME)";
+				STRING_CATALOG_GENERATE_SYMBOLS = NO;
+				SWIFT_APPROACHABLE_CONCURRENCY = YES;
+				SWIFT_EMIT_LOC_STRINGS = NO;
+				SWIFT_UPCOMING_FEATURE_MEMBER_IMPORT_VISIBILITY = YES;
+				SWIFT_VERSION = 5.0;
+				TARGETED_DEVICE_FAMILY = "1,2";
+				TEST_TARGET_NAME = trufflo;
+			};
+			name = Release;
+		};
+/* End XCBuildConfiguration section */
+
+/* Begin XCConfigurationList section */
+		BB0C655530725E1F00B57184 /* Build configuration list for PBXProject "trufflo" */ = {
+			isa = XCConfigurationList;
+			buildConfigurations = (
+				BB0C657930725E2100B57184 /* Debug configuration for PBXProject "trufflo" */,
+				BB0C657A30725E2100B57184 /* Release configuration for PBXProject "trufflo" */,
+			);
+			defaultConfigurationName = Release;
+		};
+		BB0C657B30725E2100B57184 /* Build configuration list for PBXNativeTarget "trufflo" */ = {
+			isa = XCConfigurationList;
+			buildConfigurations = (
+				BB0C657C30725E2100B57184 /* Debug configuration for PBXNativeTarget "trufflo" */,
+				BB0C657D30725E2100B57184 /* Release configuration for PBXNativeTarget "trufflo" */,
+			);
+			defaultConfigurationName = Release;
+		};
+		BB0C657E30725E2100B57184 /* Build configuration list for PBXNativeTarget "truffloTests" */ = {
+			isa = XCConfigurationList;
+			buildConfigurations = (
+				BB0C657F30725E2100B57184 /* Debug configuration for PBXNativeTarget "truffloTests" */,
+				BB0C658030725E2100B57184 /* Release configuration for PBXNativeTarget "truffloTests" */,
+			);
+			defaultConfigurationName = Release;
+		};
+		BB0C658130725E2100B57184 /* Build configuration list for PBXNativeTarget "truffloUITests" */ = {
+			isa = XCConfigurationList;
+			buildConfigurations = (
+				BB0C658230725E2100B57184 /* Debug configuration for PBXNativeTarget "truffloUITests" */,
+				BB0C658330725E2100B57184 /* Release configuration for PBXNativeTarget "truffloUITests" */,
+			);
+			defaultConfigurationName = Release;
+		};
+/* End XCConfigurationList section */
+	};
+	rootObject = BB0C655230725E1F00B57184 /* Project object */;
+	validationLevel = 1;
+}
