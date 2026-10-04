@@ -35,6 +35,7 @@ struct ManualWalkFormView: View {
                         .accessibilityIdentifier("walk.minutes")
                     TextField("Note facultative", text: $note, axis: .vertical)
                         .lineLimit(2...5)
+                        .accessibilityIdentifier("walk.note")
                     Text("Durée déclarée. Aucune distance ni aucun pas ne sont inventés.")
                         .font(.footnote).foregroundStyle(.secondary)
                 }

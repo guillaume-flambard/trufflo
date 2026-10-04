@@ -87,6 +87,10 @@ final class StarterUITests: XCTestCase {
         XCTAssertTrue(minutes.waitForExistence(timeout: 5))
         minutes.tap()
         minutes.typeText("10")
+        let note = app.textFields["walk.note"]
+        XCTAssertTrue(note.waitForExistence(timeout: 5), "le champ de note doit être identifié")
+        note.tap()
+        note.typeText("Balade tranquille au parc.")
         app.buttons["walk.save"].tap()
 
         app.tabBars.buttons["Journal"].tap()
@@ -112,6 +116,28 @@ final class StarterUITests: XCTestCase {
         XCTAssertTrue(
             unmeasured.waitForExistence(timeout: 5),
             "la distance non mesurée doit s'écrire « Non mesurée », jamais « 0 »"
+        )
+        XCTAssertTrue(
+            app.staticTexts["Balade tranquille au parc."].waitForExistence(timeout: 5),
+            "AC-003 : la note saisie doit être lisible dans le détail"
+        )
+        XCTAssertTrue(
+            app.staticTexts["Oslo"].waitForExistence(timeout: 5),
+            "AC-003 : le détail doit lister le chien présent"
+        )
+        let ended = app.staticTexts.matching(
+            NSPredicate(format: "label CONTAINS[c] %@", "Fin de la balade")
+        ).firstMatch
+        XCTAssertTrue(
+            ended.waitForExistence(timeout: 5),
+            "AC-003 : le détail doit afficher la date de fin"
+        )
+        let duration = app.staticTexts.matching(
+            NSPredicate(format: "label CONTAINS[c] %@", "10 min")
+        ).firstMatch
+        XCTAssertTrue(
+            duration.waitForExistence(timeout: 5),
+            "AC-003 : la durée saisie doit être lisible dans le détail"
         )
 
         let deleteWalk = app.buttons["walk.delete"]
