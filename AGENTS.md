@@ -39,11 +39,18 @@ Measured 2026-10-04 on Xcode 27 / iPhone 17e / iOS 27.0:
 | `build-for-testing` (TruffloFast) | 17 s | — |
 | `test-without-building` (TruffloFast), simulator cold | 61 s | 2.6 s |
 | `test-without-building` (TruffloFast), simulator warm | 16 s | 1.9 s |
-| `test` (TruffloFull) | 100 s | 1.5 s unit + 61.7 s UI |
+| `test` (TruffloFull) | 90 s | 1.5 s unit + 76 s UI |
 
-The tests are not slow; the invocation is. 44 unit tests run in under 3 s, while
-the two UI tests alone cost 61.7 s. Leave the simulator booted and reuse the
-build, otherwise every loop pays 45-60 s of boot and install overhead.
+The tests are not slow; the invocation is. 65 unit tests run in under 2 s, while
+the three UI tests alone cost 76 s because each one boots and installs the app
+on its own. Measured individually from a cold simulator: the lightest journey is
+69 s, the profile-edit plus walk-delete journey is 94 s, so a journey costs about
+25 s of interaction on top of the launch. Leave the simulator booted and reuse
+the build, otherwise every loop pays 45-60 s of boot and install overhead.
+
+Onboarding is gated by the same `--uitesting` launch argument the app already
+uses to pick an in-memory store. Without that gate the first-run full screen
+cover hides the app and all three journeys fail on a clean simulator.
 
 Build once per edit session, then reuse the result:
 
@@ -124,6 +131,7 @@ it as a speculative refactor.
 
 - create dog, record a manual walk, walk appears in the journal;
 - empty journal state, global erasure;
+- edit a dog profile, delete a single walk, journal is left consistent;
 - later: start walk, finish walk, kill app, relaunch, walk still exists.
 
 Do not add a UI test for every button. Screens are covered by Swift Testing,

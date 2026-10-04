@@ -64,27 +64,16 @@ struct ManualWalkFormView: View {
         do {
             let input = try ManualWalkInput(dogIDs: Array(selectedDogs),
                                             durationSeconds: minutes * 60, note: note)
-            let selectedProfiles = dogs.filter { input.dogIDs.contains($0.id) }
-            guard selectedProfiles.count == input.dogIDs.count else {
-                errorMessage = "Un profil a changé. Rouvrez ce formulaire."
-                return
-            }
-            let walk = WalkRecord.manual(endedAt: endedAt,
-                                      durationSeconds: input.durationSeconds,
-                                      note: input.note)
-            context.insert(walk)
-            for dog in selectedProfiles {
-                context.insert(WalkDogRecord(walkID: walk.id, dogID: dog.id, dogNameSnapshot: dog.name))
-            }
-            do { try context.save(); dismiss() }
-            catch {
-                context.rollback()
-                errorMessage = "La balade n'a pas été enregistrée. Les valeurs saisies restent disponibles."
-            }
+            try JournalRepository(context: context).addManualWalk(input, endedAt: endedAt)
+            dismiss()
         } catch WalkError.missingDog {
             errorMessage = "Sélectionnez au moins un chien."
         } catch WalkError.noteTooLong {
             errorMessage = "La note doit contenir au maximum 500 caractères."
+        } catch JournalError.profileMissing {
+            errorMessage = "Un profil a changé. Rouvrez ce formulaire."
+        } catch JournalError.persistence {
+            errorMessage = "La balade n'a pas été enregistrée. Les valeurs saisies restent disponibles."
         } catch {
             errorMessage = "La durée doit être positive, finie et ne pas dépasser 24 heures."
         }

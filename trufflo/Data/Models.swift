@@ -16,6 +16,16 @@ final class DogRecord {
         self.breedLabel = breedLabel
         self.createdAt = .now
     }
+
+    /// Human label for the picker's raw kind. Kept next to the stored column so
+    /// every screen describes a breed the same way.
+    var breedDescription: String {
+        switch breedKind {
+        case "known": breedLabel
+        case "mixed": "Croisé"
+        default: "Race inconnue"
+        }
+    }
 }
 
 /// The single walk entity: a manual entry is a session with no points, not a second
