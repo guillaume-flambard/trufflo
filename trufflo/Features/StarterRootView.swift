@@ -6,6 +6,18 @@ import SwiftData
 private struct DogRoute: Hashable { let id: UUID }
 private struct WalkRoute: Hashable { let id: UUID }
 
+private enum ActiveWalkCover: Identifiable {
+    case resume(UUID)
+    case start
+
+    var id: String {
+        switch self {
+        case .resume(let walkID): return "resume-\(walkID.uuidString)"
+        case .start: return "start"
+        }
+    }
+}
+
 /// UI tests launch with `--uitesting`, the same flag the app already uses to
 /// pick an in-memory store. Onboarding must never cover them.
 private let isUITesting = ProcessInfo.processInfo.arguments.contains("--uitesting")
@@ -18,10 +30,15 @@ struct StarterRootView: View {
     @Query private var links: [WalkDogRecord]
     @State private var showDogForm = false
     @State private var showWalkForm = false
+    @State private var activeWalkCover: ActiveWalkCover?
     @State private var showEraseConfirmation = false
     @State private var storageError = false
     @AppStorage("hasCompletedOnboarding") private var hasCompletedOnboarding = false
     @State private var showOnboardingSheet = false
+
+    private var liveWalk: WalkRecord? {
+        walks.first { $0.phase == .recording || $0.phase == .paused || $0.phase == .interrupted }
+    }
 
     var body: some View {
         TabView {
@@ -38,6 +55,33 @@ struct StarterRootView: View {
                         }
                         .padding(.vertical, TruffloTheme.Spacing.xSmall)
                     }
+
+                    if let currentWalk = liveWalk {
+                        let isInterrupted = currentWalk.phase == .interrupted
+                        Section(isInterrupted ? "Balade interrompue" : "Balade en cours") {
+                            HStack {
+                                VStack(alignment: .leading, spacing: 4) {
+                                    Text(isInterrupted ? "Session interrompue" : "Suivi GPS actif")
+                                        .font(.truffloHeadline)
+                                        .foregroundStyle(Color.truffloForest)
+                                    Text(currentWalk.phase == .recording
+                                         ? "En cours d'enregistrement..."
+                                         : isInterrupted ? "Données enregistrées jusqu'au dernier point."
+                                         : "En pause")
+                                        .font(.truffloCaption)
+                                        .foregroundStyle(.secondary)
+                                }
+                                Spacer()
+                                Button("Afficher") {
+                                    activeWalkCover = .resume(currentWalk.id)
+                                }
+                                .buttonStyle(.truffloPrimary)
+                            }
+                            .padding(.vertical, 4)
+                            .accessibilityIdentifier("walk.live.banner")
+                        }
+                    }
+
                     if dogs.isEmpty {
                         Section {
                             TruffloEmptyStateView(
@@ -50,21 +94,27 @@ struct StarterRootView: View {
                             .accessibilityIdentifier("dog.add")
                         }
                     } else {
-                        Section("Votre journal") {
+                        Section("Démarrer une balade") {
+                            Button {
+                                if let dog = dogs.first {
+                                    activeWalkCover = .start
+                                }
+                            } label: {
+                                Label("Démarrer une balade GPS", systemImage: "location.circle.fill")
+                                    .font(.truffloHeadline)
+                                    .foregroundStyle(Color.truffloForest)
+                            }
+
                             Button {
                                 showWalkForm = true
                             } label: {
                                 Label("Ajouter une balade passée", systemImage: "plus.circle.fill")
                                     .font(.truffloSubheadline)
-                                    .foregroundStyle(Color.truffloForest)
+                                    .foregroundStyle(Color.truffloForest.opacity(0.8))
                             }
                             .accessibilityIdentifier("walk.manual.add")
-
-                            Text("Ce starter permet la saisie manuelle. Le suivi GPS n'est pas encore branché.")
-                                .font(.truffloCaption)
-                                .foregroundStyle(.secondary)
                         }
-                        if let lastWalk = walks.first {
+                        if let lastWalk = walks.first(where: { $0.phase == .completed }) {
                             Section("Dernière balade enregistrée") {
                                 NavigationLink(value: WalkRoute(id: lastWalk.id)) {
                                     row(for: lastWalk)
@@ -101,7 +151,7 @@ struct StarterRootView: View {
                             description: "Les sorties ajoutées à votre journal apparaîtront ici."
                         )
                     }
-                    ForEach(walks) { walk in
+                    ForEach(walks.filter { $0.phase == .completed }) { walk in
                         NavigationLink(value: WalkRoute(id: walk.id)) { row(for: walk) }
                     }
                 }
@@ -156,6 +206,14 @@ struct StarterRootView: View {
         .tint(Color.truffloForest)
         .sheet(isPresented: $showDogForm) { DogFormView() }
         .sheet(isPresented: $showWalkForm) { ManualWalkFormView(dogs: dogs) }
+        .fullScreenCover(item: $activeWalkCover) { cover in
+            switch cover {
+            case .resume(let walkID):
+                ActiveWalkView(modelContainer: context.container, existingWalkID: walkID)
+            case .start:
+                ActiveWalkView(modelContainer: context.container, dogIDs: dogs.map(\.id))
+            }
+        }
         .fullScreenCover(isPresented: $showOnboardingSheet) {
             OnboardingView {
                 hasCompletedOnboarding = true

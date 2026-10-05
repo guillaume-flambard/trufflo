@@ -60,7 +60,7 @@ Un seul auteur modifie les points et la révision d’une session. Sauvegarder l
 
 M1 emploie `CLLocationManager`, un adaptateur de callbacks, l’autorisation When In Use demandée au démarrage et `allowsBackgroundLocationUpdates` avec le mode de fond adéquat. Cette voie est documentée par Apple. [S06]
 
-Les APIs `CLLocationUpdate`, `CLBackgroundActivitySession` et `CLServiceSession` sont une alternative documentée, pas une seconde source à superposer. Une éventuelle migration doit être décidée et testée ; ne pas lancer deux flux GPS ou deux moteurs de durée. [S05]
+Les APIs `CLLocationUpdate`, `CLBackgroundActivitySession` et `CLServiceSession` sont une alternative documentée, pas une seconde source à superposer. Une éventuelle migration doit être décidée et testée ; ne pas lancer deux flux GPS ou deux moteurs de durée. Décision : `docs/decisions/0005-maintain-classic-core-location-for-m1.md`, report pour M1 avec conditions de réveil. [S05]
 
 ## ADR-005 — Le domaine ne connaît pas l’interface
 

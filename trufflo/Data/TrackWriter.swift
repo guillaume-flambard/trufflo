@@ -150,6 +150,13 @@ actor TrackWriter {
         try snapshot(forSession: try requireSession(walkID))
     }
 
+    func breakSegment(for walkID: UUID) throws {
+        let session = try requireWritableSession(walkID)
+        var accumulator = try accumulator(for: session)
+        accumulator.breakSegment()
+        accumulators[walkID] = accumulator
+    }
+
     /// Returns plain values: neither a managed object nor its PersistentIdentifier may
     /// leave the actor that owns its context.
     func storedPoints(for walkID: UUID) throws -> [StoredTrackPoint] {

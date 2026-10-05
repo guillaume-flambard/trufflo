@@ -18,9 +18,11 @@ enum JournalError: Error, Equatable {
 @MainActor
 struct JournalRepository {
     private let context: ModelContext
+    private let container: ModelContainer
 
     init(context: ModelContext) {
         self.context = context
+        self.container = context.container
     }
 
     // MARK: - Reading
@@ -48,9 +50,15 @@ struct JournalRepository {
     @discardableResult
     func addDog(_ input: DogInput) throws -> DogRecord {
         try commit {
-            let dog = DogRecord(name: input.name,
-                                breedKind: input.breedKind,
-                                breedLabel: input.breedLabel)
+            let dog = DogRecord(
+                name: input.name,
+                breedKind: input.breedKind,
+                breedLabel: input.breedLabel,
+                ageDescription: input.ageDescription,
+                gender: input.gender,
+                preferencesNote: input.preferencesNote,
+                photoData: input.photoData
+            )
             context.insert(dog)
             return dog
         }
@@ -64,6 +72,10 @@ struct JournalRepository {
             dog.name = input.name
             dog.breedKind = input.breedKind
             dog.breedLabel = input.breedLabel
+            dog.ageDescription = input.ageDescription
+            dog.gender = input.gender
+            dog.preferencesNote = input.preferencesNote
+            dog.photoData = input.photoData
         }
     }
 
@@ -97,6 +109,112 @@ struct JournalRepository {
             }
             return walk
         }
+    }
+
+    /// The walk that is still running or paused, if any. A live session is the
+    /// state that makes a second start a no-op instead of a twin.
+    func liveWalk() -> WalkRecord? {
+        let recording = WalkPhase.recording.rawValue
+        let paused = WalkPhase.paused.rawValue
+        var descriptor = FetchDescriptor<WalkRecord>(predicate: #Predicate {
+            $0.phaseRaw == recording || $0.phaseRaw == paused
+        })
+        descriptor.fetchLimit = 1
+        return try? context.fetch(descriptor).first
+    }
+
+    /// Opens one GPS session. A second call while one is live returns that walk,
+    /// so a double tap cannot produce two walks in the journal.
+    @discardableResult
+    func startGpsSession(dogIDs: [UUID]) throws -> WalkRecord {
+        if let existing = liveWalk() { return existing }
+        return try commit {
+            let walk = WalkRecord.gpsSession(startedAt: .now)
+            context.insert(walk)
+            for dogID in dogIDs {
+                guard let dog = requireDog(dogID) else {
+                    throw JournalError.profileMissing
+                }
+                context.insert(WalkDogRecord(walkID: walk.id,
+                                             dogID: dog.id,
+                                             dogNameSnapshot: dog.name))
+            }
+            return walk
+        }
+    }
+
+    /// The coordinator owns the monotonic clock; this only persists what it hands over.
+    func pauseWalk(_ id: UUID, confirmedSeconds: TimeInterval) throws {
+        let walk = try requireLiveWalk(id, from: .recording)
+        try commit {
+            walk.confirmedSeconds = confirmedSeconds
+            walk.phase = .paused
+            walk.lastCheckpointAt = .now
+            walk.revision += 1
+        }
+    }
+
+    /// Resuming adds no duration on its own: the next monotonic delta is the first
+    /// one counted after a pause, which is what keeps a gap from becoming time.
+    func resumeWalk(_ id: UUID) throws {
+        guard let walk = requireWalk(id) else { throw JournalError.walkMissing }
+        guard walk.phase == .paused || walk.phase == .interrupted else {
+            throw WalkError.invalidTransition
+        }
+        try commit {
+            walk.phase = .recording
+            walk.lastCheckpointAt = .now
+            walk.revision += 1
+        }
+    }
+
+    /// A session that ends without a normal finish keeps its confirmed duration and
+    /// says so, rather than pretending the walk never ran.
+    func interruptWalk(_ id: UUID, confirmedSeconds: TimeInterval) throws {
+        let walk = try requireLiveWalk(id, from: nil)
+        try commit {
+            walk.confirmedSeconds = confirmedSeconds
+            walk.phase = .interrupted
+            walk.lastCheckpointAt = .now
+            walk.revision += 1
+        }
+    }
+
+    func checkpointWalk(_ id: UUID, confirmedSeconds: TimeInterval) throws {
+        let walk = try requireLiveWalk(id, from: nil)
+        try commit {
+            walk.confirmedSeconds = confirmedSeconds
+            walk.lastCheckpointAt = .now
+            walk.revision += 1
+        }
+    }
+
+    /// A session left `recording` or `paused` by a previous run cannot still be
+    /// running: nothing is accruing time on a process that no longer exists. The
+    /// confirmed duration is kept exactly as the last checkpoint wrote it, and the
+    /// walk is presented as interrupted so the three exits can be offered.
+    func recoverInterruptedSessions() throws {
+        let recording = WalkPhase.recording.rawValue
+        let paused = WalkPhase.paused.rawValue
+        let descriptor = FetchDescriptor<WalkRecord>(predicate: #Predicate {
+            $0.phaseRaw == recording || $0.phaseRaw == paused
+        })
+        let stale = try context.fetch(descriptor)
+        guard !stale.isEmpty else { return }
+        try commit {
+            for walk in stale {
+                walk.phase = .interrupted
+                walk.revision += 1
+            }
+        }
+    }
+
+    private func requireLiveWalk(_ id: UUID, from expected: WalkPhase?) throws -> WalkRecord {
+        guard let walk = requireWalk(id) else { throw JournalError.walkMissing }
+        let isLive = walk.phase == .recording || walk.phase == .paused
+        guard isLive else { throw WalkError.invalidTransition }
+        if let expected, walk.phase != expected { throw WalkError.invalidTransition }
+        return walk
     }
 
     /// Removes the walk, its participations and its recorded points in one

@@ -374,7 +374,9 @@
 				DEVELOPMENT_TEAM = Q52VN4UT34;
 				ENABLE_PREVIEWS = YES;
 				GENERATE_INFOPLIST_FILE = YES;
+				INFOPLIST_FILE = Info.plist;
 				INFOPLIST_KEY_CFBundleDisplayName = Trufflo;
+				INFOPLIST_KEY_NSLocationWhenInUseUsageDescription = "Trufflo utilise votre position pendant une balade pour enregistrer le parcours réel de votre chien. Rien n'est enregistré au lancement, et rien ne quitte votre appareil.";
 				INFOPLIST_KEY_UIApplicationSceneManifest_Generation = YES;
 				INFOPLIST_KEY_UIApplicationSupportsIndirectInputEvents = YES;
 				INFOPLIST_KEY_UILaunchScreen_Generation = YES;
@@ -407,7 +409,9 @@
 				DEVELOPMENT_TEAM = Q52VN4UT34;
 				ENABLE_PREVIEWS = YES;
 				GENERATE_INFOPLIST_FILE = YES;
+				INFOPLIST_FILE = Info.plist;
 				INFOPLIST_KEY_CFBundleDisplayName = Trufflo;
+				INFOPLIST_KEY_NSLocationWhenInUseUsageDescription = "Trufflo utilise votre position pendant une balade pour enregistrer le parcours réel de votre chien. Rien n'est enregistré au lancement, et rien ne quitte votre appareil.";
 				INFOPLIST_KEY_UIApplicationSceneManifest_Generation = YES;
 				INFOPLIST_KEY_UIApplicationSupportsIndirectInputEvents = YES;
 				INFOPLIST_KEY_UILaunchScreen_Generation = YES;

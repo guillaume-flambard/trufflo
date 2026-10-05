@@ -13,7 +13,11 @@ struct TruffloApp: App {
         #else
         let inMemory = false
         #endif
-        boot = Result { try PersistenceFactory.make(inMemory: inMemory) }
+        boot = Result {
+            let container = try PersistenceFactory.make(inMemory: inMemory)
+            try? JournalRepository(context: ModelContext(container)).recoverInterruptedSessions()
+            return container
+        }
     }
 
     var body: some Scene {

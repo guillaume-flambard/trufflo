@@ -132,7 +132,11 @@ it as a speculative refactor.
 - create dog, record a manual walk, walk appears in the journal;
 - empty journal state, global erasure;
 - edit a dog profile, delete a single walk, journal is left consistent;
-- later: start walk, finish walk, kill app, relaunch, walk still exists.
+- start a GPS walk, pause, resume, finish, the walk appears in the journal;
+- kill the app mid-walk, relaunch, the walk is interrupted with its three exits;
+- send the app to the background for two minutes mid-walk, the timer and the
+  track keep advancing;
+- revoke location mid-walk, the walk interrupts without inventing distance.
 
 Do not add a UI test for every button. Screens are covered by Swift Testing,
 domain tests, previews and a manual simulator check.

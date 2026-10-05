@@ -125,6 +125,34 @@ private func fix(_ longitude: Double, seconds: Double, accuracy: Double = 5) -> 
     #expect(snapshot.quality == .unavailable)
 }
 
+@Test func approximateAccuracyFixesAreRejectedAndTheDistanceStaysUnavailable() async throws {
+    let (_, writer, walkID) = try await makeGPFSession()
+
+    // Reduced precision reports fixes with hundreds of metres of horizontal
+    // accuracy; none of them may contribute to a distance.
+    let summary = try await writer.appendFixes(
+        [fix(2.35, seconds: 0, accuracy: 500),
+         fix(2.351, seconds: 10, accuracy: 500),
+         fix(2.352, seconds: 20, accuracy: 500)],
+        to: walkID)
+
+    #expect(summary.rejectedPoints == 3)
+    #expect(summary.acceptedPoints == 0)
+    #expect(summary.ignoredPoints == 0)
+    #expect(summary.recordedPathMeters == nil)
+
+    let snapshot = try await writer.snapshot(for: walkID)
+    #expect(snapshot.pointCount == 0)
+    #expect(snapshot.recordedPathMeters == nil)
+    #expect(snapshot.quality == .unavailable)
+
+    let finished = try await writer.finish(confirmedSeconds: 420, note: "", for: walkID)
+    #expect(finished.phase == .completed)
+    #expect(finished.confirmedSeconds == 420)
+    #expect(finished.recordedPathMeters == nil)
+    #expect(finished.quality == .unavailable)
+}
+
 @Test func checkpointStoresTheConfirmedDurationSuppliedByTheCaller() async throws {
     let (_, writer, walkID) = try await makeGPFSession()
 

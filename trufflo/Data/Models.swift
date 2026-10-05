@@ -7,13 +7,33 @@ final class DogRecord {
     var name: String
     var breedKind: String
     var breedLabel: String
+    // Property defaults double as CoreData migration defaults: without them the
+    // lightweight V2->V3 stage refuses to fill existing rows
+    // ("missing attribute values on mandatory destination attribute").
+    var ageDescription: String = ""
+    var gender: String = "unspecified"
+    var preferencesNote: String = ""
+    @Attribute(.externalStorage) var photoData: Data?
     var createdAt: Date
 
-    init(id: UUID = UUID(), name: String, breedKind: String, breedLabel: String = "") {
+    init(
+        id: UUID = UUID(),
+        name: String,
+        breedKind: String,
+        breedLabel: String = "",
+        ageDescription: String = "",
+        gender: String = "unspecified",
+        preferencesNote: String = "",
+        photoData: Data? = nil
+    ) {
         self.id = id
         self.name = name
         self.breedKind = breedKind
         self.breedLabel = breedLabel
+        self.ageDescription = ageDescription
+        self.gender = gender
+        self.preferencesNote = preferencesNote
+        self.photoData = photoData
         self.createdAt = .now
     }
 
@@ -24,6 +44,14 @@ final class DogRecord {
         case "known": breedLabel
         case "mixed": "Croisé"
         default: "Race inconnue"
+        }
+    }
+
+    var genderDescription: String {
+        switch gender {
+        case "male": "Mâle"
+        case "female": "Femelle"
+        default: "Non renseigné"
         }
     }
 }
