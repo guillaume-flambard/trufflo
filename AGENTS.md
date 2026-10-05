@@ -85,6 +85,30 @@ xcodebuild test \
   -destination 'platform=iOS Simulator,name=iPhone 17e'
 ```
 
+#### The two GPS journeys do not run under a bare TruffloFull
+
+`testWalkKeepsCountingWhileTheAppIsInBackground` and
+`testRevokingLocationMidWalkInterruptsWithoutInventingDistance` need the
+simulated position to move and the location permission to be revoked
+mid-walk. Both actions exist only on the host, so a bare `TruffloFull` run
+fails these two and passes the other five. That failure is a missing
+precondition, not a product defect: do not "fix" it by weakening an
+assertion or skipping the test.
+
+```bash
+tools/sim/gps-journeys.sh            # both, each in its own invocation
+tools/sim/gps-journeys.sh background
+tools/sim/gps-journeys.sh revocation
+```
+
+They are order-dependent, because the revocation journey revokes location
+for the whole simulator and starves any journey that runs after it. The
+script isolates each one in a separate xcodebuild call for that reason, so
+never run them together in one invocation.
+
+A milestone is not verified until the unit suite and these two journeys have
+both been run. The five remaining journeys need no host setup.
+
 ### Rules
 
 - Never repeatedly launch the full simulator/UI suite during implementation.

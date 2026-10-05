@@ -377,11 +377,15 @@ final class StarterUITests: XCTestCase {
     /// The F02 screen-lock recipe: two minutes away from the app must not stop
     /// the walk. XCUITest exposes no lock command on this SDK, so the test
     /// presses Home to put the app in the background, the state a locked screen
-    /// creates. A coordinator script moves the simulated position during that
-    /// window (marker file), so the trace has something to record.
+    /// creates.
+    ///
+    /// The trace needs something to record, and only the host can move a
+    /// simulated position. `tools/sim/gps-journeys.sh` starts a waypoint route
+    /// with `simctl location start` before the run, and the simulator keeps
+    /// emitting along it for the whole journey, so no in-test handshake is
+    /// needed. Run it through that script, not through a bare TruffloFull run.
     @MainActor
     func testWalkKeepsCountingWhileTheAppIsInBackground() throws {
-        try? FileManager.default.removeItem(atPath: "/tmp/trufflo-locked")
         let app = XCUIApplication()
         app.launchArguments = ["--uitesting"]
         app.launch()
@@ -414,7 +418,6 @@ final class StarterUITests: XCTestCase {
         let beforeMeters = Self.meters(from: distanceBefore) ?? 0
 
         XCUIDevice.shared.press(.home)
-        try? "background".write(toFile: "/tmp/trufflo-locked", atomically: true, encoding: .utf8)
 
         XCTAssertTrue(
             app.wait(for: .runningBackground, timeout: 5),
@@ -458,8 +461,13 @@ final class StarterUITests: XCTestCase {
 
     /// The F02 revocation recipe: losing the location permission during a live
     /// walk must interrupt it with a message, keep the known duration frozen
-    /// and invent no distance. The coordinator revokes from outside as soon as
-    /// the marker file appears.
+    /// and invent no distance.
+    ///
+    /// Only the host can revoke a permission, so this journey keeps a
+    /// handshake: the test drops the marker, `tools/sim/gps-journeys.sh`
+    /// watches for it and revokes. It also runs in its own xcodebuild
+    /// invocation, because the revocation disables location for the whole
+    /// simulator and would silently starve the next journey.
     @MainActor
     func testRevokingLocationMidWalkInterruptsWithoutInventingDistance() throws {
         try? FileManager.default.removeItem(atPath: "/tmp/trufflo-revoke-go")
