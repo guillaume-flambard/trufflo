@@ -5,6 +5,7 @@ import Foundation
 final class FakeLocationProvider: LocationProviding {
     var authorization: LocationAuthorization
     var servicesEnabled = true
+    var servicesAvailable: Bool { servicesEnabled }
     var requestGrants = true
     private(set) var startCount = 0
     private(set) var stopCount = 0

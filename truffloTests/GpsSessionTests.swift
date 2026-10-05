@@ -71,13 +71,27 @@ private func makeJournal() throws -> (ModelContainer, JournalRepository, UUID) {
 }
 
 @MainActor
-@Test func interruptionKeepsTheConfirmedDurationAndClearsTheLiveWalk() throws {
-    let (_, repository, dogID) = try makeJournal()
+@Test func interruptionKeepsTheConfirmedDurationAndStopsTheRecordingSession() async throws {
+    let (container, repository, dogID) = try makeJournal()
     let walk = try repository.startGpsSession(dogIDs: [dogID])
     try repository.interruptWalk(walk.id, confirmedSeconds: 45)
     let stored = repository.walk(id: walk.id)
     #expect(stored?.phase == .interrupted)
     #expect(stored?.confirmedSeconds == 45)
+    // The session stops recording, which is what "clears the live walk" meant.
+    // It stays unfinished, so it is still the walk a second start must find
+    // rather than bypass (spec §4, finding F3).
+    let live = repository.liveWalk()
+    #expect(live?.phase != .recording)
+    #expect(live?.phase != .paused)
+    #expect(live?.id == walk.id)
+
+    // Finishing it is what releases the slot.
+    _ = try await TrackWriter(modelContainer: container).finish(
+        confirmedSeconds: 45,
+        note: "",
+        for: walk.id
+    )
     #expect(repository.liveWalk() == nil)
 }
 
@@ -136,7 +150,10 @@ private func makeJournal() throws -> (ModelContainer, JournalRepository, UUID) {
     let stored = relaunched.walk(id: walk.id)
     #expect(stored?.phase == .interrupted)
     #expect(stored?.confirmedSeconds == 42)
-    #expect(relaunched.liveWalk() == nil)
+    // A cold launch stops the recording without inventing time, and the walk
+    // stays unfinished so the recovery screen is the only way forward.
+    #expect(relaunched.liveWalk()?.phase == .interrupted)
+    #expect(relaunched.liveWalk()?.id == walk.id)
 }
 
 @MainActor

@@ -111,13 +111,16 @@ struct JournalRepository {
         }
     }
 
-    /// The walk that is still running or paused, if any. A live session is the
-    /// state that makes a second start a no-op instead of a twin.
+    /// The walk that is still unfinished, if any. A live session is the state
+    /// that makes a second start a no-op instead of a twin. An interrupted walk
+    /// counts: it is not over until the user resumes, finishes or corrects it,
+    /// so `startGpsSession` has to hand it back rather than open a second one.
     func liveWalk() -> WalkRecord? {
         let recording = WalkPhase.recording.rawValue
         let paused = WalkPhase.paused.rawValue
+        let interrupted = WalkPhase.interrupted.rawValue
         var descriptor = FetchDescriptor<WalkRecord>(predicate: #Predicate {
-            $0.phaseRaw == recording || $0.phaseRaw == paused
+            $0.phaseRaw == recording || $0.phaseRaw == paused || $0.phaseRaw == interrupted
         })
         descriptor.fetchLimit = 1
         return try? context.fetch(descriptor).first

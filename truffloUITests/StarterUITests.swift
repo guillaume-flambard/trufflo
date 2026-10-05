@@ -555,6 +555,85 @@ final class StarterUITests: XCTestCase {
         )
     }
 
+    /// AC-006 / finding F1: a start refused by a withdrawn permission must offer
+    /// the two exits the spec names, not a dead "OK". The permission is revoked
+    /// by `tools/sim/gps-journeys.sh` before the app launches, so this journey
+    /// needs no mid-test handshake, and the refusal is proven to leave no walk
+    /// behind rather than only to look refused.
+    @MainActor
+    func testDeniedPermissionOffersSettingsAndManualEntry() throws {
+        let app = XCUIApplication()
+        app.launchArguments = ["--uitesting"]
+        app.launch()
+
+        XCTAssertTrue(app.buttons["dog.add"].waitForExistence(timeout: 5))
+        app.buttons["dog.add"].tap()
+        let name = app.textFields["dog.name"]
+        XCTAssertTrue(name.waitForExistence(timeout: 5))
+        name.tap()
+        name.typeText("Oslo")
+        app.buttons["dog.save"].tap()
+
+        let start = app.buttons["Démarrer une balade GPS"]
+        XCTAssertTrue(start.waitForExistence(timeout: 5))
+        start.tap()
+
+        XCTAssertTrue(
+            app.navigationBars["Balade en direct"].waitForExistence(timeout: 10),
+            "l'écran de balade doit s'ouvrir pour expliquer le refus"
+        )
+
+        let settings = app.buttons["walk.blocked.settings"]
+        XCTAssertTrue(
+            settings.waitForExistence(timeout: 10),
+            "un refus doit proposer d'ouvrir les réglages"
+        )
+        let manual = app.buttons["walk.blocked.manual"]
+        XCTAssertTrue(
+            manual.exists,
+            "un refus doit proposer la saisie manuelle"
+        )
+        XCTAssertTrue(
+            app.staticTexts.matching(
+                NSPredicate(format: "label CONTAINS %@", "La localisation est refusée")
+            ).firstMatch.exists,
+            "le motif du refus doit être nommé"
+        )
+        XCTAssertTrue(app.buttons["Annuler"].exists, "le refus doit rester annulable")
+
+        // A presented alert exposes its buttons twice in the accessibility
+        // snapshot, so the tap takes the first match. The count is asserted so
+        // a genuinely doubled alert would still fail here.
+        XCTAssertEqual(app.alerts.count, 1, "un seul refus doit être présenté")
+
+        // Manual entry has to be genuinely reachable, not merely present: the
+        // form is a sheet presented from inside an alert action.
+        app.buttons.matching(identifier: "walk.blocked.manual").firstMatch.tap()
+        XCTAssertTrue(
+            app.navigationBars["Ajouter une balade"].waitForExistence(timeout: 10),
+            "la saisie manuelle doit s'ouvrir depuis le refus"
+        )
+        XCTAssertTrue(app.textFields["walk.minutes"].exists)
+        app.navigationBars["Ajouter une balade"].buttons["Annuler"].tap()
+
+        // Leave the live walk screen: while the cover is up, the tab bar is not
+        // hittable and a Journal assertion would prove nothing. The sentinel is
+        // the start button, not `dog.add`: this journey created a dog, so the
+        // empty state is legitimately gone.
+        app.buttons["Fermer"].tap()
+        XCTAssertTrue(
+            app.buttons["Démarrer une balade GPS"].waitForExistence(timeout: 10),
+            "l'accueil doit réapparaître après la fermeture"
+        )
+
+        // No phantom session: a refused start must not leave a walk in the log.
+        app.tabBars.buttons["Journal"].tap()
+        XCTAssertTrue(
+            app.staticTexts["Aucune balade enregistrée"].waitForExistence(timeout: 5),
+            "un refus ne doit créer aucune balade"
+        )
+    }
+
     private static var distanceValuePredicate: NSPredicate {
         NSPredicate(format: "label MATCHES '^[0-9.,]+ (m|km)$' OR label == 'Non mesurée'")
     }

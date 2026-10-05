@@ -13,6 +13,11 @@
 #   tools/sim/gps-journeys.sh              les deux parcours
 #   tools/sim/gps-journeys.sh background   parcours arriere-plan seul
 #   tools/sim/gps-journeys.sh revocation   parcours revocation seul
+#   tools/sim/gps-journeys.sh denied       parcours refus de permission seul
+#
+# Le parcours `denied` (AC-006) ne demande aucune coordination pendant le test :
+# la permission est revoquee avant le lancement, ce qui suffit puisque le
+# refus est decision au demarrage.
 #
 # Lancement : le simulateur doit etre demarre et le projet deja compile avec
 # `build-for-testing -testPlan TruffloFull` (ce script utilise
@@ -95,20 +100,47 @@ watch_and_revoke() {
 }
 
 run_journey() {
-    local name="$1" logfile="$2"
+    local name="$1" logfile="$2" budget="${3:-300}"
     log ""
     log "=== $name ==="
     log "  journal : $logfile"
+
+    # xcodebuild does not always return once a UI journey is over: observed twice
+    # on a local run, with the test already reported as passed and the process
+    # still alive minutes later. A CI job would simply hang there, so the wait is
+    # bounded and the verdict is read from the journal, never from the exit code.
     xcodebuild test-without-building \
         -scheme trufflo \
         -testPlan TruffloFull \
         -destination "$DESTINATION" \
         -only-testing:"truffloUITests/StarterUITests/$name" \
-        >"$logfile" 2>&1
-    local status=$?
+        >"$logfile" 2>&1 &
+    local pid=$! waited=0 decided=""
+    while kill -0 "$pid" 2>/dev/null; do
+        # Le verdict est dans le journal avant que xcodebuild ne rende la main.
+        # On lit donc le journal en boucle : inutile de payer les 480 s d'attente
+        # quand le test est deja tranche depuis trois minutes.
+        if grep -qE "^Test Case .*$name\]' (passed|failed)" "$logfile"; then
+            decided=yes
+            kill -TERM "$pid" 2>/dev/null
+            sleep 2
+            kill -KILL "$pid" 2>/dev/null
+            break
+        fi
+        if [ "$waited" -ge "$budget" ]; then
+            log "  (xcodebuild ne rend pas la main après ${budget}s, arret)"
+            kill -TERM "$pid" 2>/dev/null
+            sleep 5
+            kill -KILL "$pid" 2>/dev/null
+            break
+        fi
+        sleep 2
+        waited=$((waited + 2))
+    done
+    wait "$pid" 2>/dev/null
+    [ -n "$decided" ] && log "  (verdict lu dans le journal, xcodebuild interrompu)"
 
-    # xcodebuild quitte 0 meme quand aucun test ne tourne : on lit la ligne de
-    # synthese, jamais le code de sortie.
+    # xcodebuild exits 0 even when it ran nothing: read the summary line.
     if ! grep -qE "^Test Case .*$name\]' passed" "$logfile"; then
         log "  ECHEC : $name"
         grep -E "error:|Executed [0-9]+ tests" "$logfile" | tail -5 | sed 's/^/    /'
@@ -123,7 +155,7 @@ background_journey() {
     reset_state "$id"
     start_moving_route "$id"
     run_journey testWalkKeepsCountingWhileTheAppIsInBackground \
-        "$LOG_DIR/trufflo-journey-background.log" || failures=$((failures + 1))
+        "$LOG_DIR/trufflo-journey-background.log" 480 || failures=$((failures + 1))
     xcrun simctl location "$id" clear >/dev/null 2>&1
     return $failures
 }
@@ -140,6 +172,20 @@ revocation_journey() {
     return $failures
 }
 
+denied_journey() {
+    local id="$1" failures=0
+    reset_state "$id"
+    # Revoked before the launch: Core Location reports the refusal as soon as
+    # the app asks, so no marker and no watcher are needed here.
+    xcrun simctl privacy "$id" revoke location "$BUNDLE_ID" >/dev/null 2>&1
+    run_journey testDeniedPermissionOffersSettingsAndManualEntry \
+        "$LOG_DIR/trufflo-journey-denied.log" || failures=$((failures + 1))
+    # The refusal outlives the app, so without this the next run of any GPS
+    # journey inherits a revoked permission and fails for the wrong reason.
+    xcrun simctl privacy "$id" grant location "$BUNDLE_ID" >/dev/null 2>&1
+    return $failures
+}
+
 main() {
     local wanted="${1:-all}" id status=0
     cd "$(dirname "$0")/../.." || exit 2
@@ -151,12 +197,14 @@ main() {
     case "$wanted" in
         background) background_journey "$id" || status=1 ;;
         revocation) revocation_journey "$id" || status=1 ;;
+        denied) denied_journey "$id" || status=1 ;;
         all)
             background_journey "$id" || status=1
             revocation_journey "$id" || status=1
+            denied_journey "$id" || status=1
             ;;
         *)
-            log "usage : $0 [all|background|revocation]"
+            log "usage : $0 [all|background|revocation|denied]"
             exit 2
             ;;
     esac

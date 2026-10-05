@@ -25,6 +25,10 @@ public final class CoreLocationProvider: NSObject, LocationProviding {
         Self.map(manager.authorizationStatus)
     }
 
+    public var servicesAvailable: Bool {
+        CLLocationManager.locationServicesEnabled()
+    }
+
     public func setHandler(_ handler: @escaping LocationEventHandler) {
         self.handler = handler
     }
@@ -36,7 +40,7 @@ public final class CoreLocationProvider: NSObject, LocationProviding {
     }
 
     public func start() async {
-        guard await Self.servicesEnabled() else {
+        guard servicesAvailable else {
             report(.stateChanged(.unavailable))
             return
         }
@@ -87,12 +91,6 @@ public final class CoreLocationProvider: NSObject, LocationProviding {
     private static var allowsBackgroundUpdates: Bool {
         let modes = Bundle.main.object(forInfoDictionaryKey: "UIBackgroundModes") as? [String]
         return modes?.contains("location") == true
-    }
-
-    private static func servicesEnabled() async -> Bool {
-        await Task.detached(priority: .utility) {
-            CLLocationManager.locationServicesEnabled()
-        }.value
     }
 
     private nonisolated func onMain(_ body: @escaping @MainActor () -> Void) {

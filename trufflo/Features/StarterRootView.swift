@@ -96,7 +96,14 @@ struct StarterRootView: View {
                     } else {
                         Section("Démarrer une balade") {
                             Button {
-                                if let dog = dogs.first {
+                                // An unfinished walk, interrupted included, is
+                                // not a reason to open a second session: the
+                                // repository would hand the existing one back
+                                // and the tap would look like it did nothing.
+                                // Open that one instead.
+                                if let unfinished = liveWalk {
+                                    activeWalkCover = .resume(unfinished.id)
+                                } else if dogs.first != nil {
                                     activeWalkCover = .start
                                 }
                             } label: {

@@ -109,14 +109,16 @@ struct ActiveWalkViewModelSessionTests {
         #expect(check.walk(id: viewModel.walkID ?? UUID())?.confirmedSeconds ?? 0 >= 1.0)
     }
 
-    @Test("A refused permission creates no session at all")
+    @Test("A refused permission creates no session and offers a way out")
     func deniedPermissionCreatesNoSession() throws {
         let (container, _, dogID, _, viewModel) = try makeHarness(authorization: .denied)
 
         viewModel.startSession(dogIDs: [dogID])
 
         #expect(viewModel.walkID == nil)
-        #expect(viewModel.errorMessage != nil)
+        #expect(viewModel.startBlock == .permissionDenied)
+        #expect(viewModel.startBlock?.offersSettings == true)
+        #expect(viewModel.startBlock?.message.contains("réglages") == true)
 
         let walks = try ModelContext(container).fetch(FetchDescriptor<WalkRecord>())
         #expect(walks.isEmpty)
@@ -240,6 +242,6 @@ struct ActiveWalkViewModelSessionTests {
         )
         viewModel.startSession(dogIDs: [])
         #expect(announcer.messages.isEmpty)
-        #expect(viewModel.errorMessage != nil)
+        #expect(viewModel.startBlock == .permissionDenied)
     }
 }

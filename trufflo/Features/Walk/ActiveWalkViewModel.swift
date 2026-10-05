@@ -13,10 +13,18 @@ public final class ActiveWalkViewModel: ObservableObject {
     @Published public private(set) var dogNames: [String] = []
     @Published public var note: String = ""
     @Published public var errorMessage: String?
+    /// Set when a start was refused before any session existed. The view turns
+    /// it into the alert the spec asks for: a reason, a way into Settings when
+    /// that can help, and manual entry either way.
+    @Published public private(set) var startBlock: LocationBlock?
+    /// Why a live session was interrupted, so the interrupted screen can offer
+    /// the same exits instead of a generic message.
+    @Published public private(set) var interruptionBlock: LocationBlock?
 
     private let modelContainer: ModelContainer
     private let locationProvider: LocationProviding
     private let accessibilityAnnouncer: AccessibilityAnnouncing
+    private let settingsOpener: SettingsOpening
     private let clock = ContinuousClock()
     private let checkpointInterval: TimeInterval = 15
     private let fixBatchSize = 3
@@ -32,11 +40,13 @@ public final class ActiveWalkViewModel: ObservableObject {
     public init(
         modelContainer: ModelContainer,
         locationProvider: LocationProviding = CoreLocationProvider(),
-        accessibilityAnnouncer: AccessibilityAnnouncing = SystemAccessibilityAnnouncer()
+        accessibilityAnnouncer: AccessibilityAnnouncing = SystemAccessibilityAnnouncer(),
+        settingsOpener: SettingsOpening = SystemSettingsOpener()
     ) {
         self.modelContainer = modelContainer
         self.locationProvider = locationProvider
         self.accessibilityAnnouncer = accessibilityAnnouncer
+        self.settingsOpener = settingsOpener
         self.trackWriter = TrackWriter(modelContainer: modelContainer)
         installHandler()
     }
@@ -45,17 +55,25 @@ public final class ActiveWalkViewModel: ObservableObject {
 
     public func startSession(dogIDs: [UUID]) {
         guard walkID == nil else { return }
+        startBlock = nil
         switch locationProvider.authorization {
         case .denied:
-            errorMessage = "La localisation est refusée. Autorisez-la dans les réglages pour lancer une balade."
+            startBlock = .permissionDenied
             return
         case .restricted:
-            errorMessage = "La localisation est restreinte sur cet appareil."
+            startBlock = .permissionRestricted
             return
         case .notDetermined:
             Task { await locationProvider.requestWhenInUse() }
         case .authorizedWhenInUse, .authorizedAlways:
             break
+        }
+        // A permission the user holds is not a working service. Without this
+        // check the session opened, the clock ran and no fix ever arrived, so
+        // the walk looked started and recorded nothing.
+        guard locationProvider.servicesAvailable else {
+            startBlock = .servicesUnavailable
+            return
         }
         let repository = JournalRepository(context: ModelContext(modelContainer))
         do {
@@ -64,6 +82,16 @@ public final class ActiveWalkViewModel: ObservableObject {
         } catch {
             errorMessage = "Impossible de démarrer la balade."
         }
+    }
+
+    /// Opens the app's Settings page. Used by the blocked-start alert and by the
+    /// interrupted screen, where a refusal is the one cause Settings can fix.
+    public func openSettings() {
+        settingsOpener.openAppSettings()
+    }
+
+    public func dismissStartBlock() {
+        startBlock = nil
     }
 
     public func resumeExisting(walkID: UUID) {
@@ -189,8 +217,21 @@ public final class ActiveWalkViewModel: ObservableObject {
 
     private func applyServiceState(_ state: LocationServiceState) {
         isLocationActive = (state == .active)
-        guard state == .denied || state == .restricted else { return }
-        interruptSession()
+        let block: LocationBlock?
+        switch state {
+        case .denied: block = .permissionDenied
+        case .restricted: block = .permissionRestricted
+        case .unavailable: block = .servicesUnavailable
+        default: block = nil
+        }
+        guard let block else { return }
+        // A walk that never started has no block to interrupt: report it as the
+        // reason the start was refused instead.
+        guard walkID != nil else {
+            startBlock = block
+            return
+        }
+        interruptSession(cause: block)
     }
 
     private func handleFix(_ fix: LocationFix) {
@@ -227,7 +268,7 @@ public final class ActiveWalkViewModel: ObservableObject {
 
     // MARK: - Interruption
 
-    private func interruptSession() {
+    private func interruptSession(cause: LocationBlock) {
         guard let walkID else { return }
         guard phase == .recording || phase == .paused else { return }
         if phase == .recording { endRun() }
@@ -235,11 +276,13 @@ public final class ActiveWalkViewModel: ObservableObject {
         do {
             try repository.interruptWalk(walkID, confirmedSeconds: confirmedSeconds)
         } catch {
-            errorMessage = "La localisation n'est plus disponible."
+            interruptionBlock = cause
+            errorMessage = cause.message
             Task { await locationProvider.stop() }
             return
         }
         phase = .interrupted
+        interruptionBlock = cause
         accumulatedBeforeRun = confirmedSeconds
         lastCheckpointSeconds = confirmedSeconds
         generation += 1
@@ -247,7 +290,16 @@ public final class ActiveWalkViewModel: ObservableObject {
         sendPendingFixes()
         writeCheckpoint()
         Task { await locationProvider.stop() }
-        errorMessage = "La localisation n'est plus autorisée. La balade est interrompue."
+        // The copy names the actual cause: a walk cut short by disabled location
+        // services must not claim the permission was withdrawn.
+        errorMessage = switch cause {
+        case .permissionDenied:
+            "La localisation n'est plus autorisée. La balade est interrompue."
+        case .permissionRestricted:
+            "La localisation est restreinte sur cet appareil. La balade est interrompue."
+        case .servicesUnavailable:
+            "La localisation est désactivée sur cet appareil. La balade est interrompue."
+        }
     }
 
     private func adopt(_ walk: WalkRecord, repository: JournalRepository) {

@@ -8,6 +8,12 @@ public struct ActiveWalkView: View {
     @Query private var dogs: [DogRecord]
     @State private var showFinishConfirmation = false
     @State private var showManualCorrection = false
+    /// Presentation mirror of `viewModel.startBlock`. The model stays the source
+    /// of truth for *what* blocked the start; the alert owns only its own
+    /// visibility. Writing back to the model from the dismissal closure would
+    /// publish during a view update, which SwiftUI reports as undefined
+    /// behaviour (same class as E-026).
+    @State private var blockedAlert: LocationBlock?
     private let dogIDsToStart: [UUID]
     private let walkIDToResume: UUID?
 
@@ -124,6 +130,17 @@ public struct ActiveWalkView: View {
                             .multilineTextAlignment(.center)
                             .padding(.horizontal, TruffloTheme.Spacing.medium)
 
+                        // Only a withdrawn permission can be repaired from
+                        // here. A restriction or a disabled service would send
+                        // the user to a Settings page that cannot help.
+                        if viewModel.interruptionBlock?.offersSettings == true {
+                            Button("Ouvrir les réglages") {
+                                viewModel.openSettings()
+                            }
+                            .buttonStyle(.truffloOutline)
+                            .accessibilityIdentifier("walk.interrupted.settings")
+                        }
+
                         Button("Reprendre à partir de maintenant") {
                             viewModel.resume()
                         }
@@ -181,6 +198,9 @@ public struct ActiveWalkView: View {
                     viewModel.startSession(dogIDs: dogIDsToStart)
                 }
             }
+            .onChange(of: viewModel.startBlock) { _, block in
+                blockedAlert = block
+            }
             .toolbar {
                 ToolbarItem(placement: .cancellationAction) {
                     Button("Fermer") {
@@ -215,7 +235,43 @@ public struct ActiveWalkView: View {
             } message: {
                 Text(viewModel.errorMessage ?? "")
             }
+            // A refused start is not an error string: the spec asks for the
+            // reason, a route into Settings when that can actually fix it, and
+            // manual entry either way, so a walk stays possible without GPS.
+            .alert(
+                blockedAlert?.message ?? "",
+                isPresented: Binding(
+                    get: { blockedAlert != nil },
+                    set: { if !$0 { blockedAlert = nil } }
+                )
+            ) {
+                if blockedAlert?.offersSettings == true {
+                    Button("Ouvrir les réglages") {
+                        viewModel.openSettings()
+                        clearBlockedAlert()
+                    }
+                    .accessibilityIdentifier("walk.blocked.settings")
+                    Button("Ajouter manuellement") {
+                        clearBlockedAlert()
+                        showManualCorrection = true
+                    }
+                    .accessibilityIdentifier("walk.blocked.manual")
+                    Button("Annuler") { clearBlockedAlert() }
+                } else {
+                    Button("Ajouter manuellement") {
+                        clearBlockedAlert()
+                        showManualCorrection = true
+                    }
+                    .accessibilityIdentifier("walk.blocked.manual")
+                    Button("OK") { clearBlockedAlert() }
+                }
+            }
         }
+    }
+
+    private func clearBlockedAlert() {
+        blockedAlert = nil
+        viewModel.dismissStartBlock()
     }
 
     private func formatDuration(_ seconds: TimeInterval) -> String {
