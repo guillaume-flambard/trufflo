@@ -36,6 +36,14 @@ struct ActiveWalkViewModelSessionTests {
         return fake.stopCount >= count
     }
 
+    /// Real seconds since an instant, measured with the same kind of clock the
+    /// view model uses, so a bound can follow the machine instead of assuming it.
+    private static func spent(since start: ContinuousClock.Instant) -> TimeInterval {
+        let duration = ContinuousClock.now.duration(to: start)
+        return TimeInterval(duration.components.seconds)
+            + TimeInterval(duration.components.attoseconds) / 1e18
+    }
+
     @Test("A second start keeps the running session and stays silent")
     func doubleStartKeepsOneSession() throws {
         let (container, _, dogID, _, viewModel) = try makeHarness()
@@ -140,16 +148,18 @@ struct ActiveWalkViewModelSessionTests {
         #expect(fake.startCount == 0)
 
         relaunched.resume()
-        for _ in 0..<100 where fake.startCount == 0 {
+        let resumedAt = ContinuousClock.now
+        for _ in 0..<200 where fake.startCount == 0 {
             try? await Task.sleep(for: .milliseconds(20))
         }
         #expect(relaunched.phase == .recording)
-        // The clock is running again, so the exact value depends on whether the
-        // first tick has landed: an equality here passed only because the tick
-        // had not fired yet, and failed on a slower machine. What the spec
-        // requires is that the walk continues from 42 without inventing time.
+        // The clock runs from the last checkpoint, so the ceiling is 42 plus the
+        // time that genuinely elapsed since the resume. A constant such as
+        // "< 45" only holds on a machine fast enough to reach resume within two
+        // seconds, which is exactly what a CI runner is not.
+        let ceiling = 42 + Self.spent(since: resumedAt) + 2
         #expect(relaunched.confirmedSeconds >= 42)
-        #expect(relaunched.confirmedSeconds < 45)
+        #expect(relaunched.confirmedSeconds <= ceiling)
         #expect(fake.startCount == 1)
 
         await relaunched.finish()
@@ -159,7 +169,7 @@ struct ActiveWalkViewModelSessionTests {
         let stored = try #require(JournalRepository(context: ModelContext(container)).walk(id: walk.id))
         #expect(stored.phase == .completed)
         #expect(stored.confirmedSeconds >= 42)
-        #expect(stored.confirmedSeconds < 45)
+        #expect(stored.confirmedSeconds <= ceiling)
     }
 
     @Test("Finishing an interrupted walk saves what was checkpointed and nothing more")
