@@ -3,21 +3,33 @@ import Foundation
 public enum DogError: Error, Equatable, Sendable {
     case invalidName
     case invalidBreedLabel
+    case preferencesNoteTooLong
+    case ageDescriptionTooLong
 }
 
 /// The fields a person can actually edit. Validation lives here so a form and a
 /// test agree on what is acceptable, with no SwiftUI and no SwiftData in the domain.
-///
-/// The kind is the picker's tag. A kind that carries no label must not keep a
-/// stale one, otherwise the stored profile shows a breed the picker no longer selects.
 public struct DogInput: Equatable, Sendable {
     public static let knownBreedKinds = ["unknown", "mixed", "known"]
+    public static let validGenders = ["unspecified", "male", "female"]
 
     public let name: String
     public let breedKind: String
     public let breedLabel: String
+    public let ageDescription: String
+    public let gender: String
+    public let preferencesNote: String
+    public let photoData: Data?
 
-    public init(name: String, breedKind: String, breedLabel: String = "") throws {
+    public init(
+        name: String,
+        breedKind: String,
+        breedLabel: String = "",
+        ageDescription: String = "",
+        gender: String = "unspecified",
+        preferencesNote: String = "",
+        photoData: Data? = nil
+    ) throws {
         let cleanName = name.trimmingCharacters(in: .whitespacesAndNewlines)
         guard !cleanName.isEmpty, cleanName.count <= 80 else {
             throw DogError.invalidName
@@ -29,8 +41,22 @@ public struct DogInput: Equatable, Sendable {
                 throw DogError.invalidBreedLabel
             }
         }
+        let cleanAge = ageDescription.trimmingCharacters(in: .whitespacesAndNewlines)
+        guard cleanAge.count <= 50 else {
+            throw DogError.ageDescriptionTooLong
+        }
+        let cleanNote = preferencesNote.trimmingCharacters(in: .whitespacesAndNewlines)
+        guard cleanNote.count <= 500 else {
+            throw DogError.preferencesNoteTooLong
+        }
+        let validGender = Self.validGenders.contains(gender) ? gender : "unspecified"
+
         self.name = cleanName
         self.breedKind = kind
         self.breedLabel = kind == "known" ? cleanLabel : ""
+        self.ageDescription = cleanAge
+        self.gender = validGender
+        self.preferencesNote = cleanNote
+        self.photoData = photoData
     }
 }

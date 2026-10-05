@@ -26,15 +26,16 @@ struct DogDetailView: View {
             if let dog = matches.first {
                 content(for: dog)
             } else {
-                ContentUnavailableView(
-                    "Ce profil n'existe plus",
-                    systemImage: "pawprint",
-                    description: Text("Il a été supprimé de cet appareil.")
+                TruffloEmptyStateView(
+                    imageName: "EmptyDog",
+                    title: "Ce profil n'existe plus",
+                    description: "Il a été supprimé de cet appareil."
                 )
             }
         }
         .navigationTitle(matches.first?.name ?? "Chien")
         .navigationBarTitleDisplayMode(.inline)
+        .tint(Color.truffloForest)
         .alert("Modification impossible", isPresented: Binding(
             get: { storageError != nil },
             set: { if !$0 { storageError = nil } }
@@ -49,8 +50,14 @@ struct DogDetailView: View {
     private func content(for dog: DogRecord) -> some View {
         List {
             Section("Profil") {
-                LabeledContent("Nom", value: dog.name)
-                LabeledContent("Race", value: dog.breedDescription)
+                LabeledContent("Nom") {
+                    Text(dog.name)
+                        .font(.truffloHeadline)
+                        .foregroundStyle(Color.truffloForest)
+                }
+                LabeledContent("Race") {
+                    TruffloBadge(dog.breedDescription, icon: "pawprint.fill", style: .sage)
+                }
             }
 
             Section {
@@ -58,6 +65,8 @@ struct DogDetailView: View {
                     showEdit = true
                 } label: {
                     Label("Modifier", systemImage: "pencil")
+                        .font(.truffloSubheadline)
+                        .foregroundStyle(Color.truffloForest)
                 }
                 .accessibilityIdentifier("dog.edit")
 
@@ -65,12 +74,14 @@ struct DogDetailView: View {
                     showDeleteConfirmation = true
                 } label: {
                     Label("Supprimer le profil", systemImage: "trash")
+                        .font(.truffloSubheadline)
                 }
                 .accessibilityIdentifier("dog.delete")
                 .accessibilityLabel("Supprimer le profil de \(dog.name)")
             } footer: {
                 Text("La suppression retire le profil de cet appareil. Vos balades déjà enregistrées gardent le nom de votre chien.")
-                    .font(.footnote)
+                    .font(.truffloCaption)
+                    .foregroundStyle(.secondary)
             }
         }
         .sheet(isPresented: $showEdit) { DogFormView(profile: dog) }

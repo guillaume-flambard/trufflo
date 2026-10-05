@@ -26,15 +26,16 @@ struct WalkDetailView: View {
             if let walk = matches.first {
                 content(for: walk)
             } else {
-                ContentUnavailableView(
-                    "Cette balade n'existe plus",
-                    systemImage: "book.closed",
-                    description: Text("Elle a été retirée de cet appareil.")
+                TruffloEmptyStateView(
+                    imageName: "EmptyWalk",
+                    title: "Cette balade n'existe plus",
+                    description: "Elle a été retirée de cet appareil."
                 )
             }
         }
         .navigationTitle("Balade")
         .navigationBarTitleDisplayMode(.inline)
+        .tint(Color.truffloForest)
         .alert("Modification impossible", isPresented: Binding(
             get: { storageError != nil },
             set: { if !$0 { storageError = nil } }
@@ -52,9 +53,14 @@ struct WalkDetailView: View {
                 let names = participants.map(\.dogNameSnapshot).sorted()
                 if names.isEmpty {
                     Text("Aucun chien associé à cette balade.")
+                        .font(.truffloBody)
                         .foregroundStyle(.secondary)
                 } else {
-                    ForEach(names, id: \.self) { Text($0) }
+                    HStack(spacing: TruffloTheme.Spacing.xSmall) {
+                        ForEach(names, id: \.self) { name in
+                            TruffloBadge(name, icon: "pawprint.fill", style: .sage)
+                        }
+                    }
                 }
             }
 
@@ -62,24 +68,44 @@ struct WalkDetailView: View {
                 LabeledContent("Fin de la balade") {
                     if let endedAt = walk.endedAt {
                         Text(endedAt, format: .dateTime.day().month().hour().minute())
+                            .font(.truffloSubheadline)
                     } else {
-                        Text("En cours").foregroundStyle(.secondary)
+                        TruffloBadge("En cours", icon: "record.circle", style: .peach)
                     }
                 }
-                LabeledContent("Durée", value: durationText(walk.confirmedSeconds))
-                LabeledContent("Origine", value: walk.source == .manual ? "Saisie manuelle" : "Suivi GPS")
-                LabeledContent("Qualité", value: qualityText(walk.quality))
+                LabeledContent("Durée") {
+                    Text(durationText(walk.confirmedSeconds))
+                        .font(.truffloHeadline)
+                        .foregroundStyle(Color.truffloForest)
+                }
+                LabeledContent("Origine") {
+                    TruffloBadge(walk.source == .manual ? "Saisie manuelle" : "Suivi GPS",
+                                 icon: walk.source == .manual ? "square.and.pencil" : "location.fill",
+                                 style: walk.source == .manual ? .sand : .peach)
+                }
+                LabeledContent("Qualité") {
+                    Text(qualityText(walk.quality))
+                        .font(.truffloSubheadline)
+                }
                 LabeledContent("Distance") {
                     if let meters = walk.recordedPathMeters {
                         Text(distanceText(meters))
+                            .font(.truffloHeadline)
+                            .foregroundStyle(Color.truffloForest)
                     } else {
-                        Text("Non mesurée").foregroundStyle(.secondary)
+                        Text("Non mesurée")
+                            .font(.truffloSubheadline)
+                            .foregroundStyle(.secondary)
                     }
                 }
             }
 
             if !walk.note.isEmpty {
-                Section("Note") { Text(walk.note) }
+                Section("Note") {
+                    Text(walk.note)
+                        .font(.truffloBody)
+                        .foregroundStyle(Color.truffloCharcoal)
+                }
             }
 
             Section {
@@ -87,12 +113,14 @@ struct WalkDetailView: View {
                     showDeleteConfirmation = true
                 } label: {
                     Label("Supprimer la balade", systemImage: "trash")
+                        .font(.truffloSubheadline)
                 }
                 .accessibilityIdentifier("walk.delete")
                 .accessibilityLabel(accessibilityDeleteLabel(for: walk))
             } footer: {
                 Text("La balade, les chiens qui y figurent et les points enregistrés sont retirés de cet appareil.")
-                    .font(.footnote)
+                    .font(.truffloCaption)
+                    .foregroundStyle(.secondary)
             }
         }
         .confirmationDialog("Supprimer cette balade ?", isPresented: $showDeleteConfirmation,

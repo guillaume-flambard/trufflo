@@ -18,34 +18,54 @@ struct ManualWalkFormView: View {
             Form {
                 Section("Chiens présents") {
                     ForEach(dogs) { dog in
-                        Toggle(dog.name, isOn: Binding(
+                        Toggle(isOn: Binding(
                             get: { selectedDogs.contains(dog.id) },
                             set: { selected in
                                 if selected { selectedDogs.insert(dog.id) }
                                 else { selectedDogs.remove(dog.id) }
                             }
-                        ))
+                        )) {
+                            Text(dog.name)
+                                .font(.truffloHeadline)
+                                .foregroundStyle(Color.truffloForest)
+                        }
                     }
                 }
                 Section("Balade passée") {
                     DatePicker("Fin de la balade", selection: $endedAt,
                                in: ...Date(), displayedComponents: [.date, .hourAndMinute])
+                        .font(.truffloBody)
                     TextField("Durée en minutes", text: $minutesText)
+                        .font(.truffloBody)
                         .keyboardType(.decimalPad)
                         .accessibilityIdentifier("walk.minutes")
                     TextField("Note facultative", text: $note, axis: .vertical)
+                        .font(.truffloBody)
                         .lineLimit(2...5)
                         .accessibilityIdentifier("walk.note")
                     Text("Durée déclarée. Aucune distance ni aucun pas ne sont inventés.")
-                        .font(.footnote).foregroundStyle(.secondary)
+                        .font(.truffloCaption)
+                        .foregroundStyle(.secondary)
                 }
-                if let errorMessage { Section { Text(errorMessage).foregroundStyle(.red) } }
+                if let errorMessage {
+                    Section {
+                        Text(errorMessage)
+                            .font(.truffloCaption)
+                            .foregroundStyle(.red)
+                    }
+                }
             }
             .navigationTitle("Ajouter une balade")
+            .tint(Color.truffloForest)
             .toolbar {
-                ToolbarItem(placement: .cancellationAction) { Button("Annuler") { dismiss() } }
+                ToolbarItem(placement: .cancellationAction) {
+                    Button("Annuler") { dismiss() }
+                        .font(.truffloSubheadline)
+                }
                 ToolbarItem(placement: .confirmationAction) {
                     Button("Enregistrer", action: save)
+                        .font(.truffloHeadline)
+                        .foregroundStyle(Color.truffloForest)
                         .accessibilityIdentifier("walk.save")
                 }
             }
