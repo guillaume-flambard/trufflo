@@ -44,15 +44,44 @@ device_id() {
         | head -1
 }
 
-require_booted() {
+# Une machine CI ne démarre avec aucun simulateur : en démarrer un fait partie
+# du travail, sinon le premier `simctl privacy` échoue sans explication.
+ensure_booted() {
     local id
     id="$(device_id)"
-    if [ -z "$id" ]; then
-        log "ERREUR : aucun simulateur iOS n'est demarre."
-        log "  xcrun simctl boot 'iPhone 17e' && open -a Simulator"
-        exit 2
+    if [ -n "$id" ]; then printf '%s' "$id"; return 0; fi
+
+    local wanted udid
+    wanted="$(printf '%s' "$DESTINATION" | sed -n 's/.*name=\(.*\)/\1/p')"
+    if [ -n "$wanted" ]; then
+        udid="$(xcrun simctl list devices available \
+            | sed -n "s/.*${wanted} (\([0-9A-F-]\{36\}\)) (.*/\1/p" | head -1)"
     fi
-    printf '%s' "$id"
+    if [ -z "$udid" ]; then
+        udid="$(xcrun simctl list devices available \
+            | sed -n 's/.*iPhone[^ (]*[e ]*(\([0-9A-F-]\{36\}\)) (Shutdown)/\1/p' | head -1)"
+    fi
+    [ -n "$udid" ] || return 1
+
+    log "  aucun simulateur démarré, démarrage de $udid" >&2
+    xcrun simctl boot "$udid" >/dev/null 2>&1
+    local i=0
+    while [ "$i" -lt 60 ]; do
+        id="$(device_id)"
+        [ -n "$id" ] && { printf '%s' "$id"; return 0; }
+        sleep 2
+        i=$((i + 2))
+    done
+    return 1
+}
+
+require_booted() {
+    local id
+    id="$(ensure_booted)" && { printf '%s' "$id"; return 0; }
+    log "ERREUR : aucun simulateur iOS disponible et aucun démarrage possible."
+    log "  Sur un runner, vérifier que le runtime iOS est installé :"
+    log "  xcrun simctl list runtimes"
+    return 2
 }
 
 # Une permission|location revoquee laisse le gestionnaire Core Location muet pour
@@ -175,8 +204,8 @@ revocation_journey() {
 denied_journey() {
     local id="$1" failures=0
     reset_state "$id"
-    # Revoked before the launch: Core Location reports the refusal as soon as
-    # the app asks, so no marker and no watcher are needed here.
+    # Revoked before the launch: Core Location reports the refusal as soon
+    # as the app asks, so no marker and no watcher are needed here.
     xcrun simctl privacy "$id" revoke location "$BUNDLE_ID" >/dev/null 2>&1
     run_journey testDeniedPermissionOffersSettingsAndManualEntry \
         "$LOG_DIR/trufflo-journey-denied.log" || failures=$((failures + 1))
@@ -186,11 +215,91 @@ denied_journey() {
     return $failures
 }
 
+run_journey() {
+    local name="$1" logfile="$2" budget="${3:-300}"
+    log ""
+    log "=== $name ==="
+    log "  journal : $logfile"
+
+    # xcodebuild does not always return once a UI journey is over: observed twice
+    # on a local run, with the test already reported as passed and the process
+    # still alive minutes later. A CI job would simply hang there, so the wait is
+    # bounded and the verdict is read from the journal, never from the exit code.
+    xcodebuild test-without-building \
+        -scheme trufflo \
+        -testPlan TruffloFull \
+        -destination "$DESTINATION" \
+        -only-testing:"truffloUITests/StarterUITests/$name" \
+        >"$logfile" 2>&1 &
+    local pid=$! waited=0 decided=""
+    while kill -0 "$pid" 2>/dev/null; do
+        # Le verdict est dans le journal avant que xcodebuild ne rende la main.
+        # On lit donc le journal en boucle : inutile de payer les 480 s d'attente
+        # quand le test est deja tranche depuis trois minutes.
+        if grep -qE "^Test Case .*$name\]' (passed|failed)" "$logfile"; then
+            decided=yes
+            kill -TERM "$pid" 2>/dev/null
+            sleep 2
+            kill -KILL "$pid" 2>/dev/null
+            break
+        fi
+        if [ "$waited" -ge "$budget" ]; then
+            log "  (xcodebuild ne rend pas la main après ${budget}s, arret)"
+            kill -TERM "$pid" 2>/dev/null
+            sleep 5
+            kill -KILL "$pid" 2>/dev/null
+            break
+        fi
+        sleep 2
+        waited=$((waited + 2))
+    done
+    wait "$pid" 2>/dev/null
+    [ -n "$decided" ] && log "  (verdict lu dans le journal, xcodebuild interrompu)"
+
+    # xcodebuild exits 0 even when it ran nothing: read the summary line.
+    if ! grep -qE "^Test Case .*$name\]' passed" "$logfile"; then
+        log "  ECHEC : $name"
+        grep -E "error:|Executed [0-9]+ tests" "$logfile" | tail -5 | sed 's/^/    /'
+        return 1
+    fi
+    log "  OK : $(grep -E "^Test Case .*$name\]' passed" "$logfile" | tail -1 | sed -E 's/.*passed \((.*)\).*/\1/')"
+    return 0
+}
+
+background_journey() {
+    local id="$1" failures=0
+    reset_state "$id"
+    start_moving_route "$id"
+    run_journey testWalkKeepsCountingWhileTheAppIsInBackground \
+        "$LOG_DIR/trufflo-journey-background.log" 480 || failures=$((failures + 1))
+    xcrun simctl location "$id" clear >/dev/null 2>&1
+    return $failures
+}
+
+revocation_journey() {
+    local id="$1" failures=0
+    reset_state "$id"
+    xcrun simctl location "$id" set "${ORIGIN_LAT},${ORIGIN_LON}" >/dev/null 2>&1
+    watch_and_revoke "$id" &
+    local watcher=$!
+    run_journey testRevokingLocationMidWalkInterruptsWithoutInventingDistance \
+        "$LOG_DIR/trufflo-journey-revocation.log" || failures=$((failures + 1))
+    wait "$watcher" 2>/dev/null
+    return $failures
+}
+
+# Le refus n'est un refus que si la permission a déjà été demandée une fois.
+# CoreSimulator n'écrit un enregistrement TCC qu'après une demande réelle de
+# l'app : sur un simulateur neuf, `grant` puis `revoke` ne produisent rien et
+# l'app démarre en « non Determinée », avec l'invite système à la place de
+# l'alerte attendue. On le dit plutôt que de laisser une assertion échouer.
+
+
 main() {
     local wanted="${1:-all}" id status=0
     cd "$(dirname "$0")/../.." || exit 2
 
-    id="$(require_booted)"
+    id="$(require_booted)" || exit $?
     log "simulateur : $id"
     log "destination : $DESTINATION"
 
