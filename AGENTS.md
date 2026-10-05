@@ -85,29 +85,39 @@ xcodebuild test \
   -destination 'platform=iOS Simulator,name=iPhone 17e'
 ```
 
-#### The two GPS journeys do not run under a bare TruffloFull
+#### Five journeys need host setup, not two
 
-`testWalkKeepsCountingWhileTheAppIsInBackground` and
-`testRevokingLocationMidWalkInterruptsWithoutInventingDistance` need the
-simulated position to move and the location permission to be revoked
-mid-walk. Both actions exist only on the host, so a bare `TruffloFull` run
-fails these two and passes the other five. That failure is a missing
-precondition, not a product defect: do not "fix" it by weakening an
-assertion or skipping the test.
+`TruffloFast` is the unit gate and runs anywhere. Of the eight UI journeys,
+only three touch no location at all and need nothing but a booted
+simulator: `testCreateDogAndRecordManualWalk`,
+`testEmptyJournalStateAndGlobalErasure` and
+`testEditDogProfileAndDeleteSingleWalk`.
+
+The other five start a real GPS session, so they need host-side state: the
+location permission granted, and a simulated position on the simulator.
+Both are set with `simctl`, which does not exist inside the simulator.
+A bare `xcodebuild test -testPlan TruffloFull` therefore leaves five
+journeys red, and that failure is a missing precondition, not a product
+defect. Do not "fix" it by weakening an assertion or skipping a test.
 
 ```bash
-tools/sim/gps-journeys.sh            # both, each in its own invocation
-tools/sim/gps-journeys.sh background
-tools/sim/gps-journeys.sh revocation
+tools/sim/gps-journeys.sh            # the five GPS journeys, each isolated
+tools/sim/gps-journeys.sh manual     # the three without location
+tools/sim/gps-journeys.sh all        # everything
+tools/sim/gps-journeys.sh background # one named journey
 ```
 
-They are order-dependent, because the revocation journey revokes location
-for the whole simulator and starves any journey that runs after it. The
-script isolates each one in a separate xcodebuild call for that reason, so
-never run them together in one invocation.
+Each journey runs in its own `xcodebuild` invocation. That matters because
+the revocation journey revokes location for the whole simulator and
+starves whatever runs after it, so they must never share an invocation.
 
-A milestone is not verified until the unit suite and these two journeys have
-both been run. The five remaining journeys need no host setup.
+The script boots a simulator if none is running, which is the state of a
+CI runner, and reads each verdict from the journal because `xcodebuild`
+both exits 0 when it ran nothing and sometimes never returns after a UI
+journey.
+
+A milestone is not verified until `TruffloFast` and this script have both
+been run.
 
 ### Rules
 

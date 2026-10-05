@@ -1,0 +1,104 @@
+name: CI
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+
+# A concurrent push on the same ref makes the older run irrelevant.
+concurrency:
+  group: ci-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  unit:
+    name: iOS unit tests
+    # macos-26 cannot build this project: IPHONEOS_DEPLOYMENT_TARGET is 27.0
+    # and that image ships no iOS 27 SDK. xcode-27 is a public preview running
+    # a beta Xcode, which is the price of gating on the toolchain the app is
+    # actually verified against. See docs/decisions/0006-ci-runner-image.md.
+    runs-on: xcode-27
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Select the iPhone simulator
+        id: device
+        run: |
+          set -euo pipefail
+          name="$(xcrun simctl list devices available \
+            | sed -n 's/.*iPhone \([^ (]*\) (.*/\1/p' \
+            | grep -E '^(17|16)' | head -1)"
+          echo "device=$name" >> "$GITHUB_OUTPUT"
+          echo "Using simulator: $name"
+
+      - name: Report the toolchain
+        run: |
+          xcodebuild -version
+          xcrun simctl list runtimes
+
+      - name: Build for testing
+        run: |
+          xcodebuild build-for-testing \
+            -scheme trufflo -testPlan TruffloFast \
+            -destination "platform=iOS Simulator,name=${{ steps.device.outputs.device }}"
+
+      - name: Unit tests
+        run: |
+          xcodebuild test-without-building \
+            -scheme trufflo -testPlan TruffloFast \
+            -destination "platform=iOS Simulator,name=${{ steps.device.outputs.device }}" \
+            | tee unit.log
+          # xcodebuild exits 0 when it ran nothing, so read the summary line.
+          grep -qE "Test run with [0-9]+ tests.*passed" unit.log
+
+      - name: Upload unit log
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: unit-log
+          path: unit.log
+
+  journeys:
+    name: iOS UI journeys
+    runs-on: xcode-27
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Select the iPhone simulator
+        id: device
+        run: |
+          set -euo pipefail
+          name="$(xcrun simctl list devices available \
+            | sed -n 's/.*iPhone \([^ (]*\) (.*/\1/p' \
+            | grep -E '^(17|16)' | head -1)"
+          echo "device=$name" >> "$GITHUB_OUTPUT"
+          echo "Using simulator: $name"
+
+      - name: Build for testing
+        run: |
+          xcodebuild build-for-testing \
+            -scheme trufflo -testPlan TruffloFull \
+            -destination "platform=iOS Simulator,name=${{ steps.device.outputs.device }}"
+
+      # The script starts a simulator if needed, sets the location permission
+      # and a simulated position per journey, and isolates each journey in its
+      # own invocation. A bare TruffloFull run leaves five of them red.
+      - name: UI journeys
+        run: |
+          set -o pipefail
+          TRUFFLO_DESTINATION="platform=iOS Simulator,name=${{ steps.device.outputs.device }}" \
+            tools/sim/gps-journeys.sh all 2>&1 | tee journeys.log
+
+      - name: Upload journey logs
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: journey-logs
+          path: |
+            journeys.log
+            /tmp/trufflo-journeys-manual.log
+            /tmp/trufflo-journey-start-pause-resume.log
+            /tmp/trufflo-journey-cold-relaunch.log
+            /tmp/trufflo-journey-background.log
+            /tmp/trufflo-journey-revocation.log
+            /tmp/trufflo-journey-denied.log
