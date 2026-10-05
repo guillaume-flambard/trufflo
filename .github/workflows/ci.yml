@@ -25,9 +25,7 @@ jobs:
         id: device
         run: |
           set -euo pipefail
-          name="$(xcrun simctl list devices available \
-            | sed -n 's/.*iPhone \([^ (]*\) (.*/\1/p' \
-            | grep -E '^(17|16)' | head -1)"
+          name="$(tools/sim/select-simulator.sh)"
           echo "device=$name" >> "$GITHUB_OUTPUT"
           echo "Using simulator: $name"
 
@@ -68,9 +66,7 @@ jobs:
         id: device
         run: |
           set -euo pipefail
-          name="$(xcrun simctl list devices available \
-            | sed -n 's/.*iPhone \([^ (]*\) (.*/\1/p' \
-            | grep -E '^(17|16)' | head -1)"
+          name="$(tools/sim/select-simulator.sh)"
           echo "device=$name" >> "$GITHUB_OUTPUT"
           echo "Using simulator: $name"
 
