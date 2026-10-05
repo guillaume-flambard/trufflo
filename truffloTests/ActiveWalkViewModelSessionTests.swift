@@ -144,7 +144,12 @@ struct ActiveWalkViewModelSessionTests {
             try? await Task.sleep(for: .milliseconds(20))
         }
         #expect(relaunched.phase == .recording)
-        #expect(relaunched.confirmedSeconds == 42)
+        // The clock is running again, so the exact value depends on whether the
+        // first tick has landed: an equality here passed only because the tick
+        // had not fired yet, and failed on a slower machine. What the spec
+        // requires is that the walk continues from 42 without inventing time.
+        #expect(relaunched.confirmedSeconds >= 42)
+        #expect(relaunched.confirmedSeconds < 45)
         #expect(fake.startCount == 1)
 
         await relaunched.finish()

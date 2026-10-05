@@ -18,6 +18,10 @@ jobs:
     # a beta Xcode, which is the price of gating on the toolchain the app is
     # actually verified against. See docs/decisions/0006-ci-runner-image.md.
     runs-on: xcode-27
+    # xcodebuild has been seen to sit for minutes after a test run reported
+    # its result, so a job needs a ceiling of its own rather than the default
+    # six hours.
+    timeout-minutes: 25
     steps:
       - uses: actions/checkout@v4
 
@@ -59,6 +63,8 @@ jobs:
   journeys:
     name: iOS UI journeys
     runs-on: xcode-27
+    # Eight journeys, each with its own invocation and its own simulator state.
+    timeout-minutes: 60
     steps:
       - uses: actions/checkout@v4
 
