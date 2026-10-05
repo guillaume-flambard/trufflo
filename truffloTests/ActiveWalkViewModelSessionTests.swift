@@ -38,8 +38,9 @@ struct ActiveWalkViewModelSessionTests {
 
     /// Real seconds since an instant, measured with the same kind of clock the
     /// view model uses, so a bound can follow the machine instead of assuming it.
+    /// `duration(to:)` measures `self → other`, so the start comes first.
     private static func spent(since start: ContinuousClock.Instant) -> TimeInterval {
-        let duration = ContinuousClock.now.duration(to: start)
+        let duration = start.duration(to: ContinuousClock.now)
         return TimeInterval(duration.components.seconds)
             + TimeInterval(duration.components.attoseconds) / 1e18
     }
@@ -158,6 +159,11 @@ struct ActiveWalkViewModelSessionTests {
         // "< 45" only holds on a machine fast enough to reach resume within two
         // seconds, which is exactly what a CI runner is not.
         let ceiling = 42 + Self.spent(since: resumedAt) + 2
+        // Guards the measurement itself: `duration(to:)` reads self → other, so
+        // an inverted call returns a negative elapsed time and silently turns
+        // the ceiling into a floor. That passed locally, where elapsed is near
+        // zero, and only failed on a slower runner.
+        #expect(Self.spent(since: resumedAt) >= 0)
         #expect(relaunched.confirmedSeconds >= 42)
         #expect(relaunched.confirmedSeconds <= ceiling)
         #expect(fake.startCount == 1)
