@@ -17,6 +17,8 @@ struct TruffloDogPortraitHero<Footer: View>: View {
     @ViewBuilder var footer: () -> Footer
 
     @State private var image: UIImage?
+    /// Where in the photo the animal is, from 0 to 1, `y` from the top.
+    @State private var focus = FocalCrop.fallbackFocus
 
     /// Decoded to the width of the largest iPhone at 3x, not to the stored size.
     private var maxPixel: CGFloat { 1400 }
@@ -50,26 +52,31 @@ struct TruffloDogPortraitHero<Footer: View>: View {
         .accessibilityElement(children: .contain)
         .task(id: photoData) {
             image = photoData.flatMap { TruffloDogPortrait.downsampled($0, to: maxPixel) }
+            // Off the main thread: Vision is synchronous.
+            focus = await Task.detached(priority: .userInitiated) { [image] in
+                image?.cgImage.map(DogFocus.focus(in:)) ?? FocalCrop.fallbackFocus
+            }.value
         }
     }
 
     @ViewBuilder
     private var backdrop: some View {
         if let image {
-            Color.clear
-                .overlay {
-                    Image(uiImage: image)
-                        .resizable()
-                        .scaledToFill()
-                        .accessibilityLabel("Photo de \(name)")
-                }
-                .clipped()
-                .overlay {
-                    LinearGradient(stops: [.init(color: .clear, location: 0),
-                                           .init(color: .clear, location: 0.4),
-                                           .init(color: Color.black.opacity(0.62), location: 1)],
-                                   startPoint: .top, endPoint: .bottom)
-                }
+            GeometryReader { proxy in
+                let crop = FocalCrop.layout(imageSize: image.size, frame: proxy.size, focus: focus)
+                Image(uiImage: image)
+                    .resizable()
+                    .frame(width: crop.size.width, height: crop.size.height)
+                    .offset(x: crop.offset.x, y: crop.offset.y)
+                    .accessibilityLabel("Photo de \(name)")
+            }
+            .clipped()
+            .overlay {
+                LinearGradient(stops: [.init(color: .clear, location: 0),
+                                       .init(color: .clear, location: 0.4),
+                                       .init(color: Color.black.opacity(0.62), location: 1)],
+                               startPoint: .top, endPoint: .bottom)
+            }
         } else {
             Color(red: 0.83, green: 0.92, blue: 0.88)
                 .overlay(alignment: .center) {

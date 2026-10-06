@@ -79,6 +79,12 @@ PRD F13). Les photos déjà stockées sont traitées à la première lecture ou 
 **A-REQ-09, la CI échoue pour de vrai.** Le contrôle du journal de tests exige un nombre de tests
 strictement positif, et le code de sortie de `xcodebuild` traverse les tubes.
 
+**A-REQ-10, le portrait vise le chien (ajoutée le 2026-10-07).** Une photo n'est pas recadrée au
+centre : le portrait de Aujourd'hui et du Profil vise l'animal. Trouvé sur une vraie photo : au
+recadrage centré, la tête d'un border collie était coupée en haut du cadre. Le point visé vient de la
+détection d'animaux de Vision (`VNRecognizeAnimalsRequest`, iOS 13 et plus), dans le haut de la boîte
+du chien ; sans détection, on vise le haut du cadre (35 % depuis le haut). Rien ne quitte l'iPhone.
+
 ## 3. Critères d'acceptation
 
 | ID | Exigence | Étant donné | Quand | Alors | Preuve |
@@ -117,6 +123,8 @@ strictement positif, et le code de sortie de `xcodebuild` traverse les tubes.
 - Résumé de balade et écran de balade en direct : ils suivent déjà DESIGN-SYSTEM, revus plus tard.
 - Toute suggestion ou routine dépendant de la race.
 
+| A-AC-17 | REQ-10 | une photo de chien portrait où le chien est haut dans le cadre | on ouvre Aujourd'hui | la tête est visible, pas coupée | unitaire (géométrie) + capture. **Détection Vision : vérifiée sur Mac seulement** (les trois photos y donnent un chien, boîte et point visé cohérents) ; **non exercée sur simulateur** (Vision y échoue : « Could not create inference context ») **ni sur iPhone**. Sur simulateur, c'est le repli qui recadre. |
+
 ## 6. Matrice de captures de fin de lot
 
 Même build, simulateur iPhone 17e, mode clair. Pour chaque cas : Aujourd'hui, Journal, Profil.
@@ -131,8 +139,19 @@ Même build, simulateur iPhone 17e, mode clair. Pour chaque cas : Aujourd'hui, J
 | Foyer | balades d'un autre membre et doublon signalé |
 | Grand texte | taille d'accessibilité maximale |
 
-Les photos de test sont de vraies photos de chien fournies par Guillaume, jamais livrées dans
-l'app. Le réglage `TRUFFLO_DEMO_PHOTO` (DEBUG seulement) les injecte dans le mode démo.
+Les photos de test ne sont jamais livrées dans l'app. Le réglage `TRUFFLO_DEMO_PHOTO` (DEBUG
+seulement) les injecte dans le mode démo. Trois photos libres de droits (Wikimedia Commons, licence
+relue au moment du téléchargement, le 2026-10-07) :
+
+| Fichier Commons | Licence | Auteur | Sert à |
+|---|---|---|---|
+| `Blue merle border collie.jpg` | CC0 | Hehehefein | portrait 3:4, chien haut dans le cadre |
+| `Mixed-breed dog black lying.jpg` | domaine public | Schapenlover (Wikipédia néerlandaise) | paysage, chien noir, croisé |
+| `Sunny the German Shepherd puppy (2009).jpg` | domaine public | Duró Sándor | portrait 3:4, visage qui remplit le cadre |
+
+Ce sont des photos d'animaux de particuliers : on les utilise pour des captures, pas comme des
+photos de chiens de l'app. Les vraies photos de chien de Guillaume restent à faire pour la dernière
+passe, parce qu'une photo de téléphone du quotidien se comporte autrement.
 
 ## 7. Décisions dont dépend ce lot
 
