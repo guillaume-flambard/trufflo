@@ -1,6 +1,6 @@
 # 0010 : le modèle des sorties collectives (lot C)
 
-Statut : **proposé le 2026-10-07, à relire avant toute migration** (spec
+Statut : **accepté le 2026-10-07** (recommandations retenues par Guillaume, qui écrit le serveur ; le client est construit contre ce contrat). Noms à fournir : zone pilote (D5), modérateur (D6), organisateurs. Point de rendez-vous en texte seul retenu. (spec
 `docs/specs/C-premiere-sortie.md`, C-REQ-01). Rien de ce document n'existe en base.
 
 Exigences du PRD couvertes : F09 (proposer une balade locale), F10 (participation), F11
@@ -115,3 +115,57 @@ qu'un besoin non couvert par `event_updates` soit constaté (spec C, §5).
 5. **Le point de rendez-vous en texte seul** : suffisant pour le pilote ? L'alternative (une
    coordonnée choisie sur une carte, publique, non liée à la personne) ajoute un risque de
    localisation et une revue de confidentialité.
+
+## Contrat client
+
+Ce que l'app attend du serveur. La source en Swift est `trufflo/Domain/CommunityRemote.swift` ; les
+règles sont exécutées par `trufflo/Features/Community/InMemoryCommunityServer.swift` et figées par
+`truffloTests/CommunityRulesTests.swift`. Le serveur réel doit tenir les mêmes tests, écrits en
+pgTAP.
+
+### Fonctions appelées par le client
+
+| Client (`CommunityRemote`) | Serveur | Forme |
+|---|---|---|
+| `zones()` | table `community_zones` | lecture, zones ouvertes seulement |
+| `myProfile()`, `saveProfile` | `community_profiles` | `saveProfile` refuse sans `adult_declared` vrai ; la date de déclaration ne se réécrit pas |
+| `myDogs()`, `saveDog`, `deleteDog` | `community_dogs` | le propriétaire seulement |
+| `events(zoneID)` | vue ou fonction `visible_events` | sorties `published` de la zone, à partir d'hier, blocs retirés dans les deux sens ; colonnes de `WalkEventDTO`, dont `organizer_name`, `humans_accepted`, `dogs_accepted`, `my_status` |
+| `myEvents()` | idem | sorties organisées ou avec une demande, toutes dates |
+| `participants(eventID)` | `list_participants(event)` | organisateur : tous ; participant accepté : les acceptés (sans la colonne `attended`) ; sinon refus |
+| `updates(eventID)` | `list_event_updates(event)` | organisateur, demandeur, accepté |
+| `requestToJoin` | `request_to_join(event, dog_ids)` | rpc |
+| `withdraw`, `declareAttendance` | `withdraw(event)`, `declare_attendance(event, attended)` | rpc |
+| `isOrganizer(zoneID)` | table `community_organizers` | booléen pour `auth.uid()` |
+| `createEvent`, `updateEvent`, `cancelEvent` | `create_event`, `update_event`, `cancel_event` | rpc, organisateur seulement |
+| `decide` | `decide_request(event, user, accept)` | rpc, verrou `FOR UPDATE` sur la sortie |
+| `report`, `block`, `unblock` | `report`, `block`, `unblock` | rpc |
+
+Les noms de colonnes JSON sont les `CodingKeys` des DTO (`snake_case`).
+
+### Messages d'erreur que le client reconnaît
+
+Le client lit le texte de l'exception du serveur (`CommunityError(serverMessage:)`) :
+
+| Le message contient | Le client affiche |
+|---|---|
+| `event full` | « La sortie est complète. » |
+| `event gone` | « Cette sortie n'est plus disponible. » |
+| `blocked` | « Vous ne pouvez pas rejoindre cette sortie. » |
+| `no profile` | l'écran de création de profil |
+| `not allowed` | « Action non autorisée. » |
+| autre | « Le serveur n'a pas répondu. Réessayez. » |
+
+### Règles que les tests figent (à reprendre en pgTAP)
+
+1. Sans profil valide, ou suspendu, ou sans déclaration d'âge : aucune lecture ni écriture.
+2. Une zone ne voit que ses propres sorties ; une zone fermée ne voit rien.
+3. Les participants ne sont jamais lisibles à plat : organisateur ou accepté seulement.
+4. Dernière place : deux acceptations concurrentes, une seule passe ; capacité humaine et capacité
+   canine sont deux contrôles.
+5. Inscription et présence sont deux états ; la présence ne se déclare qu'après la fin de la sortie
+   et seulement par un accepté.
+6. Un blocage retire sorties et demandes dans les deux sens.
+7. Seul un organisateur inscrit crée une sortie ; seul son organisateur décide, modifie, annule.
+8. Un changement d'heure ou de lieu écrit une mise à jour que voient les inscrits.
+9. Se retirer libère la place.

@@ -1,0 +1,274 @@
+#if DEBUG
+import Foundation
+
+/// An in-memory community server that applies the rules of ADR 0010: who sees
+/// what, the capacity check, blocks in both directions, inscription apart from
+/// attendance. It is the reference the client is tested against and what the
+/// demo mode runs on, until the real server exists. Never compiled into a
+/// release build, so production shows no event it did not receive.
+final class InMemoryCommunityServer: @unchecked Sendable {
+    struct Event {
+        var dto: WalkEventDTO
+        var updates: [EventUpdateDTO] = []
+    }
+    struct Participation {
+        var status: ParticipationStatus
+        var dogIDs: [UUID]
+        var attended: Bool?
+    }
+    struct Report: Equatable {
+        var reporter: UUID
+        var target: ReportTarget
+        var targetID: UUID
+        var reason: ReportReason
+    }
+
+    private let lock = NSLock()
+    var clock: () -> Date = { .now }
+    private(set) var zones: [CommunityZone] = []
+    private var closedZones: Set<String> = []
+    private(set) var profiles: [UUID: CommunityProfileDTO] = [:]
+    private(set) var dogs: [UUID: CommunityDogDTO] = [:]
+    private(set) var organizers: [UUID: Set<String>] = [:]
+    private(set) var events: [UUID: Event] = [:]
+    private(set) var participations: [UUID: [UUID: Participation]] = [:]
+    private(set) var reports: [Report] = []
+    private(set) var blocks: Set<[UUID]> = []
+    private(set) var calls: [String] = []
+    var failure: CommunityError?
+
+    func client(_ user: UUID) -> InMemoryCommunityRemote { InMemoryCommunityRemote(server: self, user: user) }
+
+    // MARK: Setup, as the migrations and the moderator would do it
+
+    func addZone(_ zone: CommunityZone, open: Bool = true) {
+        zones.append(zone)
+        if !open { closedZones.insert(zone.id) }
+    }
+    func makeOrganizer(_ user: UUID, in zone: String) { organizers[user, default: []].insert(zone) }
+    func suspend(_ user: UUID) { profiles[user]?.suspended = true }
+
+    // MARK: Rules
+
+    fileprivate func run<T>(_ name: String, _ body: () throws -> T) throws -> T {
+        lock.lock(); defer { lock.unlock() }
+        calls.append(name)
+        if let failure { throw failure }
+        return try body()
+    }
+
+    private func valid(_ user: UUID) throws -> CommunityProfileDTO {
+        guard let profile = profiles[user], !profile.suspended else { throw CommunityError.noProfile }
+        return profile
+    }
+
+    private func areBlocked(_ a: UUID, _ b: UUID) -> Bool { blocks.contains([a, b]) || blocks.contains([b, a]) }
+
+    fileprivate func openZones() -> [CommunityZone] { zones.filter { !closedZones.contains($0.id) } }
+
+    fileprivate func visibleEvents(to user: UUID, zone: String) throws -> [WalkEventDTO] {
+        let me = try valid(user)
+        guard me.zoneID == zone, !closedZones.contains(zone) else { return [] }
+        let since = clock().addingTimeInterval(-86400)
+        return events.values.map(\.dto)
+            .filter { $0.zoneID == zone && $0.status == .published && $0.startsAt >= since && !areBlocked($0.organizerID, user) }
+            .map { withMine($0, user) }
+            .sorted { $0.startsAt < $1.startsAt }
+    }
+
+    private func withMine(_ dto: WalkEventDTO, _ user: UUID) -> WalkEventDTO {
+        var out = dto
+        out.myStatus = participations[dto.id]?[user]?.status
+        let accepted = participations[dto.id]?.values.filter { $0.status == .accepted } ?? []
+        out.humansAccepted = accepted.count
+        out.dogsAccepted = accepted.reduce(0) { $0 + $1.dogIDs.count }
+        return out
+    }
+
+    fileprivate func mine(_ user: UUID) throws -> [WalkEventDTO] {
+        _ = try valid(user)
+        return events.values.map(\.dto)
+            .filter { $0.organizerID == user || participations[$0.id]?[user] != nil }
+            .map { withMine($0, user) }
+            .sorted { $0.startsAt > $1.startsAt }
+    }
+
+    fileprivate func request(_ user: UUID, _ eventID: UUID, _ dogIDs: [UUID]) throws {
+        let me = try valid(user)
+        guard let event = events[eventID]?.dto else { throw CommunityError.eventGone }
+        guard event.status == .published, event.startsAt > clock(), event.zoneID == me.zoneID else { throw CommunityError.eventGone }
+        guard !areBlocked(event.organizerID, user) else { throw CommunityError.blocked }
+        guard event.organizerID != user else { throw CommunityError.notAllowed }
+        guard dogIDs.allSatisfy({ dogs[$0]?.ownerID == user }) else { throw CommunityError.notAllowed }
+        if let existing = participations[eventID]?[user]?.status, existing == .requested || existing == .accepted { return }
+        participations[eventID, default: [:]][user] = Participation(status: .requested, dogIDs: dogIDs, attended: nil)
+    }
+
+    fileprivate func decide(_ organizer: UUID, _ eventID: UUID, _ user: UUID, accept: Bool) throws {
+        _ = try valid(organizer)
+        guard let event = events[eventID]?.dto, event.organizerID == organizer else { throw CommunityError.notAllowed }
+        guard event.status == .published else { throw CommunityError.eventGone }
+        guard var request = participations[eventID]?[user], request.status == .requested else { throw CommunityError.notAllowed }
+        if accept {
+            let current = withMine(event, organizer)
+            if current.humansAccepted + 1 > event.humanCapacity || current.dogsAccepted + request.dogIDs.count > event.dogCapacity {
+                throw CommunityError.eventFull
+            }
+        }
+        request.status = accept ? .accepted : .declined
+        participations[eventID]?[user] = request
+    }
+
+    fileprivate func withdraw(_ user: UUID, _ eventID: UUID) throws {
+        _ = try valid(user)
+        participations[eventID]?[user]?.status = .withdrawn
+    }
+
+    fileprivate func attendance(_ user: UUID, _ eventID: UUID, _ attended: Bool) throws {
+        _ = try valid(user)
+        guard let event = events[eventID]?.dto, event.endsAt <= clock(),
+              participations[eventID]?[user]?.status == .accepted else { throw CommunityError.notAllowed }
+        participations[eventID]?[user]?.attended = attended
+    }
+
+    fileprivate func create(_ user: UUID, _ draft: WalkEventDraft, _ zone: String) throws -> UUID {
+        let me = try valid(user)
+        guard organizers[user]?.contains(zone) == true, me.zoneID == zone else { throw CommunityError.notAllowed }
+        let id = UUID()
+        events[id] = Event(dto: WalkEventDTO(
+            id: id, organizerID: user, organizerName: me.displayName, zoneID: zone, startsAt: draft.startsAt,
+            durationMinutes: draft.durationMinutes, meetingPoint: draft.meetingPoint, rules: draft.rules,
+            humanCapacity: draft.humanCapacity, dogCapacity: draft.dogCapacity, humansAccepted: 0, dogsAccepted: 0,
+            status: .published, myStatus: nil))
+        return id
+    }
+
+    fileprivate func update(_ user: UUID, _ eventID: UUID, startsAt: Date, meetingPoint: String) throws {
+        guard var event = events[eventID], event.dto.organizerID == user, event.dto.status == .published else { throw CommunityError.notAllowed }
+        let now = clock()
+        if startsAt != event.dto.startsAt {
+            event.updates.append(EventUpdateDTO(id: UUID(), eventID: eventID, kind: .time,
+                                                previous: event.dto.startsAt.formatted(), current: startsAt.formatted(), createdAt: now))
+            event.dto.startsAt = startsAt
+        }
+        if meetingPoint != event.dto.meetingPoint {
+            event.updates.append(EventUpdateDTO(id: UUID(), eventID: eventID, kind: .place,
+                                                previous: event.dto.meetingPoint, current: meetingPoint, createdAt: now))
+            event.dto.meetingPoint = meetingPoint
+        }
+        events[eventID] = event
+    }
+
+    fileprivate func cancel(_ user: UUID, _ eventID: UUID) throws {
+        guard var event = events[eventID], event.dto.organizerID == user else { throw CommunityError.notAllowed }
+        event.dto.status = .cancelled
+        event.updates.append(EventUpdateDTO(id: UUID(), eventID: eventID, kind: .cancelled, previous: "", current: "", createdAt: clock()))
+        events[eventID] = event
+    }
+
+    fileprivate func participantList(_ user: UUID, _ eventID: UUID) throws -> [EventParticipantDTO] {
+        _ = try valid(user)
+        guard let event = events[eventID]?.dto else { throw CommunityError.eventGone }
+        let all = participations[eventID] ?? [:]
+        let isOrganizer = event.organizerID == user
+        guard isOrganizer || all[user]?.status == .accepted else { throw CommunityError.notAllowed }
+        return all.compactMap { id, part -> EventParticipantDTO? in
+            guard isOrganizer || part.status == .accepted else { return nil }
+            guard let profile = profiles[id] else { return nil }
+            let names = part.dogIDs.compactMap { dogs[$0]?.name }.sorted()
+            return EventParticipantDTO(userID: id, displayName: profile.displayName, status: part.status,
+                                       dogNames: names, attended: isOrganizer ? part.attended : nil)
+        }.sorted { $0.displayName < $1.displayName }
+    }
+
+    fileprivate func updateList(_ user: UUID, _ eventID: UUID) throws -> [EventUpdateDTO] {
+        _ = try valid(user)
+        guard let event = events[eventID] else { throw CommunityError.eventGone }
+        guard event.dto.organizerID == user || participations[eventID]?[user]?.status == .accepted
+                || participations[eventID]?[user]?.status == .requested else { throw CommunityError.notAllowed }
+        return event.updates.sorted { $0.createdAt > $1.createdAt }
+    }
+
+    fileprivate func saveProfile(_ user: UUID, _ name: String, _ zone: String, _ adult: Bool) throws {
+        guard adult else { throw CommunityError.invalid("Le pilote est réservé aux adultes.") }
+        let clean = name.trimmingCharacters(in: .whitespacesAndNewlines)
+        guard (1...40).contains(clean.count) else { throw CommunityError.invalid("Un nom de 1 à 40 caractères.") }
+        guard zones.contains(where: { $0.id == zone }), !closedZones.contains(zone) else { throw CommunityError.invalid("Cette zone n'est pas ouverte.") }
+        if profiles[user]?.suspended == true { throw CommunityError.noProfile }
+        let since = profiles[user]?.adultDeclaredAt ?? clock()
+        profiles[user] = CommunityProfileDTO(userID: user, displayName: clean, zoneID: zone, adultDeclaredAt: since)
+    }
+
+    fileprivate func put(_ dog: CommunityDogDTO, by user: UUID) throws {
+        _ = try valid(user)
+        guard dog.ownerID == user, (1...40).contains(dog.name.count), dog.publicNote.count <= 200,
+              dog.breedLabel.count <= 80 else { throw CommunityError.invalid("Ce chien n'est pas valide.") }
+        dogs[dog.id] = dog
+    }
+
+    fileprivate func remove(dog id: UUID, by user: UUID) throws {
+        guard dogs[id]?.ownerID == user else { throw CommunityError.notAllowed }
+        dogs[id] = nil
+    }
+
+    fileprivate func file(_ report: Report) throws {
+        _ = try valid(report.reporter)
+        reports.append(report)
+    }
+
+    fileprivate func setBlock(_ blocker: UUID, _ blocked: UUID, _ on: Bool) throws {
+        _ = try valid(blocker)
+        if on { blocks.insert([blocker, blocked]) } else { blocks.remove([blocker, blocked]) }
+    }
+
+    fileprivate func profile(of user: UUID) -> CommunityProfileDTO? {
+        profiles[user].flatMap { $0.suspended ? nil : $0 }
+    }
+    fileprivate func dogsOf(_ user: UUID) -> [CommunityDogDTO] { dogs.values.filter { $0.ownerID == user }.sorted { $0.name < $1.name } }
+    fileprivate func isOrganizerOf(_ user: UUID, _ zone: String) -> Bool { organizers[user]?.contains(zone) == true }
+}
+
+struct InMemoryCommunityRemote: CommunityRemote {
+    let server: InMemoryCommunityServer
+    let user: UUID
+
+    func currentUserID() async throws -> UUID { user }
+    func zones() async throws -> [CommunityZone] { try server.run("zones") { server.openZones() } }
+    func myProfile() async throws -> CommunityProfileDTO? { try server.run("myProfile") { server.profile(of: user) } }
+    func saveProfile(displayName: String, zoneID: String, adultDeclared: Bool) async throws {
+        try server.run("saveProfile") { try server.saveProfile(user, displayName, zoneID, adultDeclared) }
+    }
+    func myDogs() async throws -> [CommunityDogDTO] { try server.run("myDogs") { server.dogsOf(user) } }
+    func saveDog(_ dog: CommunityDogDTO) async throws { try server.run("saveDog") { try server.put(dog, by: user) } }
+    func deleteDog(id: UUID) async throws { try server.run("deleteDog") { try server.remove(dog: id, by: user) } }
+    func events(zoneID: String) async throws -> [WalkEventDTO] { try server.run("events") { try server.visibleEvents(to: user, zone: zoneID) } }
+    func myEvents() async throws -> [WalkEventDTO] { try server.run("myEvents") { try server.mine(user) } }
+    func participants(eventID: UUID) async throws -> [EventParticipantDTO] {
+        try server.run("participants") { try server.participantList(user, eventID) }
+    }
+    func updates(eventID: UUID) async throws -> [EventUpdateDTO] { try server.run("updates") { try server.updateList(user, eventID) } }
+    func requestToJoin(eventID: UUID, dogIDs: [UUID]) async throws {
+        try server.run("requestToJoin") { try server.request(user, eventID, dogIDs) }
+    }
+    func withdraw(eventID: UUID) async throws { try server.run("withdraw") { try server.withdraw(user, eventID) } }
+    func declareAttendance(eventID: UUID, attended: Bool) async throws {
+        try server.run("declareAttendance") { try server.attendance(user, eventID, attended) }
+    }
+    func isOrganizer(zoneID: String) async throws -> Bool { try server.run("isOrganizer") { server.isOrganizerOf(user, zoneID) } }
+    func createEvent(_ draft: WalkEventDraft, zoneID: String) async throws -> UUID {
+        try server.run("createEvent") { try server.create(user, draft, zoneID) }
+    }
+    func decide(eventID: UUID, userID: UUID, accept: Bool) async throws {
+        try server.run("decide") { try server.decide(user, eventID, userID, accept: accept) }
+    }
+    func updateEvent(eventID: UUID, startsAt: Date, meetingPoint: String) async throws {
+        try server.run("updateEvent") { try server.update(user, eventID, startsAt: startsAt, meetingPoint: meetingPoint) }
+    }
+    func cancelEvent(eventID: UUID) async throws { try server.run("cancelEvent") { try server.cancel(user, eventID) } }
+    func report(_ target: ReportTarget, id: UUID, reason: ReportReason, detail: String) async throws {
+        try server.run("report") { try server.file(.init(reporter: user, target: target, targetID: id, reason: reason)) }
+    }
+    func block(userID: UUID) async throws { try server.run("block") { try server.setBlock(user, userID, true) } }
+    func unblock(userID: UUID) async throws { try server.run("unblock") { try server.setBlock(user, userID, false) } }
+}
+#endif
