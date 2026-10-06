@@ -10,6 +10,8 @@ struct SharedWalkCard: View {
     let walk: SharedWalkRecord
     let authorName: String
     var possibleDuplicate = false
+    /// Outside the journal's day groups the line also says which day.
+    var showsDay = false
 
     private var date: Date { walk.endedAt }
     private var names: String {
@@ -25,7 +27,7 @@ struct SharedWalkCard: View {
     var body: some View {
         TimelineRow(time: WalkFormatting.time(date),
                     title: names.isEmpty ? "Balade" : names,
-                    meta: "Par \(authorName)",
+                    meta: showsDay ? "\(WalkFormatting.relativeDay(date)), par \(authorName)" : "Par \(authorName)",
                     figures: figures,
                     flag: possibleDuplicate ? "Peut-être la même sortie qu'une des vôtres" : nil)
             .accessibilityElement(children: .ignore)

@@ -54,6 +54,13 @@ enum HouseholdDemo {
             confirmedSeconds: 1200, recordedPathMeters: nil, correctedAt: now.addingTimeInterval(-3600),
             updatedAt: now, deletedAt: nil,
             dogs: [.init(dogID: oslo.id, dogNameSnapshot: "Oslo")])))
+        // And Bruno took Oslo out again an hour ago, after my last walk: the
+        // household news Today shows (B-REQ-04).
+        context.insert(SharedWalkRecord(RemoteWalkDTO(
+            id: UUID(), authorID: bruno, revision: 1, source: "gps", quality: "gpsRecorded",
+            startedAt: now.addingTimeInterval(-3600 - 1500), endedAt: now.addingTimeInterval(-3600),
+            confirmedSeconds: 1500, recordedPathMeters: 1310, correctedAt: nil, updatedAt: now, deletedAt: nil,
+            dogs: [.init(dogID: oslo.id, dogNameSnapshot: "Oslo")])))
         try context.save()
     }
 }

@@ -44,7 +44,7 @@ décision ouverte ne passe pas en implémentation sur ce point.
 | ID | Question | Recommandation | Responsable | Statut |
 |---|---|---|---|---|
 | D1 | Source du catalogue de races | Liste écrite par nous (noms français usuels, alias), pas un import FCI : la nomenclature FCI ne couvre pas les races non reconnues et ses conditions de réutilisation ne sont pas vérifiées. | Guillaume | Tranchée le 2026-10-06 : liste écrite par nous |
-| D2 | Aujourd'hui montre-t-il mes balades seules, ou aussi celles du foyer ? | Mes balades pour les chiffres ; la dernière contribution du foyer dans un bloc séparé et attribué. | Guillaume | Ouverte |
+| D2 | Aujourd'hui montre-t-il mes balades seules, ou aussi celles du foyer ? | Mes balades pour les chiffres ; la dernière contribution du foyer dans un bloc séparé et attribué. | Guillaume | Tranchée le 2026-10-07 : chiffres à moi, bloc foyer séparé |
 | D3 | Texte de l'introduction sur la confidentialité (ADR 0008, point ouvert 5) | « Votre carnet reste sur cet iPhone. Si vous créez ou rejoignez un foyer, seuls les résumés de balade sont partagés. » | Guillaume | Tranchée le 2026-10-06 : texte recommandé |
 | D4 | Mode sombre en V1 | Non : clair seul, l'app le force déjà. À rouvrir avec le lot D. | Guillaume | Ouverte |
 | D5 | Zone du pilote communautaire | Une seule ville, choisie là où un organisateur réel existe. | Guillaume | Ouverte |

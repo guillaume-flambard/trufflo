@@ -84,6 +84,7 @@ struct StarterRootView: View {
                 }
                 .navigationDestination(for: WalkRoute.self) { WalkDetailView(walkID: $0.id) }
                 .navigationDestination(for: DogRoute.self) { DogDetailView(dogID: $0.id) }
+                .navigationDestination(for: SharedWalkRoute.self) { SharedWalkDetailView(walkID: $0.id) }
             }
             .tabItem { Label("Aujourd'hui", systemImage: "sun.max") }
 
@@ -391,6 +392,7 @@ struct StarterRootView: View {
                                 .buttonStyle(.plain)
                             }
                         }
+                        householdOutingSection
                         if liveWalk == nil { pastWalkButton }
                     }
                     .padding(.horizontal, TruffloTheme.Spacing.medium)
@@ -450,6 +452,27 @@ struct StarterRootView: View {
         case 0: return "Pas encore de balade"
         case 1: return "1 balade enregistrée"
         default: return "\(count) balades enregistrées"
+        }
+    }
+
+    /// The latest outing another member recorded, when it is newer than mine
+    /// and not the same outing (B-REQ-04, decision D2). Apart from my figures,
+    /// and attributed: who, which dogs, when, how long.
+    @ViewBuilder
+    private var householdOutingSection: some View {
+        let entries = sharedEntries(own: completedWalks)
+        let latest = HouseholdOuting.latest(
+            entries.map { .init(id: $0.walk.id, endedAt: $0.walk.endedAt, isPossibleDuplicate: $0.possibleDuplicate) },
+            myLastEndedAt: completedWalks.compactMap(\.endedAt).max())
+        if let id = latest, let entry = entries.first(where: { $0.walk.id == id }) {
+            VStack(alignment: .leading, spacing: TruffloTheme.Spacing.small) {
+                sectionTitle("Dernière sortie du foyer")
+                NavigationLink(value: SharedWalkRoute(id: entry.walk.id)) {
+                    SharedWalkCard(walk: entry.walk, authorName: entry.authorName, showsDay: true)
+                }
+                .buttonStyle(.plain)
+            }
+            .accessibilityIdentifier("today.householdOuting")
         }
     }
 
