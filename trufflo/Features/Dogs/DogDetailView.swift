@@ -18,6 +18,7 @@ struct DogDetailView: View {
 
     @State private var showEdit = false
     @State private var showRoutine = false
+    @State private var showHousehold = false
     @State private var showDeleteConfirmation = false
     @State private var storageError: String?
 
@@ -98,6 +99,8 @@ struct DogDetailView: View {
 
                     routineSection(for: dog)
 
+                    HouseholdPrompt(place: .profile, dogName: dog.name) { showHousehold = true }
+
                     if !dog.preferencesNote.isEmpty {
                         VStack(alignment: .leading, spacing: TruffloTheme.Spacing.xSmall) {
                             WalkSectionTitle("Préférences de sortie")
@@ -135,6 +138,7 @@ struct DogDetailView: View {
         .ignoresSafeArea(edges: .top)
         .scrollEdgeEffectHidden(true, for: .top)
         .sheet(isPresented: $showEdit) { DogFormView(profile: dog) }
+        .sheet(isPresented: $showHousehold) { HouseholdView() }
         .sheet(isPresented: $showRoutine) {
             RoutineFormView(dogID: dog.id, dogName: dog.name, current: routines.first?.routine)
         }

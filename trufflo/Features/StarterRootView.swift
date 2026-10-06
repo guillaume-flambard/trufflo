@@ -401,6 +401,9 @@ struct StarterRootView: View {
                         }
                         householdOutingSection
                         if liveWalk == nil { pastWalkButton }
+                        if !completedWalks.isEmpty {
+                            HouseholdPrompt(place: .today, dogName: dogNames, isSeveral: dogs.count > 1) { showHousehold = true }
+                        }
                     }
                     .padding(.horizontal, TruffloTheme.Spacing.medium)
                     .padding(.top, TruffloTheme.Spacing.large)

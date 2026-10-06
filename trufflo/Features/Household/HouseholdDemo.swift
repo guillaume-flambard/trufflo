@@ -13,8 +13,11 @@ enum HouseholdDemo {
     @MainActor
     static func seedDogs(_ context: ModelContext) throws {
         let repository = JournalRepository(context: context)
-        try repository.addDog(try DogInput(name: "Oslo", breedKind: "mixed"))
+        let oslo = try repository.addDog(try DogInput(name: "Oslo", breedKind: "mixed"))
         try repository.addDog(try DogInput(name: "Pixel", breedKind: "unknown"))
+        // One walk already: the moment the household is offered (B-REQ-07).
+        try repository.addManualWalk(try ManualWalkInput(dogIDs: [oslo.id], durationSeconds: 25 * 60, note: ""),
+                                     endedAt: Date().addingTimeInterval(-2 * 3600))
     }
 
     @MainActor
