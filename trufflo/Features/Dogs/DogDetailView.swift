@@ -75,6 +75,7 @@ struct DogDetailView: View {
                 } label: {
                     Label("Supprimer le profil", systemImage: "trash")
                         .font(.truffloSubheadline)
+                        .foregroundStyle(Color.truffloDanger)
                 }
                 .accessibilityIdentifier("dog.delete")
                 .accessibilityLabel("Supprimer le profil de \(dog.name)")

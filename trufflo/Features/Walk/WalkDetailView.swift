@@ -88,6 +88,7 @@ struct WalkDetailView: View {
                     if let endedAt = walk.endedAt {
                         Text(endedAt, format: .dateTime.day().month().hour().minute())
                             .font(.truffloSubheadline)
+                            .foregroundStyle(Color.truffloSlate)
                     } else {
                         TruffloBadge("En cours", icon: "record.circle", style: .peach)
                     }
@@ -105,6 +106,7 @@ struct WalkDetailView: View {
                 LabeledContent("Qualité") {
                     Text(qualityText(walk.quality))
                         .font(.truffloSubheadline)
+                        .foregroundStyle(Color.truffloSlate)
                 }
                 LabeledContent("Distance") {
                     if let meters = walk.recordedPathMeters {
@@ -133,6 +135,7 @@ struct WalkDetailView: View {
                 } label: {
                     Label("Supprimer la balade", systemImage: "trash")
                         .font(.truffloSubheadline)
+                        .foregroundStyle(Color.truffloDanger)
                 }
                 .accessibilityIdentifier("walk.delete")
                 .accessibilityLabel(accessibilityDeleteLabel(for: walk))
