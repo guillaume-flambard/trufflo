@@ -94,7 +94,7 @@ struct StarterRootView: View {
                             .accessibilityIdentifier("dog.add")
                         }
                     } else {
-                        Section("Démarrer une balade") {
+                        Section {
                             Button {
                                 // An unfinished walk, interrupted included, is
                                 // not a reason to open a second session: the
@@ -107,20 +107,24 @@ struct StarterRootView: View {
                                     activeWalkCover = .start
                                 }
                             } label: {
-                                Label("Démarrer une balade GPS", systemImage: "location.circle.fill")
-                                    .font(.truffloHeadline)
-                                    .foregroundStyle(Color.truffloForest)
+                                Label("Démarrer une balade GPS", systemImage: "location.fill")
+                                    .lineLimit(1)
+                                    .minimumScaleFactor(0.8)
                             }
+                            .buttonStyle(.truffloPrimary)
 
                             Button {
                                 showWalkForm = true
                             } label: {
-                                Label("Ajouter une balade passée", systemImage: "plus.circle.fill")
-                                    .font(.truffloSubheadline)
-                                    .foregroundStyle(Color.truffloForest.opacity(0.8))
+                                Label("Ajouter une balade passée", systemImage: "plus")
+                                    .lineLimit(1)
+                                    .minimumScaleFactor(0.8)
                             }
+                            .buttonStyle(.truffloOutline)
                             .accessibilityIdentifier("walk.manual.add")
                         }
+                        .listRowBackground(Color.clear)
+                        .listRowSeparator(.hidden)
                         if let lastWalk = walks.first(where: { $0.phase == .completed }) {
                             Section("Dernière balade enregistrée") {
                                 NavigationLink(value: WalkRoute(id: lastWalk.id)) {
