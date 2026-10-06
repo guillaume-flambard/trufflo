@@ -3,3 +3,13 @@
 
 # macOS
 .DS_Store
+
+# Xcode per-user state, never shared
+xcuserdata/
+*.xcuserstate
+*.xcscmblueprint
+DerivedData/
+build/
+*.xccheckout
+*.xcscmblueprint
+
