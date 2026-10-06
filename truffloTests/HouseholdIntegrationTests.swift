@@ -1,4 +1,5 @@
 import Foundation
+import Supabase
 import SwiftData
 import Testing
 @testable import trufflo
@@ -18,34 +19,13 @@ private enum Local {
     static var enabled: Bool { url != nil && anonKey != nil }
 }
 
-private final class MemoryStore: SessionStoring, @unchecked Sendable {
-    var session: AuthSession?
-    func load() -> AuthSession? { session }
-    func save(_ session: AuthSession) { self.session = session }
-    func clear() { session = nil }
-}
-
-/// Signs up a fresh local account and returns the production remote for it.
+/// Signs up a fresh local account through the official SDK and returns the
+/// production remote for it. The session lives in memory, never in the keychain.
 private func account(_ config: BackendConfig) async throws -> SupabaseRemote {
-    struct Response: Decodable {
-        struct User: Decodable { var id: UUID }
-        var access_token: String; var refresh_token: String; var expires_in: Double; var user: User
-    }
-    var request = URLRequest(url: config.baseURL.appending(path: "auth/v1/signup"))
-    request.httpMethod = "POST"
-    request.setValue(config.anonKey, forHTTPHeaderField: "apikey")
-    request.setValue("application/json", forHTTPHeaderField: "Content-Type")
-    request.httpBody = try JSONEncoder().encode(["email": "\(UUID().uuidString.lowercased())@trufflo.test",
-                                                 "password": UUID().uuidString])
-    let (data, response) = try await URLSessionTransport().send(request)
-    try HTTPStatus.check(data, response)
-    let body = try JSONDecoder().decode(Response.self, from: data)
-    let store = MemoryStore()
-    store.save(AuthSession(accessToken: body.access_token, refreshToken: body.refresh_token,
-                           expiresAt: Date().addingTimeInterval(body.expires_in), userID: body.user.id))
-    let transport = URLSessionTransport()
-    let sessions = SessionManager(store: store, auth: GoTrueAuth(config: config, transport: transport))
-    return SupabaseRemote(config: config, sessions: sessions, transport: transport)
+    let client = config.makeClient(storage: MemoryAuthStorage())
+    _ = try await client.auth.signUp(email: "\(UUID().uuidString.lowercased())@trufflo.test",
+                                     password: UUID().uuidString)
+    return SupabaseRemote(client: client)
 }
 
 @MainActor
@@ -128,4 +108,64 @@ func twoPeopleShareAHouseholdOverRealHTTP() async throws {
     #expect(try await brunoRemote.household(id: household.id) == nil, "retiré, le serveur ne lui montre plus rien")
     #expect(try await brunoRemote.walks(householdID: household.id, changedSince: nil).isEmpty)
     #expect(bruno.walk(id: brunoWalk.id) != nil, "son propre journal reste intact")
+}
+
+/// Live updates: a member hears about a household walk change; an outsider
+/// subscribed to the same filter hears nothing (Realtime applies RLS).
+@MainActor
+@Test(.enabled(if: Local.enabled, "needs a local Supabase, see tools/backend/household-integration.sh"))
+func aMemberHearsAWalkChangeAndAnOutsiderDoesNot() async throws {
+    let config = BackendConfig(baseURL: try #require(Local.url), anonKey: try #require(Local.anonKey))
+    let anneClient = config.makeClient(storage: MemoryAuthStorage())
+    let brunoClient = config.makeClient(storage: MemoryAuthStorage())
+    let drissClient = config.makeClient(storage: MemoryAuthStorage())
+    for client in [anneClient, brunoClient, drissClient] {
+        _ = try await client.auth.signUp(email: "\(UUID().uuidString.lowercased())@trufflo.test", password: UUID().uuidString)
+    }
+    let anne = SupabaseRemote(client: anneClient)
+    let household = UUID()
+    try await anne.createHousehold(id: household, name: "Maison")
+    let token = try await anne.createInvite(householdID: household, role: .reader)
+    _ = try await SupabaseRemote(client: brunoClient).acceptInvite(token: token)
+
+    final class Heard: @unchecked Sendable {
+        private let lock = NSLock()
+        private var value = false
+        func ring() { lock.withLock { value = true } }
+        var rang: Bool { lock.withLock { value } }
+    }
+    func listen(_ client: SupabaseClient, into heard: Heard) async throws -> (RealtimeChannelV2, Task<Void, Never>) {
+        let channel = client.channel("t-\(UUID().uuidString.lowercased())")
+        let changes = channel.postgresChange(AnyAction.self, schema: "public", table: "walks",
+                                             filter: .eq("household_id", value: household))
+        try await channel.subscribeWithError()
+        let task = Task { for await _ in changes { heard.ring() } }
+        return (channel, task)
+    }
+    let brunoHeard = Heard(), drissHeard = Heard()
+    let (brunoChannel, brunoTask) = try await listen(brunoClient, into: brunoHeard)
+    let (drissChannel, drissTask) = try await listen(drissClient, into: drissHeard)
+
+    // On a cold server the first subscription creates Realtime's replication
+    // slot, and a change written meanwhile rings nobody. The app only loses a
+    // delay (the next foreground sync pulls it); the test writes again until
+    // the member hears one, five tries at most.
+    let walkID = UUID()
+    for attempt in 1...5 where !brunoHeard.rang {
+        try await anne.upsertWalk(WalkSummaryDTO(
+            id: walkID, householdID: household, source: "manual", quality: "manual",
+            startedAt: Date().addingTimeInterval(-1800), endedAt: Date(), confirmedSeconds: Double(1800 + attempt),
+            recordedPathMeters: nil, correctedAt: nil))
+        let deadline = Date().addingTimeInterval(3)
+        while Date() < deadline, !brunoHeard.rang { try await Task.sleep(for: .milliseconds(200)) }
+    }
+    // Give a leaking event the same chance to reach the outsider.
+    try await Task.sleep(for: .seconds(2))
+    brunoTask.cancel()
+    drissTask.cancel()
+    await brunoClient.removeChannel(brunoChannel)
+    await drissClient.removeChannel(drissChannel)
+
+    #expect(brunoHeard.rang, "un membre est prévenu d'un changement de balade du foyer")
+    #expect(!drissHeard.rang, "un étranger abonné au même filtre n'entend rien")
 }

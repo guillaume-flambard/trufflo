@@ -142,9 +142,20 @@ struct StarterRootView: View {
         .task {
             await household.refreshSessionState()
             await household.syncNow()
+            await household.startLiveUpdates()
         }
         .onChange(of: scenePhase) { _, phase in
-            if phase == .active { Task { await household.syncNow() } }
+            switch phase {
+            case .active:
+                Task {
+                    await household.syncNow()
+                    await household.startLiveUpdates()
+                }
+            case .background:
+                Task { await household.stopLiveUpdates() }
+            default:
+                break
+            }
         }
         .sheet(isPresented: $showWalkForm) { ManualWalkFormView(dogs: dogs) }
         .sheet(isPresented: $showWhoIsWalking) {
@@ -205,6 +216,9 @@ struct StarterRootView: View {
             if !isUITesting && !hasCompletedOnboarding {
                 showOnboardingSheet = true
             }
+            #if DEBUG
+            if ProcessInfo.processInfo.arguments.contains("--open-household") { showHousehold = true }
+            #endif
         }
         .confirmationDialog("Effacer le journal et les profils de cet appareil ?",
                             isPresented: $showEraseConfirmation, titleVisibility: .visible) {

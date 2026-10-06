@@ -22,13 +22,19 @@ struct TruffloApp: App {
             try? JournalRepository(context: ModelContext(container)).recoverInterruptedSessions()
             #if DEBUG
             if inMemory && HouseholdDemo.isRequested { try HouseholdDemo.seed(container.mainContext) }
+            if inMemory && HouseholdDemo.dogsOnly { try HouseholdDemo.seedDogs(container.mainContext) }
             #endif
             return container
         }
         // UI tests run with no network and no keychain: the household screen
         // says it is unavailable instead of talking to the real server.
         household = (try? boot.get()).map { container in
-            inMemory ? HouseholdModel.unavailable(container: container) : HouseholdModel.production(container: container)
+            #if DEBUG
+            if inMemory && ProcessInfo.processInfo.arguments.contains("--demo-signed-in") {
+                return HouseholdModel.demoSignedIn(container: container)
+            }
+            #endif
+            return inMemory ? HouseholdModel.unavailable(container: container) : HouseholdModel.production(container: container)
         }
     }
 

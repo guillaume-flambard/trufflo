@@ -8,9 +8,19 @@ Le serveur du foyer tourne (`trufflo-api`, ADR 0007). L'iPhone doit s'y connecte
 
 ## Décisions
 
-### Pas de SDK Supabase, un client mince
+### Le SDK officiel, épinglé
 
-Le SDK officiel `supabase-swift` 2.55.3 existe et a été lu (`Package.swift` du tag). Il déclare dix paquets résolus au build, dont OpenTelemetry, secp256k1 et CryptoSwift. L'app n'utilise que quelques appels documentés : l'échange du jeton Apple et le rafraîchissement (GoTrue, `internal/api/token_oidc.go` et README), puis lectures, upserts et marqueurs (PostgREST). Le client est donc écrit sur URLSession : `Services/SupabaseRemote.swift` et `Services/AuthSession.swift`. À réévaluer si l'app a besoin de Realtime, de Storage ou des clés asymétriques.
+D'abord écrit à la main sur URLSession, le client passe le soir même au SDK officiel `supabase-swift` 2.55.3 (produit `Supabase`), à la demande de Guillaume. Version exacte dans le projet, `Package.resolved` commité : 8 paquets résolus. Le client est dans `Services/SupabaseRemote.swift`, derrière le protocole `HouseholdRemote` : le moteur de synchronisation et ses tests n'ont pas changé.
+
+Deux réglages du SDK sont corrigés, lus dans son source au tag 2.55.3 :
+- `upsert`, `update` et `delete` renvoient la ligne par défaut (`returning: .representation`). Chaque écriture passe `.minimal`, sinon la création d'un foyer retombe dans le piège du `RETURNING` (ADR 0007).
+- Son trousseau utilise `kSecAttrAccessibleAfterFirstUnlock`, qui laisse la session voyager avec une sauvegarde chiffrée vers un autre appareil. `DeviceOnlyKeychainStorage` la garde sur cet appareil seulement.
+
+Les erreurs de PostgREST arrivent avec un code SQLSTATE et sans statut HTTP : `42501` devient « refusé pour votre rôle », `PGRST30x` « session expirée ».
+
+### Temps réel
+
+L'app s'abonne aux changements de `walks` du foyer (Realtime, `postgres_changes`) tant qu'elle est au premier plan. L'événement ne sert que de sonnette : il déclenche la synchronisation habituelle, sous les mêmes règles. Un événement manqué coûte un délai, jamais un journal faux. Realtime applique la RLS sauf aux `DELETE` ; les balades ne sont jamais supprimées, seulement marquées, et le rôle n'a plus le droit `DELETE` (test pgTAP). Mesuré : sur un serveur froid, la première souscription crée le slot de réplication et un changement écrit pendant ce temps ne sonne pas ; le test d'intégration réécrit jusqu'à être entendu.
 
 ### Connexion
 
@@ -50,7 +60,7 @@ Le serveur dit à quel foyer la personne appartient (`households` sous RLS). L'a
 
 ### Moments de synchronisation
 
-À l'ouverture, au retour au premier plan, à l'ouverture de l'écran du foyer et à la demande. Pas de tâche d'arrière-plan dans cette version.
+À l'ouverture, au retour au premier plan, à l'ouverture de l'écran du foyer, à la demande, et à chaque événement temps réel. Pas de tâche d'arrière-plan dans cette version.
 
 ### Langue
 
@@ -58,14 +68,14 @@ Le serveur dit à quel foyer la personne appartient (`households` sous RLS). L'a
 
 ## Vérifié
 
-- 16 tests unitaires de synchronisation contre un serveur en mémoire qui applique les mêmes règles que la base (RLS, révision, marqueurs, dernier responsable), et 8 sur la session, le nonce et la forme des requêtes.
-- Parcours à deux comptes en vrai HTTP contre le Supabase local (`tools/backend/household-integration.sh`) : création, invitation, rapprochement des chiens, échange, correction, suppression sans résurrection, reprise sur un iPhone vide, départ.
+- 16 tests unitaires de synchronisation contre un serveur en mémoire qui applique les mêmes règles que la base (RLS, révision, marqueurs, dernier responsable), et 4 sur le nonce, le trousseau et la traduction des erreurs du SDK.
+- Via le SDK, en vrai HTTP, contre le Supabase local (`tools/backend/household-integration.sh`) et contre la stack auto-hébergée complète lancée en local : temps réel (un membre est prévenu, un étranger abonné au même filtre n'entend rien), et parcours à deux comptes : création, invitation, rapprochement des chiens, échange, correction, suppression sans résurrection, reprise sur un iPhone vide, départ.
 - Migration V5 vers V6 testée sur un store écrit en V5, et ouverture réelle d'un store existant sur simulateur.
 
 ## Ouvert
 
 1. Connexion Apple sur un vrai compte : demande la capacité Sign in with Apple sur l'App ID `dev.memolabs.trufflo` (compte développeur de Guillaume).
-2. Migration serveur `member_profiles` à appliquer en production.
+2. Migrations `member_profiles`, `realtime_walks` et `tighten_grants` à appliquer en production, avec la stack complète (lab-infra, branche `trufflo-api-full`).
 3. Changer le rôle d'un membre ou le retirer depuis l'app ; lien d'invitation cliquable.
 4. Synchronisation en arrière-plan.
 5. La phrase d'introduction « Tout reste sur cet iPhone » reste vraie tant que la personne ne rejoint pas de foyer ; sa formulation est à trancher par Guillaume.

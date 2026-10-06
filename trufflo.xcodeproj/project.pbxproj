@@ -6,6 +6,10 @@
 	objectVersion = 110;
 	objects = {
 
+/* Begin PBXBuildFile section */
+		BB0C65A030725F0000B57184 /* Supabase in Frameworks */ = {isa = PBXBuildFile; productRef = BB0C65A130725F0000B57184 /* Supabase */; };
+/* End PBXBuildFile section */
+
 /* Begin PBXContainerItemProxy section */
 		BB0C656A30725E2100B57184 /* PBXContainerItemProxy */ = {
 			isa = PBXContainerItemProxy;
@@ -51,6 +55,7 @@
 		BB0C655730725E1F00B57184 /* Frameworks */ = {
 			isa = PBXFrameworksBuildPhase;
 			files = (
+				BB0C65A030725F0000B57184 /* Supabase in Frameworks */,
 			);
 		};
 		BB0C656630725E2100B57184 /* Frameworks */ = {
@@ -103,6 +108,9 @@
 				BB0C655C30725E1F00B57184 /* trufflo */,
 			);
 			name = trufflo;
+			packageProductDependencies = (
+				BB0C65A130725F0000B57184 /* Supabase */,
+			);
 			productName = trufflo;
 			productReference = BB0C655A30725E1F00B57184 /* trufflo.app */;
 			productType = "com.apple.product-type.application";
@@ -181,6 +189,9 @@
 			);
 			mainGroup = BB0C655130725E1F00B57184;
 			minimizedProjectReferenceProxies = 1;
+			packageReferences = (
+				BB0C65A230725F0000B57184 /* XCRemoteSwiftPackageReference "supabase-swift" */,
+			);
 			preferredProjectObjectVersion = 77;
 			productRefGroup = BB0C655B30725E1F00B57184 /* Products */;
 			projectDirPath = "";
@@ -556,6 +567,25 @@
 			defaultConfigurationName = Release;
 		};
 /* End XCConfigurationList section */
+
+/* Begin XCRemoteSwiftPackageReference section */
+		BB0C65A230725F0000B57184 /* XCRemoteSwiftPackageReference "supabase-swift" */ = {
+			isa = XCRemoteSwiftPackageReference;
+			repositoryURL = "https://github.com/supabase/supabase-swift";
+			requirement = {
+				kind = exactVersion;
+				version = 2.55.3;
+			};
+		};
+/* End XCRemoteSwiftPackageReference section */
+
+/* Begin XCSwiftPackageProductDependency section */
+		BB0C65A130725F0000B57184 /* Supabase */ = {
+			isa = XCSwiftPackageProductDependency;
+			package = BB0C65A230725F0000B57184 /* XCRemoteSwiftPackageReference "supabase-swift" */;
+			productName = Supabase;
+		};
+/* End XCSwiftPackageProductDependency section */
 	};
 	rootObject = BB0C655230725E1F00B57184 /* Project object */;
 	validationLevel = 1;

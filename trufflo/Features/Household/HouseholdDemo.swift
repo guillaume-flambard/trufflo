@@ -7,6 +7,15 @@ import SwiftData
 /// shared journal without a server. Never compiled into a release build.
 enum HouseholdDemo {
     static var isRequested: Bool { ProcessInfo.processInfo.arguments.contains("--demo-household") }
+    static var dogsOnly: Bool { ProcessInfo.processInfo.arguments.contains("--demo-dogs-only") }
+
+    /// Two dogs and no household: the states before joining one.
+    @MainActor
+    static func seedDogs(_ context: ModelContext) throws {
+        let repository = JournalRepository(context: context)
+        try repository.addDog(try DogInput(name: "Oslo", breedKind: "mixed"))
+        try repository.addDog(try DogInput(name: "Pixel", breedKind: "unknown"))
+    }
 
     @MainActor
     static func seed(_ context: ModelContext) throws {

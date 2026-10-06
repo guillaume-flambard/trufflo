@@ -29,12 +29,12 @@ Un membre retiré ne lit plus rien dès le retrait.
 
 Créer un foyer se fait sans relire la ligne dans la même requête (PostgREST `return=minimal`, pas de `.select()` côté client), avec un UUID choisi par l'app. Le responsable est inscrit par un trigger après l'insertion et le `RETURNING` est filtré avant : la relecture répond 403. Un test le fige. Une balade garde son auteur et son foyer ; chaque correction avance la révision. Les suppressions de chiens et de balades sont des marqueurs (`deleted_at`) pour qu'un élément supprimé ne revienne pas par une synchronisation.
 
-Exposition à l'API : depuis octobre 2026, une table n'est plus exposée par défaut (changelog Supabase, « Tables not exposed to Data and GraphQL API automatically »). Les droits sont donc accordés explicitement au seul rôle `authenticated`, rien pour `anon`. Le code privilégié (appartenance, acceptation d'invitation) vit dans le schéma non exposé `private` ; la seule fonction appelable est une enveloppe `security invoker`.
+Exposition à l'API : depuis octobre 2026, une table n'est plus exposée par défaut (changelog Supabase, « Tables not exposed to Data and GraphQL API automatically »). Correction du 2026-10-06 au soir : la première migration ajoutait ses droits à ceux par défaut au lieu de les remplacer, et `authenticated` gardait `DELETE` et `TRUNCATE` sur toutes les tables, en local comme en production. `TRUNCATE` ignore la RLS. La migration `tighten_grants` retire tout puis n'accorde que ce que les politiques attendent, et `grants_test.sql` fige la liste exacte. Rien pour `anon`. Le code privilégié (appartenance, acceptation d'invitation) vit dans le schéma non exposé `private` ; la seule fonction appelable est une enveloppe `security invoker`.
 
 ## Vérifié
 
 - `supabase db advisors --local` : aucune alerte (sécurité et performance).
-- `supabase test db --local` : 26 contrôles, tous verts.
+- `supabase test db --local` : 38 contrôles en quatre fichiers, tous verts (droits figés, publication Realtime limitée à `walks`).
 - Postgres 17, CLI Supabase 2.119.0, le 2026-10-06.
 
 ## Ouvert
