@@ -36,6 +36,8 @@ struct StarterRootView: View {
     @AppStorage("hasCompletedOnboarding") private var hasCompletedOnboarding = false
     @State private var showOnboardingSheet = false
     @State private var startBlock: LocationBlock?
+    @State private var exportFile: SharedFile?
+    @State private var exportError: String?
     @Environment(\.dynamicTypeSize) private var typeSize
 
     private var liveWalk: WalkRecord? {
@@ -52,6 +54,10 @@ struct StarterRootView: View {
                 .toolbar {
                     ToolbarItem(placement: .topBarTrailing) {
                         Menu("Réglages", systemImage: "gearshape") {
+                            Button("Exporter le journal", systemImage: "square.and.arrow.up") {
+                                exportJournal()
+                            }
+                            .accessibilityIdentifier("journal.export")
                             Button("Revoir l'introduction", systemImage: "sparkles") {
                                 showOnboardingSheet = true
                             }
@@ -114,6 +120,18 @@ struct StarterRootView: View {
         .tint(Color.truffloForest)
         .sheet(isPresented: $showDogForm) { DogFormView() }
         .sheet(isPresented: $showWalkForm) { ManualWalkFormView(dogs: dogs) }
+        .sheet(item: $exportFile) { file in
+            ShareSheet(items: [file.url])
+                .presentationDetents([.medium, .large])
+        }
+        .alert("Export impossible", isPresented: Binding(
+            get: { exportError != nil },
+            set: { if !$0 { exportError = nil } }
+        )) {
+            Button("Fermer", role: .cancel) {}
+        } message: {
+            Text(exportError ?? "")
+        }
         .sheet(item: $startBlock) { block in
             StartBlockedSheet(block: block,
                               openSettings: {
@@ -478,6 +496,19 @@ struct StarterRootView: View {
                     .frame(maxWidth: .infinity, minHeight: 44)
             }
             .accessibilityIdentifier("walk.manual.add")
+        }
+    }
+
+    /// Builds the archive (a summary CSV plus one GPX per recorded route) and
+    /// hands it to the share sheet, where the person chooses where it goes.
+    private func exportJournal() {
+        do {
+            let walks = try JournalRepository(context: context).exportWalks()
+            exportFile = SharedFile(url: try ExportArchive.make(from: walks))
+        } catch ExportArchive.Failure.nothingToExport {
+            exportError = "Le journal ne contient encore aucune balade terminée."
+        } catch {
+            exportError = "L'export n'a pas pu être préparé. Votre journal n'a pas été modifié."
         }
     }
 

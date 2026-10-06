@@ -16,6 +16,7 @@ struct WalkDetailView: View {
     @Query(sort: \DogRecord.createdAt) private var dogs: [DogRecord]
 
     @State private var showDeleteConfirmation = false
+    @State private var routeFile: SharedFile?
     @State private var storageError: String?
     /// A finished walk is framed once and never chases the camera afterwards.
     @State private var isFollowingTrack = false
@@ -117,6 +118,18 @@ struct WalkDetailView: View {
                         }
                     }
 
+                    if walk.source != .manual && trackCoordinates.count >= 2 {
+                        Button {
+                            exportRoute(of: walk)
+                        } label: {
+                            Label("Exporter le tracé (GPX)", systemImage: "square.and.arrow.up")
+                                .font(.subheadline.weight(.semibold))
+                                .foregroundStyle(Color.truffloForest)
+                                .frame(minHeight: 44, alignment: .leading)
+                        }
+                        .accessibilityIdentifier("walk.export.gpx")
+                    }
+
                     VStack(alignment: .leading, spacing: TruffloTheme.Spacing.xxSmall) {
                         Button(role: .destructive) {
                             showDeleteConfirmation = true
@@ -142,6 +155,10 @@ struct WalkDetailView: View {
         .ignoresSafeArea(edges: hasMap ? .top : [])
         .toolbarBackgroundVisibility(hasMap ? .hidden : .automatic, for: .navigationBar)
         .navigationTitle(hasMap ? "" : "Balade")
+        .sheet(item: $routeFile) { file in
+            ShareSheet(items: [file.url])
+                .presentationDetents([.medium, .large])
+        }
         .confirmationDialog("Supprimer cette balade ?", isPresented: $showDeleteConfirmation,
                             titleVisibility: .visible) {
             Button("Supprimer définitivement", role: .destructive) { delete(walkID: walk.id) }
@@ -191,6 +208,22 @@ struct WalkDetailView: View {
         guard let endedAt = walk.endedAt else { return "Supprimer la balade en cours" }
         let date = endedAt.formatted(.dateTime.day().month())
         return "Supprimer la balade du \(date)"
+    }
+
+    /// One walk's route as a GPX file. Read back from the export path, so the
+    /// file is the same one the full journal export would contain.
+    private func exportRoute(of walk: WalkRecord) {
+        do {
+            guard let exported = try JournalRepository(context: context).exportWalks()
+                    .first(where: { $0.id == walk.id }),
+                  let gpx = WalkExport.gpx(exported) else { return }
+            let url = FileManager.default.temporaryDirectory
+                .appendingPathComponent(WalkExport.gpxFileName(for: exported))
+            try Data(gpx.utf8).write(to: url, options: .atomic)
+            routeFile = SharedFile(url: url)
+        } catch {
+            storageError = "Le tracé n'a pas pu être exporté."
+        }
     }
 
     private func delete(walkID: UUID) {

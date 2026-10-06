@@ -278,6 +278,28 @@ struct JournalRepository {
         dog(id: id)
     }
 
+    // MARK: - Export
+
+    /// Every finished walk, read back as stored, for the export (PRD F07). A walk
+    /// still recording, paused or interrupted is not finished and is left out:
+    /// exporting it would freeze a duration that is still moving.
+    func exportWalks() throws -> [ExportWalk] {
+        let finished = try context.fetch(FetchDescriptor<WalkRecord>(
+            sortBy: [SortDescriptor(\.startedAt)])).filter { $0.phase == .completed }
+        return try finished.map { walk in
+            let names = try links(walkID: walk.id).map(\.dogNameSnapshot).sorted()
+            let route = try points(walkID: walk.id)
+                .sorted { $0.sequence < $1.sequence }
+                .map { ExportPoint(segment: $0.segment, latitude: $0.latitude, longitude: $0.longitude,
+                                   horizontalAccuracy: $0.horizontalAccuracy, timestamp: $0.timestamp) }
+            return ExportWalk(id: walk.id, startedAt: walk.startedAt, endedAt: walk.endedAt,
+                              durationSeconds: walk.confirmedSeconds,
+                              distanceMeters: walk.recordedPathMeters,
+                              source: walk.source, quality: walk.quality,
+                              dogNames: names, note: walk.note, points: route)
+        }
+    }
+
     private func requireWalk(_ id: UUID) -> WalkRecord? {
         walk(id: id)
     }
