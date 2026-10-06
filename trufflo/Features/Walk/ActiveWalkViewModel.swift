@@ -13,6 +13,9 @@ public final class ActiveWalkViewModel: ObservableObject {
     @Published public private(set) var dogNames: [String] = []
     @Published public var note: String = ""
     @Published public var errorMessage: String?
+    /// The path recorded so far, for display only. The distance the app shows is
+    /// the accumulator's, never a length computed from these coordinates.
+    @Published public private(set) var trackPoints: [TrackCoordinate] = []
     /// Set when a start was refused before any session existed. The view turns
     /// it into the alert the spec asks for: a reason, a way into Settings when
     /// that can help, and manual entry either way.
@@ -162,6 +165,7 @@ public final class ActiveWalkViewModel: ObservableObject {
             // over a walk that had just been saved.
             self.walkID = nil
             interruptionBlock = nil
+            trackPoints = []
             accumulatedBeforeRun = 0
             lastCheckpointSeconds = 0
             accessibilityAnnouncer.announce("Balade terminée")
@@ -264,6 +268,9 @@ public final class ActiveWalkViewModel: ObservableObject {
                 let summary = try await trackWriter.appendFixes(batch, to: walkID)
                 guard self.generation == expected else { return }
                 self.distanceMeters = summary.recordedPathMeters
+                self.trackPoints.append(contentsOf: summary.insertedPoints.map {
+                    TrackCoordinate(segment: $0.segment, latitude: $0.latitude, longitude: $0.longitude)
+                })
             } catch {
                 return
             }
@@ -323,6 +330,17 @@ public final class ActiveWalkViewModel: ObservableObject {
         distanceMeters = walk.recordedPathMeters
         dogNames = repository.participants(walkID: walk.id).map(\.dogNameSnapshot)
         pendingFixes.removeAll()
+        let writer = trackWriter
+        let expected = generation
+        // A resumed session opens on an already recorded path: read it back so the
+        // map shows the whole walk and not only what arrives after the relaunch.
+        Task { [weak self] in
+            guard let writer, let stored = try? await writer.storedPoints(for: walk.id) else { return }
+            guard self?.generation == expected else { return }
+            self?.trackPoints = stored.map {
+                TrackCoordinate(segment: $0.segment, latitude: $0.latitude, longitude: $0.longitude)
+            }
+        }
         guard walk.phase == .recording else { return }
         beginRun()
         Task { await locationProvider.start() }

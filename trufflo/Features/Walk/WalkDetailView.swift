@@ -12,6 +12,7 @@ struct WalkDetailView: View {
 
     @Query private var matches: [WalkRecord]
     @Query private var participants: [WalkDogRecord]
+    @Query private var points: [TrackPointRecord]
 
     @State private var showDeleteConfirmation = false
     @State private var storageError: String?
@@ -19,6 +20,8 @@ struct WalkDetailView: View {
     init(walkID: UUID) {
         _matches = Query(filter: #Predicate<WalkRecord> { $0.id == walkID })
         _participants = Query(filter: #Predicate<WalkDogRecord> { $0.walkID == walkID })
+        _points = Query(filter: #Predicate<TrackPointRecord> { $0.walkID == walkID },
+                        sort: \.sequence, order: .forward)
     }
 
     var body: some View {
@@ -61,6 +64,17 @@ struct WalkDetailView: View {
                             TruffloBadge(name, icon: "pawprint.fill", style: .sage)
                         }
                     }
+                }
+            }
+
+            if trackCoordinates.count >= 2 {
+                Section {
+                    TruffloTrackMap(points: trackCoordinates)
+                        .frame(height: 220)
+                        .listRowInsets(EdgeInsets())
+                        .accessibilityIdentifier("walk.detail.map")
+                } header: {
+                    Text("Parcours")
                 }
             }
 
@@ -133,6 +147,12 @@ struct WalkDetailView: View {
     }
 
     // MARK: - Formatting
+
+    /// A manual entry has no coordinates at all, so it gets no map section rather
+    /// than an empty one.
+    private var trackCoordinates: [TrackCoordinate] {
+        points.map { TrackCoordinate(segment: $0.segment, latitude: $0.latitude, longitude: $0.longitude) }
+    }
 
     private func durationText(_ seconds: TimeInterval) -> String {
         let minutes = (seconds / 60).formatted(.number.precision(.fractionLength(0...1)))

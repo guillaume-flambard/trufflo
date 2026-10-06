@@ -14,6 +14,10 @@ struct TrackAppendSummary: Equatable, Sendable {
     let rejectedPoints: Int
     let revision: Int
     let recordedPathMeters: Double?
+    /// Exactly what was inserted for this batch, in write order. The display layer
+    /// draws these, so it never refetches the whole track and never draws a point
+    /// the accumulator rejected.
+    let insertedPoints: [StoredTrackPoint]
 }
 
 struct TrackSnapshot: Equatable, Sendable {
@@ -55,7 +59,8 @@ actor TrackWriter {
             let session = try requireSession(walkID)
             return TrackAppendSummary(acceptedPoints: 0, ignoredPoints: 0, rejectedPoints: 0,
                                       revision: session.revision,
-                                      recordedPathMeters: session.recordedPathMeters)
+                                      recordedPathMeters: session.recordedPathMeters,
+                                      insertedPoints: [])
         }
         guard fixes.count <= Self.maximumBatchSize else { throw TrackWriteError.batchTooLarge }
 
@@ -65,34 +70,37 @@ actor TrackWriter {
         var accepted = 0
         var ignored = 0
         var rejected = 0
+        var inserted: [StoredTrackPoint] = []
         var nextSequence = try headSequence(for: walkID) + 1
 
         do {
             for fix in fixes {
+                let segment: Int
                 switch accumulator.ingest(fix) {
-                case .anchor(let segment):
-                    modelContext.insert(TrackPointRecord(walkID: walkID, sequence: nextSequence,
-                                                         segment: segment,
-                                                         latitude: fix.latitude,
-                                                         longitude: fix.longitude,
-                                                         horizontalAccuracy: fix.horizontalAccuracy,
-                                                         timestamp: fix.timestamp))
-                    nextSequence += 1
-                    accepted += 1
-                case .accepted(let segment, _):
-                    modelContext.insert(TrackPointRecord(walkID: walkID, sequence: nextSequence,
-                                                         segment: segment,
-                                                         latitude: fix.latitude,
-                                                         longitude: fix.longitude,
-                                                         horizontalAccuracy: fix.horizontalAccuracy,
-                                                         timestamp: fix.timestamp))
-                    nextSequence += 1
-                    accepted += 1
+                case .anchor(let value):
+                    segment = value
+                case .accepted(let value, _):
+                    segment = value
                 case .ignoredDuplicateOrOld:
                     ignored += 1
+                    continue
                 case .rejected:
+                    // A rejection breaks the segment but stores nothing, so the map
+                    // never gains a vertex the distance calculation also refused.
                     rejected += 1
+                    continue
                 }
+                modelContext.insert(TrackPointRecord(walkID: walkID, sequence: nextSequence,
+                                                     segment: segment,
+                                                     latitude: fix.latitude,
+                                                     longitude: fix.longitude,
+                                                     horizontalAccuracy: fix.horizontalAccuracy,
+                                                     timestamp: fix.timestamp))
+                inserted.append(StoredTrackPoint(sequence: nextSequence, segment: segment,
+                                                 latitude: fix.latitude, longitude: fix.longitude,
+                                                 timestamp: fix.timestamp))
+                nextSequence += 1
+                accepted += 1
             }
             commit(session: session, accumulator: accumulator)
             accumulators[walkID] = accumulator
@@ -106,7 +114,8 @@ actor TrackWriter {
 
         return TrackAppendSummary(acceptedPoints: accepted, ignoredPoints: ignored,
                                   rejectedPoints: rejected, revision: session.revision,
-                                  recordedPathMeters: session.recordedPathMeters)
+                                  recordedPathMeters: session.recordedPathMeters,
+                                  insertedPoints: inserted)
     }
 
     /// Stores the confirmed duration supplied by the coordinator. The caller owns the

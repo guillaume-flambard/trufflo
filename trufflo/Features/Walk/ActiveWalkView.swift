@@ -121,6 +121,17 @@ public struct ActiveWalkView: View {
 
                 Spacer()
 
+                // MARK: - Recorded Path
+                if viewModel.trackPoints.count >= 2 {
+                    TruffloTrackMap(points: viewModel.trackPoints, followsNewPoints: true)
+                        .frame(height: 180)
+                        .clipShape(RoundedRectangle(cornerRadius: TruffloTheme.Radius.large, style: .continuous))
+                        .padding(.horizontal, TruffloTheme.Spacing.medium)
+                        .accessibilityIdentifier("walk.map")
+                }
+
+                Spacer()
+
                 // MARK: - Control Buttons
                 VStack(spacing: TruffloTheme.Spacing.medium) {
                     if viewModel.phase == .interrupted {
