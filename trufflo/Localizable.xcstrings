@@ -110,6 +110,28 @@
           }
         }
       }
+    },
+    "%lld balades enregistrées": {
+      "localizations": {
+        "fr": {
+          "variations": {
+            "plural": {
+              "one": {
+                "stringUnit": {
+                  "state": "translated",
+                  "value": "%lld balade enregistrée"
+                }
+              },
+              "other": {
+                "stringUnit": {
+                  "state": "translated",
+                  "value": "%lld balades enregistrées"
+                }
+              }
+            }
+          }
+        }
+      }
     }
   },
   "version": "1.1"

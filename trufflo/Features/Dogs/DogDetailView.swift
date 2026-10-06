@@ -34,8 +34,14 @@ struct DogDetailView: View {
                 TruffloNotice(title: "Ce profil n'existe plus", message: "Il a été retiré de cet iPhone depuis un autre écran.", actionTitle: "Revenir à la liste") { dismiss() }
             }
         }
+        // The title stays the dog's name, for the back menu, VoiceOver and the
+        // edit journey, but is not drawn: the hero already says it, large.
         .navigationTitle(matches.first?.name ?? "Chien")
+        .toolbarBackground(.hidden, for: .navigationBar)
         .toolbar {
+            if matches.first != nil {
+                ToolbarItem(placement: .principal) { Color.clear.frame(width: 1, height: 1) }
+            }
             if matches.first != nil {
                 ToolbarItem(placement: .topBarTrailing) {
                     Button("Modifier") { showEdit = true }
@@ -60,16 +66,9 @@ struct DogDetailView: View {
     private func content(for dog: DogRecord) -> some View {
         ScrollView {
             VStack(alignment: .leading, spacing: 0) {
-                if dog.photoData != nil {
-                    TruffloDogHero(name: dog.name, photoData: dog.photoData)
-                } else {
-                    // No photo, no giant initial standing in for one: the name
-                    // leads, and adding the photo is one tap away.
-                    VStack(alignment: .leading, spacing: TruffloTheme.Spacing.small) {
-                        Text(dog.name)
-                            .font(.system(.largeTitle, design: .rounded, weight: .heavy))
-                            .foregroundStyle(Color.truffloForest)
-                            .accessibilityAddTraits(.isHeader)
+                TruffloDogPortraitHero(name: dog.name, photoData: dog.photoData,
+                                       subtitle: facts(of: dog), heightFactor: 0.5) {
+                    if dog.photoData == nil {
                         Button {
                             showEdit = true
                         } label: {
@@ -77,23 +76,23 @@ struct DogDetailView: View {
                                 .font(.subheadline.weight(.semibold))
                                 .padding(.horizontal, TruffloTheme.Spacing.medium)
                                 .frame(minHeight: 44)
-                                .background(Color.truffloMint.opacity(0.5), in: Capsule())
+                                .background(Color.white.opacity(0.7), in: Capsule())
                         }
                         .buttonStyle(.plain)
                         .foregroundStyle(Color.truffloForest)
                         .accessibilityIdentifier("dog.addPhoto")
                     }
-                    .padding(.horizontal, TruffloTheme.Spacing.large)
-                    .padding(.top, TruffloTheme.Spacing.medium)
                 }
 
                 VStack(alignment: .leading, spacing: TruffloTheme.Spacing.large) {
-                    identity(of: dog)
-
                     if let count = walkCount, count > 0 {
-                        TruffloStatRow {
-                            TruffloStat("Vos balades", value: "\(count)")
-                            TruffloStat("Temps enregistré", value: WalkFormatting.minutes(recordedSeconds))
+                        VStack(alignment: .leading, spacing: TruffloTheme.Spacing.xxSmall) {
+                            Text(String(localized: "\(count) balades enregistrées"))
+                                .font(.system(.title3, design: .rounded, weight: .bold))
+                                .foregroundStyle(Color.truffloForest)
+                            Text("\(WalkFormatting.minutes(recordedSeconds)) en tout.")
+                                .font(.subheadline)
+                                .foregroundStyle(Color.truffloSlate)
                         }
                     }
 
@@ -133,8 +132,8 @@ struct DogDetailView: View {
                 .padding(.bottom, TruffloTheme.Spacing.xLarge)
             }
         }
-        // Edge to edge only under a photo; a page without one starts below the bar.
-        .ignoresSafeArea(edges: dog.photoData == nil ? [] : .top)
+        .ignoresSafeArea(edges: .top)
+        .scrollEdgeEffectHidden(true, for: .top)
         .sheet(isPresented: $showEdit) { DogFormView(profile: dog) }
         .sheet(isPresented: $showRoutine) {
             RoutineFormView(dogID: dog.id, dogName: dog.name, current: routines.first?.routine)
@@ -148,22 +147,15 @@ struct DogDetailView: View {
         }
     }
 
-    /// Breed, then age and sex joined with a comma. What the person declared and
-    /// nothing else: no trait is read from the walks.
-    private func identity(of dog: DogRecord) -> some View {
-        // One line of declared facts. An unknown breed or an unset sex is the
-        // absence of a fact, not a fact to print.
-        let facts = [dog.breedKind != "unknown" ? dog.breedDescription : "",
-                     dog.ageDescription,
-                     dog.genderDescription == "Non renseigné" ? "" : dog.genderDescription.lowercased()]
+    /// Breed, age and sex, joined with commas: what the person declared and
+    /// nothing else, no trait read from the walks. An unknown breed or an unset
+    /// sex is the absence of a fact, not a fact to print.
+    private func facts(of dog: DogRecord) -> String {
+        [dog.breedKind != "unknown" ? dog.breedDescription : "",
+         dog.ageDescription,
+         dog.genderDescription == "Non renseigné" ? "" : dog.genderDescription.lowercased()]
             .filter { !$0.isEmpty }
-        return Group {
-            if !facts.isEmpty {
-                Text(facts.joined(separator: ", "))
-                    .font(.title3)
-                    .foregroundStyle(Color.truffloCharcoal)
-            }
-        }
+            .joined(separator: ", ")
     }
 
     /// The chosen routine, or an invitation that makes clear the journal works

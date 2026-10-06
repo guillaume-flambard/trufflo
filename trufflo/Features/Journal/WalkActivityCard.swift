@@ -46,9 +46,13 @@ struct WalkActivityCard: View {
                 : nil
         }
     }
+    /// The timeline rail says GPS (solid dot) or declared (hollow ring); the
+    /// words are kept for a declared walk, where they explain the ring, and
+    /// when the row is shown outside the journal's day groups.
     private var origin: String {
         let how = isGPS ? "suivi GPS" : "saisie manuelle"
-        return showsDay ? "\(WalkFormatting.relativeDay(date)), \(how)" : how.capitalizedFirst
+        if showsDay { return "\(WalkFormatting.relativeDay(date)), \(how)" }
+        return isGPS ? "" : how.capitalizedFirst
     }
 
     var body: some View {
@@ -56,6 +60,7 @@ struct WalkActivityCard: View {
             time: WalkFormatting.time(date),
             title: names.isEmpty ? "Balade" : names,
             meta: origin,
+            isDeclared: !isGPS,
             figures: figures,
             note: walk.note.isEmpty ? nil : walk.note,
             photo: leadPhoto,
@@ -87,6 +92,8 @@ struct TimelineRow: View {
     let time: String
     let title: String
     let meta: String
+    /// Hollow ring on the rail instead of a solid dot: a walk the person declared.
+    var isDeclared = false
     let figures: [String]
     var note: String? = nil
     var photo: Data? = nil
@@ -96,13 +103,15 @@ struct TimelineRow: View {
     @Environment(\.dynamicTypeSize) private var typeSize
 
     var body: some View {
-        HStack(alignment: .firstTextBaseline, spacing: TruffloTheme.Spacing.medium) {
+        HStack(alignment: .top, spacing: TruffloTheme.Spacing.small) {
             if !typeSize.isAccessibilitySize {
                 Text(time)
                     .font(.system(.subheadline, design: .rounded, weight: .semibold))
                     .monospacedDigit()
                     .foregroundStyle(Color.truffloSlate)
                     .frame(width: 46, alignment: .leading)
+                    .padding(.top, 3 + TruffloTheme.Spacing.small)
+                rail
             }
             VStack(alignment: .leading, spacing: 4) {
                 HStack(alignment: .top, spacing: TruffloTheme.Spacing.small) {
@@ -110,9 +119,12 @@ struct TimelineRow: View {
                         Text(title)
                             .font(.system(.headline, design: .rounded, weight: .bold))
                             .foregroundStyle(Color.truffloForest)
-                        Text(typeSize.isAccessibilitySize ? "\(time), \(meta.lowercasedFirst)" : meta)
-                            .font(.footnote)
-                            .foregroundStyle(Color.truffloSlate)
+                        let line = typeSize.isAccessibilitySize ? "\(time), \(meta.lowercasedFirst)" : meta
+                        if !line.isEmpty {
+                            Text(line)
+                                .font(.footnote)
+                                .foregroundStyle(Color.truffloSlate)
+                        }
                     }
                     Spacer(minLength: 0)
                     if let route {
@@ -139,10 +151,29 @@ struct TimelineRow: View {
                         .foregroundStyle(Color.truffloSlate)
                 }
             }
+            .padding(.vertical, TruffloTheme.Spacing.small)
         }
-        .padding(.vertical, TruffloTheme.Spacing.small)
         .frame(maxWidth: .infinity, alignment: .leading)
         .contentShape(Rectangle())
+    }
+
+    /// The vertical line of the day, with a solid dot for a recorded walk and a
+    /// hollow ring for a declared one. The line runs the full height of the row
+    /// so consecutive rows of one day read as a single thread.
+    private var rail: some View {
+        ZStack(alignment: .top) {
+            Rectangle()
+                .fill(Color.truffloForest.opacity(0.16))
+                .frame(width: 2)
+            Circle()
+                .fill(isDeclared ? Color.truffloSand : Color.truffloForest)
+                .overlay(Circle().strokeBorder(Color.truffloForest, lineWidth: isDeclared ? 2 : 0))
+                .frame(width: 12, height: 12)
+                .padding(.top, 5 + TruffloTheme.Spacing.small)
+        }
+        .frame(width: 14)
+        .frame(maxHeight: .infinity)
+        .accessibilityHidden(true)
     }
 }
 

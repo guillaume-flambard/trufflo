@@ -17,7 +17,7 @@ struct JournalTimelineView: View {
 
     var body: some View {
         ScrollView {
-            LazyVStack(alignment: .leading, spacing: TruffloTheme.Spacing.medium) {
+            LazyVStack(alignment: .leading, spacing: TruffloTheme.Spacing.large) {
                 if let sentence = filterSummary ?? weekSentence {
                     Text(sentence)
                         .font(.subheadline)
@@ -26,16 +26,12 @@ struct JournalTimelineView: View {
                 ForEach(days, id: \.start) { day in
                     VStack(alignment: .leading, spacing: 0) {
                         Text(heading(for: day.start))
-                            .font(.system(.title3, design: .rounded, weight: .bold))
+                            .font(.system(.title, design: .rounded, weight: .heavy))
                             .foregroundStyle(Color.truffloForest)
-                            .padding(.top, TruffloTheme.Spacing.small)
+                            .padding(.top, TruffloTheme.Spacing.medium)
                             .padding(.bottom, TruffloTheme.Spacing.xxSmall)
                             .accessibilityAddTraits(.isHeader)
-                        ForEach(Array(day.items.enumerated()), id: \.element.id) { index, item in
-                            if index > 0 {
-                                Rectangle().fill(Color.truffloForest.opacity(0.1)).frame(height: 1)
-                                    .padding(.leading, 62)
-                            }
+                        ForEach(day.items) { item in
                             switch item {
                             case .own(let walk):
                                 NavigationLink(value: rowDestination(walk.id)) {

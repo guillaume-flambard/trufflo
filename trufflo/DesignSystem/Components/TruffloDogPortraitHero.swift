@@ -11,6 +11,9 @@ struct TruffloDogPortraitHero<Footer: View>: View {
     let name: String
     let photoData: Data?
     let subtitle: String
+    /// Share of the screen height the portrait takes: Today leads with it, the
+    /// profile gives it a little more.
+    var heightFactor: CGFloat = 0.46
     @ViewBuilder var footer: () -> Footer
 
     @State private var image: UIImage?
@@ -41,7 +44,7 @@ struct TruffloDogPortraitHero<Footer: View>: View {
             .padding(.bottom, TruffloTheme.Spacing.medium)
             .frame(maxWidth: .infinity, alignment: .leading)
         }
-        .containerRelativeFrame(.vertical) { height, _ in height * 0.46 }
+        .containerRelativeFrame(.vertical) { height, _ in height * heightFactor }
         .frame(maxWidth: .infinity)
         .clipped()
         .accessibilityElement(children: .contain)
