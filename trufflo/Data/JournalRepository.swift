@@ -329,6 +329,14 @@ struct JournalRepository {
             for walk in try all(WalkRecord.self) { context.delete(walk) }
             for dog in try all(DogRecord.self) { context.delete(dog) }
             for routine in try all(RoutineRecord.self) { context.delete(routine) }
+            // The household tables go too (spec S12): what was received from
+            // other members is not kept after a global erasure. Nothing is
+            // deleted on the server; the screen says so.
+            for shared in try all(SharedWalkRecord.self) { context.delete(shared) }
+            for member in try all(HouseholdMemberRecord.self) { context.delete(member) }
+            for link in try all(DogLinkRecord.self) { context.delete(link) }
+            for entry in try all(SyncLedgerRecord.self) { context.delete(entry) }
+            for household in try all(HouseholdRecord.self) { context.delete(household) }
         }
     }
 

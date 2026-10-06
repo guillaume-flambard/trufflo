@@ -41,5 +41,6 @@ Exposition à l'API : depuis octobre 2026, une table n'est plus exposée par dé
 
 1. **Déploiement sur le VPS** : stack `trufflo-api` écrite dans `lab-infra` (branche `trufflo-api`, commit `85fcbd3`), testée en local de bout en bout, déployée le 2026-10-06 depuis la PR lab-infra #93, migration `20261006170603` appliquée, incluse dans la sauvegarde nocturne. Procédure dans `stacks/trufflo-api/README.md` de ce dépôt-là. Adresse : `https://trufflo-api.memolabs.dev`.
 2. **Se connecter avec Apple** : en flux natif (jeton d'identité), il suffit que l'identifiant de l'app `dev.memolabs.trufflo` figure dans les Client IDs ; ni Services ID, ni clé `.p8`, ni rotation (documentation Supabase, « Login with Apple », lue le 2026-10-06). Reste à activer la capacité Sign in with Apple sur l'App ID, dans le compte développeur de Guillaume.
-3. **Synchronisation côté iPhone** : non écrite. Elle demandera un état de synchronisation local (`localOnly`, `pending`, `synced`, `conflict`, `failed`, voir `DATA-CONTRACTS` §3) et des opérations idempotentes.
-4. **Rapprochement des chiens** : deux personnes qui créent chacune « Oslo » en local produiront deux chiens. Le rattachement à un chien existant du foyer est à concevoir avant la synchro.
+3. **Synchronisation côté iPhone** : écrite au chantier 3, voir l'ADR 0008.
+4. **Rapprochement des chiens** : tranché dans l'ADR 0008. En rejoignant, la personne dit quel chien local est quel chien du foyer ; rien n'est relié par ressemblance de nom.
+5. **Noms des membres** : migration `20261006180954_member_profiles` (nom choisi par chaque membre, par foyer). Testée en local, à appliquer en production.

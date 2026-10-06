@@ -216,8 +216,9 @@ enum SchemaV4: VersionedSchema {
     }
 }
 
-/// V5 is the current version: it adds the chosen routine, one per dog. Existing
-/// stores gain an empty table.
+/// V5 adds the chosen routine, one per dog. Existing stores gain an empty
+/// table. Its five classes are still the live ones, unchanged since: V6 only
+/// adds tables, so V5's identity does not move.
 enum SchemaV5: VersionedSchema {
     static let versionIdentifier = Schema.Version(5, 0, 0)
     static var models: [any PersistentModel.Type] {
@@ -225,9 +226,21 @@ enum SchemaV5: VersionedSchema {
     }
 }
 
+/// V6 is the current version: the shared household (PRD F08, chantier 3).
+/// Five new tables beside the journal; no journal class changes, so every
+/// existing store gains empty tables and nothing else.
+enum SchemaV6: VersionedSchema {
+    static let versionIdentifier = Schema.Version(6, 0, 0)
+    static var models: [any PersistentModel.Type] {
+        [DogRecord.self, WalkRecord.self, WalkDogRecord.self, TrackPointRecord.self, RoutineRecord.self,
+         HouseholdRecord.self, DogLinkRecord.self, SyncLedgerRecord.self,
+         SharedWalkRecord.self, HouseholdMemberRecord.self]
+    }
+}
+
 enum TruffloMigrationPlan: SchemaMigrationPlan {
     static var schemas: [any VersionedSchema.Type] {
-        [SchemaV1.self, SchemaV2.self, SchemaV3.self, SchemaV4.self, SchemaV5.self]
+        [SchemaV1.self, SchemaV2.self, SchemaV3.self, SchemaV4.self, SchemaV5.self, SchemaV6.self]
     }
 
     static var stages: [MigrationStage] {
@@ -236,11 +249,12 @@ enum TruffloMigrationPlan: SchemaMigrationPlan {
             .lightweight(fromVersion: SchemaV2.self, toVersion: SchemaV3.self),
             .lightweight(fromVersion: SchemaV3.self, toVersion: SchemaV4.self),
             .lightweight(fromVersion: SchemaV4.self, toVersion: SchemaV5.self),
+            .lightweight(fromVersion: SchemaV5.self, toVersion: SchemaV6.self),
         ]
     }
 }
 
 enum CurrentSchema {
-    static let versioned = SchemaV5.self
-    static var schema: Schema { Schema(versionedSchema: SchemaV5.self) }
+    static let versioned = SchemaV6.self
+    static var schema: Schema { Schema(versionedSchema: SchemaV6.self) }
 }

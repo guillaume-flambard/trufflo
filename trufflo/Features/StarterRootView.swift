@@ -29,6 +29,12 @@ struct StarterRootView: View {
     @Query(sort: \WalkRecord.startedAt, order: .reverse) private var walks: [WalkRecord]
     @Query private var links: [WalkDogRecord]
     @Query private var routines: [RoutineRecord]
+    @Query private var sharedWalks: [SharedWalkRecord]
+    @Query private var householdMembers: [HouseholdMemberRecord]
+    @Query private var dogLinks: [DogLinkRecord]
+    @Environment(HouseholdModel.self) private var household
+    @Environment(\.scenePhase) private var scenePhase
+    @State private var showHousehold = false
     @State private var showDogForm = false
     @State private var showWalkForm = false
     @State private var activeWalkCover: ActiveWalkCover?
@@ -57,6 +63,10 @@ struct StarterRootView: View {
                 .toolbar {
                     ToolbarItem(placement: .topBarTrailing) {
                         Menu("Réglages", systemImage: "gearshape") {
+                            Button("Foyer partagé", systemImage: "person.2") {
+                                showHousehold = true
+                            }
+                            .accessibilityIdentifier("household.open")
                             Button("Exporter le journal", systemImage: "square.and.arrow.up") {
                                 exportJournal()
                             }
@@ -80,12 +90,13 @@ struct StarterRootView: View {
                 .navigationTitle("Journal")
                 .truffloScreen()
                 .toolbar {
-                    if walks.contains(where: { $0.phase == .completed }) {
+                    if walks.contains(where: { $0.phase == .completed }) || !sharedWalks.isEmpty {
                         ToolbarItem(placement: .topBarTrailing) { journalFilterMenu }
                     }
                 }
                 .navigationDestination(for: WalkRoute.self) { WalkDetailView(walkID: $0.id) }
                 .navigationDestination(for: DogRoute.self) { DogDetailView(dogID: $0.id) }
+                .navigationDestination(for: SharedWalkRoute.self) { SharedWalkDetailView(walkID: $0.id) }
             }
             .tabItem { Label("Journal", systemImage: "book") }
 
@@ -127,6 +138,14 @@ struct StarterRootView: View {
         }
         .tint(Color.truffloForest)
         .sheet(isPresented: $showDogForm) { DogFormView() }
+        .sheet(isPresented: $showHousehold) { HouseholdView() }
+        .task {
+            await household.refreshSessionState()
+            await household.syncNow()
+        }
+        .onChange(of: scenePhase) { _, phase in
+            if phase == .active { Task { await household.syncNow() } }
+        }
         .sheet(isPresented: $showWalkForm) { ManualWalkFormView(dogs: dogs) }
         .sheet(isPresented: $showWhoIsWalking) {
             WhoIsWalkingSheet(dogs: dogs,
@@ -191,7 +210,9 @@ struct StarterRootView: View {
                             isPresented: $showEraseConfirmation, titleVisibility: .visible) {
             Button("Tout effacer", role: .destructive, action: eraseAll)
         } message: {
-            Text("Cette suppression locale ne peut pas être annulée dans le starter.")
+            Text(sharedWalks.isEmpty && dogLinks.isEmpty
+                 ? "Cette suppression locale ne peut pas être annulée dans le starter."
+                 : "Cette suppression locale ne peut pas être annulée. Ce que vous avez déjà partagé avec le foyer y reste visible.")
         }
         .alert("Enregistrement impossible", isPresented: $storageError) {
             Button("Fermer", role: .cancel) {}
@@ -209,7 +230,8 @@ struct StarterRootView: View {
             journalFilter.includes(date: walk.endedAt ?? walk.startedAt,
                                    dogIDs: Set(links.filter { $0.walkID == walk.id }.map(\.dogID)))
         }
-        if completed.isEmpty {
+        let sharedShown = sharedEntries(own: completed)
+        if completed.isEmpty && sharedWalks.isEmpty {
             List {
                 TruffloEmptyStateView(
                     imageName: "EmptyWalk",
@@ -217,15 +239,42 @@ struct StarterRootView: View {
                     description: "Les sorties ajoutées à votre journal apparaîtront ici."
                 )
             }
-        } else if shown.isEmpty {
+        } else if shown.isEmpty && sharedShown.isEmpty {
             TruffloNotice(title: "Aucune balade pour ce filtre",
                           message: "Aucune sortie enregistrée ne correspond au chien et à la période choisis.",
                           actionTitle: "Tout afficher") { journalFilter = JournalFilter() }
         } else {
-            JournalTimelineView(walks: shown,
-                                filterSummary: journalFilter.isActive ? filterSummary(count: shown.count) : nil,
+            JournalTimelineView(walks: shown, shared: sharedShown,
+                                filterSummary: journalFilter.isActive ? filterSummary(count: shown.count + sharedShown.count) : nil,
                                 rowDestination: { WalkRoute(id: $0) })
         }
+    }
+
+    /// Walks of the other members, under the same filter. The dog filter
+    /// speaks of a local dog; a shared walk names household dogs, so the
+    /// local dog is translated through its link (spec S8, S13).
+    private func sharedEntries(own completed: [WalkRecord]) -> [JournalTimelineView.SharedEntry] {
+        guard !sharedWalks.isEmpty else { return [] }
+        let remoteOf = Dictionary(dogLinks.map { ($0.localDogID, $0.remoteDogID) }, uniquingKeysWith: { a, _ in a })
+        let localOf = Dictionary(dogLinks.map { ($0.remoteDogID, $0.localDogID) }, uniquingKeysWith: { a, _ in a })
+        let names = Dictionary(householdMembers.map { ($0.userID, $0.displayName) }, uniquingKeysWith: { a, _ in a })
+        let mine = completed.compactMap { walk -> PossibleDuplicate.Span? in
+            guard let end = walk.endedAt else { return nil }
+            let dogs = Set(links.filter { $0.walkID == walk.id }.compactMap { remoteOf[$0.dogID] })
+            return PossibleDuplicate.Span(start: walk.startedAt, end: end, dogs: dogs)
+        }
+        let flagged = PossibleDuplicate.flagged(
+            others: sharedWalks.map { ($0.id, PossibleDuplicate.Span(start: $0.startedAt, end: $0.endedAt, dogs: Set($0.dogIDs))) },
+            mine: mine)
+        return sharedWalks
+            .filter { walk in
+                journalFilter.includes(date: walk.endedAt, dogIDs: Set(walk.dogIDs.compactMap { localOf[$0] }))
+            }
+            .map { walk in
+                JournalTimelineView.SharedEntry(walk: walk,
+                                                authorName: names[walk.authorID] ?? "un membre du foyer",
+                                                possibleDuplicate: flagged.contains(walk.id))
+            }
     }
 
     /// "3 balades, Oslo, 30 derniers jours": says what the filtered list is.
@@ -593,8 +642,10 @@ struct StarterRootView: View {
     }
 
     private func eraseAll() {
-        do { try JournalRepository(context: context).eraseAll() }
-        catch { storageError = true }
+        do {
+            try JournalRepository(context: context).eraseAll()
+            Task { await household.forgetSession() }
+        } catch { storageError = true }
     }
 }
 

@@ -6,6 +6,10 @@ Aucune surveillance permanente, publication de domicile, carte de personnes en d
 
 La CNIL rappelle la nécessité de définir finalités, minimisation, information et durée, ainsi que la différence entre autorisation système et usages ultérieurs des données. Le projet doit documenter son propre fondement et ne pas considérer un écran de permission comme une conformité complète. [S08]
 
+## Foyer partagé (M2)
+
+Le partage est un choix explicite : se connecter avec Apple, puis créer ou rejoindre un foyer. Avant cela, l'app n'émet aucune requête réseau ; un test le vérifie. Partent les noms, races et âges des chiens et, pour chaque balade, les dates, la durée, la distance mesurée, la qualité et les noms des chiens. Ne partent jamais : tracés, lieux, notes, photos, sexe et préférences des chiens. La session est gardée dans le trousseau, sur cet appareil seulement. Une personne retirée du foyer perd l'accès serveur à l'instant, et son iPhone oublie ce qu'il avait reçu au contact suivant. Effacer les données de l'iPhone ne supprime pas ce qui a déjà été partagé avec le foyer, et l'écran le dit (ADR 0007, ADR 0008).
+
 ## Protection locale et sauvegardes
 
 Le starter désactive CloudKit géré par SwiftData, mais n’a pas vérifié les sauvegardes système iOS ni la protection effective des fichiers sur appareil. Ces vérifications sont obligatoires avant de promettre une confidentialité locale donnée. [S04]

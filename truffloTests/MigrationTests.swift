@@ -233,6 +233,35 @@ private func seedLegacyV2Store(at storeURL: URL) throws {
     #expect(try context.fetch(FetchDescriptor<RoutineRecord>()).isEmpty)
 }
 
+/// A store written before the household (V5) opens with its journal and
+/// routine intact and every household table empty: joining a household is
+/// opt-in, never something a migration does.
+@Test @MainActor func aV5StoreOpensWithNoHousehold() throws {
+    let directory = try makeV1StoreDirectory()
+    defer { try? FileManager.default.removeItem(at: directory) }
+    let storeURL = directory.appending(path: "TruffloMigration.store")
+    do {
+        var writer: ModelContainer? = try PersistenceFactory.makeFixtureStore(
+            versioned: SchemaV5.self, at: storeURL)
+        let context = try #require(writer?.mainContext)
+        let dog = DogRecord(name: "Oslo", breedKind: "unknown")
+        context.insert(dog)
+        context.insert(WalkRecord.manual(endedAt: Date(timeIntervalSince1970: 7_000), durationSeconds: 900))
+        context.insert(RoutineRecord(dogID: dog.id, routine: try DogRoutine(outingsPerDay: 2, minutesPerOuting: nil, slots: [])))
+        try context.save()
+        writer = nil
+    }
+    let context = ModelContext(try PersistenceFactory.makeMigrated(at: storeURL))
+    #expect(try context.fetch(FetchDescriptor<DogRecord>()).count == 1)
+    #expect(try context.fetch(FetchDescriptor<WalkRecord>()).count == 1)
+    #expect(try context.fetch(FetchDescriptor<RoutineRecord>()).count == 1)
+    #expect(try context.fetch(FetchDescriptor<HouseholdRecord>()).isEmpty)
+    #expect(try context.fetch(FetchDescriptor<DogLinkRecord>()).isEmpty)
+    #expect(try context.fetch(FetchDescriptor<SyncLedgerRecord>()).isEmpty)
+    #expect(try context.fetch(FetchDescriptor<SharedWalkRecord>()).isEmpty)
+    #expect(try context.fetch(FetchDescriptor<HouseholdMemberRecord>()).isEmpty)
+}
+
 /// The tripwire for unversioned model edits (ADR-008). The live classes are
 /// the current schema; if anyone adds, removes or renames a persisted property
 /// without freezing the previous shape and adding a version, this dump changes
@@ -248,8 +277,13 @@ private func seedLegacyV2Store(at storeURL: URL) throws {
         .sorted()
         .joined(separator: " | ")
 
-    let expected = "DogRecord{ageDescription,breedKind,breedLabel,createdAt,gender,id,name,photoData,preferencesNote}"
+    let expected = "DogLinkRecord{localDogID,remoteDogID}"
+        + " | DogRecord{ageDescription,breedKind,breedLabel,createdAt,gender,id,name,photoData,preferencesNote}"
+        + " | HouseholdMemberRecord{displayName,roleRaw,userID}"
+        + " | HouseholdRecord{id,joinedAt,lastError,lastPulledAt,lastSyncAt,myDisplayName,myRoleRaw,myUserID,name}"
         + " | RoutineRecord{dogID,isPaused,minutesPerOuting,outingsPerDay,slotsRaw,updatedAt}"
+        + " | SharedWalkRecord{authorID,confirmedSeconds,correctedAt,dogIDsRaw,dogNamesRaw,endedAt,id,qualityRaw,recordedPathMeters,revision,sourceRaw,startedAt,updatedAt}"
+        + " | SyncLedgerRecord{key,kindRaw,lastError,localID,pushedFingerprint,stateRaw,updatedAt}"
         + " | TrackPointRecord{horizontalAccuracy,id,latitude,longitude,segment,sequence,timestamp,walkID}"
         + " | WalkDogRecord{dogID,dogNameSnapshot,id,walkID}"
         + " | WalkRecord{confirmedSeconds,correctedAt,endedAt,id,lastCheckpointAt,measuredEdgeCount,note,phaseRaw,qualityRaw,recordedPathMeters,revision,sourceRaw,startedAt,trackSegmentCount}"

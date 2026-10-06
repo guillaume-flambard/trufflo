@@ -119,6 +119,22 @@ journey.
 A milestone is not verified until `TruffloFast` and this script have both
 been run.
 
+#### The household journey needs a local Supabase
+
+`twoPeopleShareAHouseholdOverRealHTTP` runs the production household client
+over real HTTP, two accounts, against a local Supabase built from
+`backend/supabase`. It is skipped inside `TruffloFast` (it reports
+`skipped`, which is not a pass). Run it with Docker up:
+
+```bash
+tools/backend/household-integration.sh
+```
+
+The script resets the local database, passes its address and anon key to
+the test through `TEST_RUNNER_` variables, and reads the verdict from the
+journal. The server rules themselves are tested with
+`supabase test db --local` from `backend/`.
+
 ### Rules
 
 - Never repeatedly launch the full simulator/UI suite during implementation.

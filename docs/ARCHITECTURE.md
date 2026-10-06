@@ -78,7 +78,7 @@ Le petit moteur fourni vérifie les transitions ; il ne contient pas encore le d
 
 UUID métier stables, DTO versionnés et clés d’idempotence. Ne pas envoyer `PersistentIdentifier` comme identifiant public. La future synchro de M2 concerne les synthèses autorisées, pas les tracés privés par défaut.
 
-Candidat backend : PostgreSQL et authentification compatible, Supabase à évaluer à M2. Le choix n’est pas une dépendance de M0/M1. Ne pas activer CloudKit pour contourner la conception des rôles de foyer : son activation aurait ses propres contraintes et migrations. [S11]
+Backend M2 : Supabase auto-hébergé sur le VPS du lab, connexion avec Apple (ADR 0007). Côté iPhone, un client mince sur URLSession, un registre d'envoi et des tables de foyer séparées du journal (ADR 0008, `Data/HouseholdSync.swift`). Rien ne part tant que la personne n'a pas rejoint de foyer. Ne pas activer CloudKit pour contourner la conception des rôles de foyer : son activation aurait ses propres contraintes et migrations. [S11]
 
 ## ADR-008 — Migrations avant données externes
 

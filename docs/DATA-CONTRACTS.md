@@ -20,7 +20,7 @@ La migration exacte est écrite avant d’ajouter les modèles M1. Un champ requ
 
 ## 3. Axes d’état indépendants
 
-Phase métier : `recording`, `paused`, `interrupted`, `completed`, `discarded`. État de synchronisation futur : `localOnly`, `pending`, `synced`, `conflict`, `failed`. Qualité : `gpsRecorded`, `gpsPartial`, `manual`, `unavailable`.
+Phase métier : `recording`, `paused`, `interrupted`, `completed`, `discarded`. État de synchronisation : `localOnly`, `pending`, `synced`, `conflict`, `failed`. Il est porté par un registre à part (`SyncLedgerRecord`, ADR 0008), jamais par la balade ; `conflict` n'est pas produit dans la version actuelle. Qualité : `gpsRecorded`, `gpsPartial`, `manual`, `unavailable`.
 
 Une balade terminée et non synchronisée reste terminée. Une session interrompue ne redevient pas automatiquement active. Un tracé partiel peut être sauvegardé honnêtement. Aucun champ `dogStepsMeasured` sans mesure canine adaptée.
 
@@ -30,7 +30,7 @@ Une balade terminée et non synchronisée reste terminée. Une session interromp
 
 Une commande produisant une erreur n’écrit pas une moitié d’agrégat. Toute opération rejouable possède un identifiant stable. Les UUID de persistance SwiftData ne deviennent pas les identifiants réseau.
 
-## 5. Exemple de DTO de synthèse futur
+## 5. DTO de synthèse
 
 ```json
 {
@@ -47,7 +47,7 @@ Une commande produisant une erreur n’écrit pas une moitié d’agrégat. Tout
 }
 ```
 
-Les exemples sont synthétiques. Le DTO ne contient pas de latitude, longitude, chemin de fichier local, note privée ou identifiant de publicité. Les futures notes partagées ont un contrat distinct, choisi explicitement.
+Le DTO réel (`Domain/HouseholdDTO.swift`) suit ce contrat en noms de colonnes serveur, plus le nom du chien au moment de la balade. Les exemples sont synthétiques. Le DTO ne contient pas de latitude, longitude, chemin de fichier local, note privée ou identifiant de publicité. Les futures notes partagées ont un contrat distinct, choisi explicitement.
 
 ## 6. Cohérence et calcul
 

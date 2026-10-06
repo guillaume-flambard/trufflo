@@ -5,6 +5,8 @@ import SwiftUI
 /// summed, no target is shown.
 struct JournalTimelineView: View {
     let walks: [WalkRecord]
+    /// Walks of the other household members, read-only (PRD F08).
+    var shared: [SharedEntry] = []
     /// Shown instead of the week sentence when the list is filtered.
     var filterSummary: String? = nil
     let rowDestination: (UUID) -> WalkRoute
@@ -26,11 +28,20 @@ struct JournalTimelineView: View {
                         .foregroundStyle(Color.truffloForest)
                         .padding(.top, TruffloTheme.Spacing.xSmall)
                         .accessibilityAddTraits(.isHeader)
-                    ForEach(day.walks) { walk in
-                        NavigationLink(value: rowDestination(walk.id)) {
-                            WalkActivityCard(walk: walk, showsDay: false)
+                    ForEach(day.items) { item in
+                        switch item {
+                        case .own(let walk):
+                            NavigationLink(value: rowDestination(walk.id)) {
+                                WalkActivityCard(walk: walk, showsDay: false)
+                            }
+                            .buttonStyle(.plain)
+                        case .shared(let entry):
+                            NavigationLink(value: SharedWalkRoute(id: entry.walk.id)) {
+                                SharedWalkCard(walk: entry.walk, authorName: entry.authorName,
+                                               possibleDuplicate: entry.possibleDuplicate)
+                            }
+                            .buttonStyle(.plain)
                         }
-                        .buttonStyle(.plain)
                     }
                 }
             }
@@ -39,17 +50,41 @@ struct JournalTimelineView: View {
         }
     }
 
+    struct SharedEntry {
+        let walk: SharedWalkRecord
+        let authorName: String
+        let possibleDuplicate: Bool
+    }
+
+    private enum Item: Identifiable {
+        case own(WalkRecord)
+        case shared(SharedEntry)
+
+        var id: UUID {
+            switch self {
+            case .own(let walk): walk.id
+            case .shared(let entry): entry.walk.id
+            }
+        }
+
+        var date: Date {
+            switch self {
+            case .own(let walk): walk.endedAt ?? walk.startedAt
+            case .shared(let entry): entry.walk.endedAt
+            }
+        }
+    }
+
     private struct Day {
         let start: Date
-        let walks: [WalkRecord]
+        let items: [Item]
     }
 
     private var days: [Day] {
-        let grouped = Dictionary(grouping: walks) { calendar.startOfDay(for: $0.endedAt ?? $0.startedAt) }
+        let items = walks.map(Item.own) + shared.map(Item.shared)
+        let grouped = Dictionary(grouping: items) { calendar.startOfDay(for: $0.date) }
         return grouped.keys.sorted(by: >).map { start in
-            Day(start: start, walks: grouped[start]!.sorted {
-                ($0.endedAt ?? $0.startedAt) > ($1.endedAt ?? $1.startedAt)
-            })
+            Day(start: start, items: grouped[start]!.sorted { $0.date > $1.date })
         }
     }
 
@@ -64,6 +99,7 @@ struct JournalTimelineView: View {
     private var weekSentence: String? {
         let weekAgo = Date().addingTimeInterval(-7 * 24 * 3600)
         let count = walks.filter { ($0.endedAt ?? $0.startedAt) >= weekAgo }.count
+            + shared.filter { $0.walk.endedAt >= weekAgo }.count
         switch count {
         case 0: return nil
         case 1: return "1 balade enregistrée cette semaine"

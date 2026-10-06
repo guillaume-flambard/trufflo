@@ -6,6 +6,7 @@ import SwiftData
 @MainActor
 struct TruffloApp: App {
     private let boot: Result<ModelContainer, Error>
+    private let household: HouseholdModel?
 
     init() {
         let forest = UIColor(Color.truffloForest)
@@ -19,7 +20,15 @@ struct TruffloApp: App {
         boot = Result {
             let container = try PersistenceFactory.make(inMemory: inMemory)
             try? JournalRepository(context: ModelContext(container)).recoverInterruptedSessions()
+            #if DEBUG
+            if inMemory && HouseholdDemo.isRequested { try HouseholdDemo.seed(container.mainContext) }
+            #endif
             return container
+        }
+        // UI tests run with no network and no keychain: the household screen
+        // says it is unavailable instead of talking to the real server.
+        household = (try? boot.get()).map { container in
+            inMemory ? HouseholdModel.unavailable(container: container) : HouseholdModel.production(container: container)
         }
     }
 
@@ -29,6 +38,7 @@ struct TruffloApp: App {
             case .success(let container):
                 StarterRootView()
                     .modelContainer(container)
+                    .environment(household ?? HouseholdModel.unavailable(container: container))
                     // The palette ships light values only; until adaptive colours
                     // exist, dark mode would put forest text on a dark system
                     // background on half the screens.
