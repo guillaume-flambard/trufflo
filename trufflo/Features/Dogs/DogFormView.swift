@@ -109,7 +109,12 @@ struct DogFormView: View {
             .onChange(of: selectedPhotoItem) { _, newItem in
                 Task {
                     if let data = try? await newItem?.loadTransferable(type: Data.self) {
-                        await MainActor.run { self.photoData = data }
+                        // Resized and stripped of its location before it is kept.
+                        // Unreadable, it is not kept at all: storing the original
+                        // would keep the place the photo was taken.
+                        if let prepared = PhotoImport.prepare(data) {
+                            await MainActor.run { self.photoData = prepared }
+                        }
                     }
                 }
             }
