@@ -32,6 +32,9 @@ l'installation du starter et est obsolète depuis l'intégration.
 | [SOURCES.md](SOURCES.md) | Sources citées par le PRD, notation `[Snn]`. |
 | [XCODE-SETUP.md](XCODE-SETUP.md) | Configuration Xcode d'origine. |
 | [KICKOFF-PROMPT.md](KICKOFF-PROMPT.md) | Prompt de démarrage d'origine. Preuve de provenance. |
+| [specs/README.md](specs/README.md) | Specs de livraison des lots A à D, et le registre des décisions. |
+| [decisions/](decisions/) | ADR : les décisions techniques et leurs sources. |
+| [research/README.md](research/README.md) | Tests d'usage (lot D) : guide de séance, grille, recrutement, installation. Les notes de séance, elles, vivent hors de ce dépôt public. |
 
 ## Archive
 

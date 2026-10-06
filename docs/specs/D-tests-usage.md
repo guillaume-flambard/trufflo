@@ -17,6 +17,14 @@ Des personnes extérieures à l'équipe utilisent Trufflo, et ce qu'on observe c
 
 Chaque séance : on donne une tâche, on observe sans aider, on note. Pas de démonstration avant.
 
+Le matériel est dans `docs/research/` : guide de séance, fiche d'observation, message de
+recrutement, marche à suivre pour installer l'app (`distribution.md`, qui dit ce qui est vérifié et
+ce qui ne l'est pas), modèle de synthèse.
+
+**État des prérequis au 2026-10-07 :** D-1 attend la fin du lot A (matrice de captures, photos
+réelles de chien) mais n'a besoin d'aucun envoi à Apple : les séances se font sur l'iPhone de
+Guillaume. D-2 et D-3 demandent TestFlight externe, donc une fiche d'app et une revue Apple.
+
 ## 2. Tâches observées
 
 | Tâche | Question | Signal d'échec |
@@ -35,5 +43,10 @@ confiance (« où partent mes données ? »). « C'est joli » ne vaut ni usage 
 
 ## 4. Ce qui sort de chaque étape
 
-Une note datée dans `docs/research/` : ce qui a été observé, ce qui change dans les specs, les
-décisions prises. Une observation qui ne change rien est quand même écrite.
+Une synthèse datée (`docs/research/modele-synthese.md`) : ce qui a été observé, ce qui change dans
+les specs, les décisions prises. Une observation qui ne change rien est quand même écrite.
+
+**Où elle vit : dans le Vault, pas dans ce dépôt.** Le dépôt est public (vérifié le 2026-10-07 avec
+`gh repo view`). Une fiche remplie contient des citations et des habitudes de vraies personnes,
+même sans nom. Seule une décision, avec son motif et sans citation identifiable, peut être reportée
+dans une ADR ou dans une spec.
