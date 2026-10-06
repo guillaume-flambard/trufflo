@@ -272,3 +272,69 @@ struct InMemoryCommunityRemote: CommunityRemote {
     func unblock(userID: UUID) async throws { try server.run("unblock") { try server.setBlock(user, userID, false) } }
 }
 #endif
+
+#if DEBUG
+/// `--demo-community` and friends: a zone with a few real-looking events, to
+/// look at the screens before the server exists. Names and places are made up
+/// for the demo and never reach a release build.
+extension InMemoryCommunityServer {
+    enum DemoRequest {
+        case none, newcomer, member, organizer
+
+        init?(arguments: [String]) {
+            if arguments.contains("--demo-community-organizer") { self = .organizer }
+            else if arguments.contains("--demo-community-new") { self = .newcomer }
+            else if arguments.contains("--demo-community") { self = .member }
+            else { return nil }
+        }
+    }
+
+    @MainActor
+    static func demoModel(_ request: DemoRequest) -> CommunityModel {
+        let server = InMemoryCommunityServer()
+        let me = UUID(), lea = UUID(), marc = UUID(), sam = UUID()
+        let zone = CommunityZone(id: "demo", name: "Zone de démonstration")
+        server.addZone(zone)
+        server.makeOrganizer(lea, in: zone.id)
+        server.makeOrganizer(marc, in: zone.id)
+        if request == .organizer { server.makeOrganizer(me, in: zone.id) }
+        let adult = server.clock()
+        func profile(_ id: UUID, _ name: String) {
+            server.profiles[id] = CommunityProfileDTO(userID: id, displayName: name, zoneID: zone.id, adultDeclaredAt: adult)
+        }
+        profile(lea, "Léa"); profile(marc, "Marc"); profile(sam, "Sam")
+        if request != .newcomer { profile(me, "Guillaume") }
+
+        let calendar = Calendar.current
+        func day(_ offset: Int, _ hour: Int, _ minute: Int = 0) -> Date {
+            let start = calendar.startOfDay(for: .now)
+            let base = calendar.date(byAdding: .day, value: offset, to: start) ?? start
+            return calendar.date(bySettingHour: hour, minute: minute, second: 0, of: base) ?? base
+        }
+        func event(_ organizer: UUID, _ name: String, _ at: Date, _ minutes: Int, _ point: String, _ rules: String,
+                   humans: Int, dogs: Int) -> UUID {
+            let id = UUID()
+            server.events[id] = Event(dto: WalkEventDTO(
+                id: id, organizerID: organizer, organizerName: name, zoneID: zone.id, startsAt: at, durationMinutes: minutes,
+                meetingPoint: point, rules: rules, humanCapacity: humans, dogCapacity: dogs,
+                humansAccepted: 0, dogsAccepted: 0, status: .published, myStatus: nil))
+            return id
+        }
+        let first = event(lea, "Léa", day(2, 10), 60, "Entrée nord du parc", "Chiens en laisse près de l'étang. Sacs fournis.", humans: 6, dogs: 6)
+        let second = event(marc, "Marc", day(3, 9, 30), 90, "Parking du bois de la Fontaine", "Rythme tranquille, chiens sociables.", humans: 4, dogs: 4)
+        _ = event(lea, "Léa", day(9, 18), 45, "Place de la mairie", "", humans: 8, dogs: 8)
+
+        if request != .newcomer {
+            let dog = UUID()
+            server.dogs[dog] = CommunityDogDTO(id: dog, ownerID: me, name: "Oslo")
+            // Sam is already in the first one; I come to the second with Oslo.
+            server.participations[first, default: [:]][sam] = Participation(status: .accepted, dogIDs: [], attended: nil)
+            if request == .member {
+                server.participations[second, default: [:]][me] = Participation(status: .requested, dogIDs: [dog], attended: nil)
+            }
+        }
+        // Zone and identity are fixed for the demo: this device is « me ».
+        return CommunityModel(remote: server.client(me))
+    }
+}
+#endif

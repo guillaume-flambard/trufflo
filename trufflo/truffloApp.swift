@@ -7,6 +7,9 @@ import SwiftData
 struct TruffloApp: App {
     private let boot: Result<ModelContainer, Error>
     private let household: HouseholdModel?
+    /// Nil in production until the community server exists: the tab is absent,
+    /// and no event is shown that a server did not send.
+    private let community: CommunityModel?
 
     init() {
         let forest = UIColor(Color.truffloForest)
@@ -26,6 +29,15 @@ struct TruffloApp: App {
             #endif
             return container
         }
+        #if DEBUG
+        if let request = InMemoryCommunityServer.DemoRequest(arguments: ProcessInfo.processInfo.arguments) {
+            community = InMemoryCommunityServer.demoModel(request)
+        } else {
+            community = nil
+        }
+        #else
+        community = nil
+        #endif
         // UI tests run with no network and no keychain: the household screen
         // says it is unavailable instead of talking to the real server.
         household = (try? boot.get()).map { container in
@@ -45,6 +57,7 @@ struct TruffloApp: App {
                 StarterRootView()
                     .modelContainer(container)
                     .environment(household ?? HouseholdModel.unavailable(container: container))
+                    .environment(community)
                     // The palette ships light values only; until adaptive colours
                     // exist, dark mode would put forest text on a dark system
                     // background on half the screens.

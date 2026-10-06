@@ -33,6 +33,7 @@ struct StarterRootView: View {
     @Query private var householdMembers: [HouseholdMemberRecord]
     @Query private var dogLinks: [DogLinkRecord]
     @Environment(HouseholdModel.self) private var household
+    @Environment(CommunityModel.self) private var community: CommunityModel?
     @Environment(\.scenePhase) private var scenePhase
     @State private var showHousehold = false
     @State private var showDogForm = false
@@ -142,6 +143,14 @@ struct StarterRootView: View {
                 .navigationDestination(for: DogRoute.self) { DogDetailView(dogID: $0.id) }
             }
             .tabItem { Label("Mes chiens", systemImage: "pawprint") }
+
+            if let community {
+                NavigationStack {
+                    CommunityRootView()
+                }
+                .environment(community)
+                .tabItem { Label("Sorties", systemImage: "figure.walk") }
+            }
         }
         .tint(Color.truffloForest)
         .sheet(isPresented: $showDogForm) { DogFormView() }
