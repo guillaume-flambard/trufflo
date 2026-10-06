@@ -72,11 +72,24 @@ struct ActiveWalkViewModelSessionTests {
         #expect(viewModel.confirmedSeconds == frozen)
 
         viewModel.resume()
-        try await Task.sleep(for: .milliseconds(1100))
+        let resumedAt = ContinuousClock.now
+        // Proof that the clock restarted: wait for the confirmed time to grow,
+        // rather than assuming a one-second tick landed inside a fixed sleep.
+        // A bare `>= frozen` would pass even if resume did nothing.
+        var grew = false
+        for _ in 0..<100 {
+            if viewModel.confirmedSeconds > frozen { grew = true; break }
+            try await Task.sleep(for: .milliseconds(50))
+        }
         viewModel.pause()
 
-        #expect(viewModel.confirmedSeconds >= frozen + 1.0)
-        #expect(viewModel.confirmedSeconds < frozen + 5)
+        #expect(grew, "la reprise doit faire repartir l'horloge")
+        // The upper bound follows the measured time since the resume instead of
+        // a constant: `frozen + 5` assumed the machine stays close to real
+        // time, which a busy runner does not.
+        let accrued = Self.spent(since: resumedAt)
+        #expect(accrued >= 0)
+        #expect(viewModel.confirmedSeconds <= frozen + accrued + 2)
 
         try? await Task.sleep(for: .milliseconds(50))
         let check = JournalRepository(context: ModelContext(container))

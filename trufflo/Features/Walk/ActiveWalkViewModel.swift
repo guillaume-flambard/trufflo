@@ -141,6 +141,7 @@ public final class ActiveWalkViewModel: ObservableObject {
 
     public func finish() async {
         guard let walkID, let trackWriter else { return }
+        guard phase != .completed else { return }
         let finalSeconds = elapsedSeconds()
         confirmedSeconds = finalSeconds
         endRun()
@@ -155,6 +156,12 @@ public final class ActiveWalkViewModel: ObservableObject {
             }
             _ = try await trackWriter.finish(confirmedSeconds: finalSeconds, note: note, for: walkID)
             phase = .completed
+            // Released on success, so a second tap on "Terminer" is a no-op.
+            // Leaving the identifier set made the second call reach the writer,
+            // which refused an already closed session and reported an error
+            // over a walk that had just been saved.
+            self.walkID = nil
+            interruptionBlock = nil
             accumulatedBeforeRun = 0
             lastCheckpointSeconds = 0
             accessibilityAnnouncer.announce("Balade terminée")
@@ -216,7 +223,10 @@ public final class ActiveWalkViewModel: ObservableObject {
     }
 
     private func applyServiceState(_ state: LocationServiceState) {
-        isLocationActive = (state == .active)
+        // A signal only counts as active while the walk is actually recording.
+        // Without the phase in this condition, a fix that arrives just after a
+        // pause lit the lamp back up although nothing was being collected.
+        isLocationActive = (state == .active) && phase == .recording
         let block: LocationBlock?
         switch state {
         case .denied: block = .permissionDenied

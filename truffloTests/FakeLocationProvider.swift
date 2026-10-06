@@ -53,7 +53,9 @@ final class FakeLocationProvider: LocationProviding {
     func stop() async {
         stopCount += 1
         started = false
-        state = .idle
+        // Same contract as the production adapter: stopping is reported, so the
+        // tests exercise the path that turns the signal lamp off.
+        report(.stateChanged(.idle))
     }
 
     func emit(latitude: Double, longitude: Double, accuracy: Double, at date: Date) {

@@ -63,8 +63,11 @@ public final class CoreLocationProvider: NSObject, LocationProviding {
 
     public func stop() async {
         started = false
-        state = .idle
         manager.stopUpdatingLocation()
+        // Reported, not just recorded: without this the last known state stayed
+        // `.active` in the view model, so the signal lamp kept reading "Actif"
+        // after a pause while no location was being collected at all.
+        report(.stateChanged(.idle))
     }
 
     private func report(_ event: LocationServiceEvent) {
