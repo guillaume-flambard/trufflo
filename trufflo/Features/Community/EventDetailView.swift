@@ -13,6 +13,9 @@ struct EventDetailView: View {
     @State private var updates: [EventUpdateDTO] = []
     @State private var showJoin = false
     @State private var confirmWithdraw = false
+    @State private var showReschedule = false
+    @State private var showRepropose = false
+    @State private var confirmCancel = false
 
     private var event: WalkEventDTO? { model.event(eventID) }
 
@@ -28,7 +31,7 @@ struct EventDetailView: View {
         }
         .background(Color.truffloSand.ignoresSafeArea())
         .navigationBarTitleDisplayMode(.inline)
-        .task(id: event?.myStatus) { await loadExtras() }
+        .task(id: model.revision) { await loadExtras() }
     }
 
     private func loadExtras() async {
@@ -85,6 +88,13 @@ struct EventDetailView: View {
         }
         .safeAreaInset(edge: .bottom) { bottomAction(event, isOrganizer: isOrganizer) }
         .sheet(isPresented: $showJoin) { JoinSheet(event: event) }
+        .sheet(isPresented: $showReschedule) { EventEditorView(mode: .reschedule(event)) }
+        .sheet(isPresented: $showRepropose) { EventEditorView(mode: .create(prefill: event)) }
+        .confirmationDialog("Annuler cette sortie ?", isPresented: $confirmCancel, titleVisibility: .visible) {
+            Button("Annuler la sortie", role: .destructive) { Task { await model.cancelEvent(eventID) } }
+        } message: {
+            Text("Les personnes inscrites verront qu'elle est annulée.")
+        }
         .confirmationDialog("Retirer votre demande ?", isPresented: $confirmWithdraw, titleVisibility: .visible) {
             Button("Me retirer", role: .destructive) { Task { await model.withdraw(eventID) } }
         } message: {
@@ -110,26 +120,67 @@ struct EventDetailView: View {
 
     private func participantsSection(_ event: WalkEventDTO, isOrganizer: Bool) -> some View {
         let shown = participants.filter { isOrganizer || $0.status == .accepted }
-        return section(isOrganizer ? "Demandes et participants" : "Qui vient") {
-            VStack(alignment: .leading, spacing: 0) {
-                ForEach(shown) { person in
-                    VStack(alignment: .leading, spacing: 2) {
-                        Text(person.displayName).font(.headline).foregroundStyle(Color.truffloCharcoal)
-                        Text(person.dogNames.isEmpty ? "Sans chien" : person.dogNames.formatted(.list(type: .and).locale(TruffloLocale.french)))
-                            .font(.footnote)
-                            .foregroundStyle(Color.truffloSlate)
+        let pending = shown.filter { $0.status == .requested }
+        let accepted = shown.filter { $0.status == .accepted }
+        return VStack(alignment: .leading, spacing: TruffloTheme.Spacing.large) {
+            if isOrganizer && !pending.isEmpty {
+                section("Demandes à traiter") {
+                    VStack(alignment: .leading, spacing: 0) {
+                        ForEach(pending) { person in
+                            HStack(alignment: .center) {
+                                personLine(person)
+                                Spacer(minLength: TruffloTheme.Spacing.xSmall)
+                                Button("Refuser") { Task { await model.decide(eventID, userID: person.userID, accept: false) } }
+                                    .font(.subheadline.weight(.semibold))
+                                    .foregroundStyle(Color.truffloSlate)
+                                    .frame(minWidth: 44, minHeight: 44)
+                                    .accessibilityIdentifier("event.decline.\(person.displayName)")
+                                Button("Accepter") { Task { await model.decide(eventID, userID: person.userID, accept: true) } }
+                                    .font(.subheadline.weight(.semibold))
+                                    .foregroundStyle(Color.truffloForest)
+                                    .frame(minWidth: 44, minHeight: 44)
+                                    .accessibilityIdentifier("event.accept.\(person.displayName)")
+                            }
+                        }
                     }
-                    .padding(.vertical, TruffloTheme.Spacing.xSmall)
-                    .frame(maxWidth: .infinity, alignment: .leading)
-                    .accessibilityElement(children: .combine)
+                }
+            }
+            if !accepted.isEmpty {
+                section(isOrganizer ? "Participants" : "Qui vient") {
+                    VStack(alignment: .leading, spacing: 0) {
+                        ForEach(accepted) { person in
+                            HStack {
+                                personLine(person)
+                                Spacer()
+                                if isOrganizer, let attended = person.attended {
+                                    Text(attended ? "Était là" : "Absent")
+                                        .font(.footnote.weight(.semibold))
+                                        .foregroundStyle(Color.truffloSlate)
+                                }
+                            }
+                        }
+                    }
                 }
             }
         }
     }
 
+    private func personLine(_ person: EventParticipantDTO) -> some View {
+        VStack(alignment: .leading, spacing: 2) {
+            Text(person.displayName).font(.headline).foregroundStyle(Color.truffloCharcoal)
+            Text(person.dogNames.isEmpty ? "Sans chien" : person.dogNames.formatted(.list(type: .and).locale(TruffloLocale.french)))
+                .font(.footnote)
+                .foregroundStyle(Color.truffloSlate)
+        }
+        .padding(.vertical, TruffloTheme.Spacing.xSmall)
+        .accessibilityElement(children: .combine)
+    }
+
     @ViewBuilder
     private func bottomAction(_ event: WalkEventDTO, isOrganizer: Bool) -> some View {
-        if !isOrganizer {
+        if isOrganizer {
+            organizerBar(event)
+        } else {
             VStack(spacing: TruffloTheme.Spacing.xSmall) {
                 if EventFormatting.canRequest(event) {
                     Button { showJoin = true } label: {
@@ -162,6 +213,39 @@ struct EventDetailView: View {
             .padding(.vertical, TruffloTheme.Spacing.xSmall)
             .background(Color.truffloSand.opacity(0.95))
         }
+    }
+
+    @ViewBuilder
+    private func organizerBar(_ event: WalkEventDTO) -> some View {
+        VStack(spacing: TruffloTheme.Spacing.xxSmall) {
+            if EventFormatting.hasEnded(event) || event.status != .published {
+                Button { showRepropose = true } label: {
+                    Text("Reproposer cette sortie")
+                        .font(.system(.title3, design: .rounded, weight: .bold))
+                        .frame(maxWidth: .infinity, minHeight: 56)
+                }
+                .buttonStyle(.glassProminent)
+                .buttonBorderShape(.roundedRectangle(radius: TruffloTheme.Radius.medium))
+                .tint(Color.truffloForest)
+                .accessibilityIdentifier("event.repropose")
+            } else {
+                Text("Vous organisez cette sortie")
+                    .font(.system(.headline, design: .rounded, weight: .bold))
+                    .foregroundStyle(Color.truffloForest)
+                HStack(spacing: TruffloTheme.Spacing.large) {
+                    Button("Changer l'heure ou le lieu") { showReschedule = true }
+                        .accessibilityIdentifier("event.reschedule")
+                    Button("Annuler la sortie", role: .destructive) { confirmCancel = true }
+                        .accessibilityIdentifier("event.cancel")
+                }
+                .font(.subheadline.weight(.semibold))
+                .frame(minHeight: 44)
+            }
+        }
+        .frame(maxWidth: .infinity)
+        .padding(.horizontal, TruffloTheme.Spacing.large)
+        .padding(.vertical, TruffloTheme.Spacing.xSmall)
+        .background(Color.truffloSand.opacity(0.95))
     }
 
     private func section<Content: View>(_ title: String, @ViewBuilder content: () -> Content) -> some View {

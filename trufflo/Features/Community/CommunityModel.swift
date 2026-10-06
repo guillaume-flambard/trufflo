@@ -18,6 +18,9 @@ final class CommunityModel {
     private(set) var myDogs: [CommunityDogDTO] = []
     private(set) var isOrganizer = false
     private(set) var userID: UUID?
+    /// Moves after every action and reload, so a screen that reads something the
+    /// model does not keep (an event's participants) knows to read it again.
+    private(set) var revision = 0
     /// A refusal or a failure the person can read, shown once.
     var errorMessage: String?
 
@@ -49,6 +52,7 @@ final class CommunityModel {
             async let organizer = remote.isOrganizer(zoneID: profile.zoneID)
             (events, myEvents, myDogs, isOrganizer) = try await (upcoming, mine, dogs, organizer)
             phase = .ready
+            revision += 1
         } catch CommunityError.noProfile {
             profile = nil
             phase = .needsProfile

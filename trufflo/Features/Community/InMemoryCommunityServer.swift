@@ -333,6 +333,16 @@ extension InMemoryCommunityServer {
                 server.participations[second, default: [:]][me] = Participation(status: .requested, dogIDs: [dog], attended: nil)
             }
         }
+        if request == .organizer {
+            let samDog = UUID()
+            server.dogs[samDog] = CommunityDogDTO(id: samDog, ownerID: sam, name: "Pixel")
+            let mine = event(me, "Guillaume", day(4, 17), 60, "Place du marché", "Chiens sociables, en laisse jusqu'au parc.",
+                             humans: 4, dogs: 3)
+            server.participations[mine, default: [:]][sam] = Participation(status: .requested, dogIDs: [samDog], attended: nil)
+            server.participations[mine, default: [:]][lea] = Participation(status: .accepted, dogIDs: [], attended: nil)
+            let past = event(me, "Guillaume", day(-2, 10), 60, "Bords de la rivière", "Rythme tranquille.", humans: 6, dogs: 6)
+            server.participations[past, default: [:]][sam] = Participation(status: .accepted, dogIDs: [samDog], attended: true)
+        }
         // Zone and identity are fixed for the demo: this device is « me ».
         return CommunityModel(remote: server.client(me))
     }

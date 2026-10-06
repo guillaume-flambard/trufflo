@@ -6,6 +6,7 @@ struct EventsListView: View {
     @Environment(CommunityModel.self) private var model
     @Environment(\.calendar) private var calendar
     @State private var tab = "upcoming"
+    @State private var showEditor = false
 
     private var shown: [WalkEventDTO] { tab == "upcoming" ? model.events : model.myEvents }
 
@@ -56,6 +57,15 @@ struct EventsListView: View {
             .padding(.vertical, TruffloTheme.Spacing.medium)
         }
         .refreshable { await model.refresh() }
+        .toolbar {
+            if model.isOrganizer {
+                ToolbarItem(placement: .topBarTrailing) {
+                    Button("Proposer une sortie", systemImage: "plus") { showEditor = true }
+                        .accessibilityIdentifier("event.create")
+                }
+            }
+        }
+        .sheet(isPresented: $showEditor) { EventEditorView(mode: .create(prefill: nil)) }
         // The page names itself in large type: a bar title would say it twice.
         .navigationTitle("")
         .navigationBarTitleDisplayMode(.inline)

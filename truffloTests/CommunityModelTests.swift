@@ -99,3 +99,63 @@ func serverMessagesMap() {
     #expect(CommunityError(serverMessage: "not allowed") == .notAllowed)
     #expect(CommunityError(serverMessage: "weird") == .network("weird"))
 }
+
+@MainActor
+@Test("An accepted request moves the revision, so an open event reloads its participants")
+func decidingMovesTheRevision() async throws {
+    let (server, eventID) = try await world()
+    try await server.client(camille).saveProfile(displayName: "Camille", zoneID: lyon.id, adultDeclared: true)
+    try await server.client(camille).requestToJoin(eventID: eventID, dogIDs: [])
+    let boss = CommunityModel(remote: server.client(organizer))
+    await boss.refresh()
+    #expect(await boss.participants(of: eventID).map(\.status) == [.requested])
+
+    let before = boss.revision
+    await boss.decide(eventID, userID: camille, accept: true)
+    #expect(boss.revision > before)
+    #expect(await boss.participants(of: eventID).map(\.status) == [.accepted])
+}
+
+@MainActor
+@Test("An organizer creates, reschedules and cancels; the registered see each change")
+func theOrganizerFlow() async throws {
+    let (server, eventID) = try await world()
+    let boss = CommunityModel(remote: server.client(organizer))
+    await boss.refresh()
+    #expect(boss.isOrganizer)
+
+    let draft = try WalkEventDraft(startsAt: now.addingTimeInterval(3 * 86400), durationMinutes: 90, meetingPoint: "Quai nord",
+                                   rules: "En laisse", humanCapacity: 5, dogCapacity: 5, now: now)
+    let created = try #require(await boss.createEvent(draft))
+    #expect(boss.event(created)?.meetingPoint == "Quai nord")
+    #expect(boss.myEvents.contains { $0.id == created })
+
+    // Someone registers on the first event, then the place changes.
+    let guest = CommunityModel(remote: server.client(camille))
+    await guest.saveProfile(displayName: "Camille", zoneID: lyon.id, adultDeclared: true)
+    await guest.requestToJoin(eventID, dogIDs: [])
+    await boss.decide(eventID, userID: camille, accept: true)
+    await boss.updateEvent(eventID, startsAt: now.addingTimeInterval(86400), meetingPoint: "  Sortie ouest  ")
+    #expect(boss.event(eventID)?.meetingPoint == "Sortie ouest", "le lieu est nettoyé")
+    #expect(await guest.updates(of: eventID).map(\.kind) == [.place])
+
+    await boss.cancelEvent(eventID)
+    #expect(boss.event(eventID)?.status == .cancelled)
+    #expect(await guest.updates(of: eventID).map(\.kind).contains(.cancelled))
+    await guest.refresh()
+    #expect(guest.events.contains { $0.id == eventID } == false, "une sortie annulée quitte la liste « à venir »")
+    #expect(EventFormatting.myStatus(try #require(guest.event(eventID))) == "Annulée")
+}
+
+@MainActor
+@Test("A person who is not an organizer cannot create, and is told so")
+func aGuestCannotOrganize() async throws {
+    let (server, _) = try await world()
+    let guest = CommunityModel(remote: server.client(camille))
+    await guest.saveProfile(displayName: "Camille", zoneID: lyon.id, adultDeclared: true)
+    #expect(guest.isOrganizer == false)
+    let draft = try WalkEventDraft(startsAt: now.addingTimeInterval(86400), durationMinutes: 60, meetingPoint: "Parc",
+                                   rules: "", humanCapacity: 3, dogCapacity: 3, now: now)
+    #expect(await guest.createEvent(draft) == nil)
+    #expect(guest.errorMessage == "Action non autorisée.")
+}
