@@ -33,10 +33,10 @@ enum WalkFormatting {
 
     static func quality(_ quality: WalkQuality) -> String {
         switch quality {
-        case .gpsRecorded: "Mesurée par GPS"
-        case .gpsPartial: "Mesure partielle"
-        case .manual: "Déclarée à la main"
-        case .unavailable: "Non mesurée"
+        case .gpsRecorded: "Parcours complet par GPS"
+        case .gpsPartial: "Parcours en partie mesuré"
+        case .manual: "Durée déclarée à la main"
+        case .unavailable: "Aucun point de parcours retenu"
         }
     }
 
@@ -67,5 +67,20 @@ enum WalkFormatting {
     /// "mardi 6 oct., 14:48".
     static func dayAndTime(_ date: Date) -> String {
         date.formatted(.dateTime.weekday(.wide).day().month().hour().minute().locale(french))
+    }
+
+    /// "aujourd'hui, 08:15", "hier, 18:42", then "mardi 6 oct., 18:42".
+    static func relativeDayAndTime(_ date: Date) -> String {
+        let time = date.formatted(.dateTime.hour().minute().locale(french))
+        let calendar = Calendar.current
+        if calendar.isDateInToday(date) { return "aujourd'hui, \(time)" }
+        if calendar.isDateInYesterday(date) { return "hier, \(time)" }
+        return date.formatted(.dateTime.weekday(.wide).day().month().locale(french)) + ", \(time)"
+    }
+
+    /// "07:37 à 08:15".
+    static func timeRange(_ start: Date, _ end: Date) -> String {
+        let style = Date.FormatStyle.dateTime.hour().minute().locale(french)
+        return "\(start.formatted(style)) à \(end.formatted(style))"
     }
 }

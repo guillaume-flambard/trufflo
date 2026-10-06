@@ -108,6 +108,10 @@ struct WalkSummaryView: View {
                         TextField("Comment s'est passée la balade ?", text: $note, axis: .vertical)
                             .font(.body)
                             .lineLimit(3...8)
+                            .padding(TruffloTheme.Spacing.small)
+                            .background(Color.white, in: RoundedRectangle(cornerRadius: 16, style: .continuous))
+                            .overlay(RoundedRectangle(cornerRadius: 16, style: .continuous)
+                                .strokeBorder(Color.truffloForest.opacity(0.1), lineWidth: 1))
                             .accessibilityIdentifier("walk.summary.note")
                     }
                     .padding(.top, TruffloTheme.Spacing.medium)

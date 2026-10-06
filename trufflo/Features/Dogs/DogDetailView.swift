@@ -28,14 +28,19 @@ struct DogDetailView: View {
             if let dog = matches.first {
                 content(for: dog)
             } else {
-                TruffloEmptyStateView(
-                    imageName: "EmptyDog",
-                    title: "Ce profil n'existe plus",
-                    description: "Il a été supprimé de cet appareil."
-                )
+                TruffloNotice(title: "Ce profil n'existe plus", message: "Il a été retiré de cet iPhone depuis un autre écran.", actionTitle: "Revenir à la liste") { dismiss() }
             }
         }
         .navigationTitle(matches.first?.name ?? "Chien")
+        .toolbar {
+            if matches.first != nil {
+                ToolbarItem(placement: .topBarTrailing) {
+                    Button("Modifier") { showEdit = true }
+                        .fontWeight(.semibold)
+                        .accessibilityIdentifier("dog.edit")
+                }
+            }
+        }
         .navigationBarTitleDisplayMode(.inline)
         .truffloScreen()
         .alert("Modification impossible", isPresented: Binding(
@@ -70,6 +75,9 @@ struct DogDetailView: View {
                             Text(dog.preferencesNote)
                                 .font(.body)
                                 .foregroundStyle(Color.truffloCharcoal)
+                            Text("Écrit par vous")
+                                .font(.footnote)
+                                .foregroundStyle(Color.truffloSlate)
                         }
                     }
 
@@ -109,33 +117,18 @@ struct DogDetailView: View {
     /// Breed, then age and sex joined with a comma. What the person declared and
     /// nothing else: no trait is read from the walks.
     private func identity(of dog: DogRecord) -> some View {
-        VStack(alignment: .leading, spacing: TruffloTheme.Spacing.small) {
-            VStack(alignment: .leading, spacing: 2) {
-                // An unknown breed is the absence of a fact, not a fact to print.
-                if dog.breedKind != "unknown" {
-                    Text(dog.breedDescription)
-                        .font(.title3.weight(.medium))
-                        .foregroundStyle(Color.truffloCharcoal)
-                }
-                let details = [dog.ageDescription, dog.genderDescription]
-                    .filter { !$0.isEmpty && $0 != "Non renseigné" }
-                if !details.isEmpty {
-                    Text(details.joined(separator: ", "))
-                        .font(.subheadline)
-                        .foregroundStyle(Color.truffloSlate)
-                }
+        // One line of declared facts. An unknown breed or an unset sex is the
+        // absence of a fact, not a fact to print.
+        let facts = [dog.breedKind != "unknown" ? dog.breedDescription : "",
+                     dog.ageDescription,
+                     dog.genderDescription == "Non renseigné" ? "" : dog.genderDescription.lowercased()]
+            .filter { !$0.isEmpty }
+        return Group {
+            if !facts.isEmpty {
+                Text(facts.joined(separator: ", "))
+                    .font(.title3)
+                    .foregroundStyle(Color.truffloCharcoal)
             }
-            Button {
-                showEdit = true
-            } label: {
-                Label("Modifier", systemImage: "pencil")
-                    .font(.subheadline.weight(.semibold))
-                    .padding(.horizontal, TruffloTheme.Spacing.xSmall)
-                    .frame(minHeight: 44)
-            }
-            .buttonStyle(.glass)
-            .tint(Color.truffloForest)
-            .accessibilityIdentifier("dog.edit")
         }
     }
 

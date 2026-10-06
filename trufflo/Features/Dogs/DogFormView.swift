@@ -38,133 +38,150 @@ struct DogFormView: View {
 
     var body: some View {
         NavigationStack {
-            Form {
-                // MARK: - Photo Section
-                Section("Photo de profil") {
-                    HStack {
-                        Spacer()
-                        VStack(spacing: TruffloTheme.Spacing.small) {
-                            if let photoData, let uiImage = UIImage(data: photoData) {
-                                Image(uiImage: uiImage)
-                                    .resizable()
-                                    .scaledToFill()
-                                    .frame(width: 90, height: 90)
-                                    .clipShape(Circle())
-                                    .overlay(Circle().stroke(Color.truffloForest, lineWidth: 2))
-                            } else {
-                                ZStack {
-                                    Circle()
-                                        .fill(Color.truffloSand)
-                                        .frame(width: 90, height: 90)
-                                    Image(systemName: "pawprint.fill")
-                                        .font(.largeTitle)
-                                        .foregroundStyle(Color.truffloForest.opacity(0.6))
-                                }
-                            }
+            ScrollView {
+                VStack(alignment: .leading, spacing: TruffloTheme.Spacing.large) {
+                    photoPicker
+                        .frame(maxWidth: .infinity)
 
-                            HStack(spacing: TruffloTheme.Spacing.medium) {
-                                PhotosPicker(
-                                    selection: $selectedPhotoItem,
-                                    matching: .images,
-                                    photoLibrary: .shared()
-                                ) {
-                                    Label(photoData == nil ? "Ajouter une photo" : "Changer", systemImage: "photo")
-                                        .font(.truffloCaption)
-                                        .foregroundStyle(Color.truffloForest)
-                                }
+                    field("Nom") {
+                        TextField("Nom de votre chien", text: $name)
+                            .textInputAutocapitalization(.words)
+                            .accessibilityIdentifier("dog.name")
+                            .modifier(FormFieldStyle())
+                    }
 
-                                if photoData != nil {
-                                    Button(role: .destructive) {
-                                        photoData = nil
-                                        selectedPhotoItem = nil
-                                    } label: {
-                                        Label("Effacer", systemImage: "trash")
-                                            .font(.truffloCaption)
-                                    }
-                                }
-                            }
+                    field("Race") {
+                        TruffloChoice(options: [("known", "Connue"), ("mixed", "Croisé"), ("unknown", "Inconnue")],
+                                      selection: $breedKind)
+                        if breedKind == "known" {
+                            TextField("Nom de la race", text: $breedLabel)
+                                .accessibilityIdentifier("dog.breedLabel")
+                                .modifier(FormFieldStyle())
                         }
-                        Spacer()
                     }
-                    .padding(.vertical, TruffloTheme.Spacing.xSmall)
-                }
 
-                // MARK: - General Identity
-                Section("Identité") {
-                    TextField("Nom", text: $name)
-                        .font(.truffloBody)
-                        .textInputAutocapitalization(.words)
-                        .accessibilityIdentifier("dog.name")
-
-                    Picker("Sexe", selection: $gender) {
-                        Text("Non renseigné").tag("unspecified")
-                        Text("Mâle").tag("male")
-                        Text("Femelle").tag("female")
+                    ViewThatFits(in: .horizontal) {
+                        HStack(alignment: .top, spacing: TruffloTheme.Spacing.small) {
+                            ageField.frame(maxWidth: .infinity)
+                            sexField.frame(maxWidth: .infinity)
+                        }
+                        VStack(alignment: .leading, spacing: TruffloTheme.Spacing.large) {
+                            ageField
+                            sexField
+                        }
                     }
-                    .font(.truffloBody)
 
-                    TextField("Âge ou date (ex: 2 ans, 6 mois)", text: $ageDescription)
-                        .font(.truffloBody)
-                        .accessibilityIdentifier("dog.age")
-
-                    Picker("Race", selection: $breedKind) {
-                        Text("Race inconnue").tag("unknown")
-                        Text("Croisé").tag("mixed")
-                        Text("Race connue").tag("known")
+                    field("Préférences de sortie") {
+                        TextField("Rythme, rencontres, ce qu'il aime ou évite", text: $preferencesNote, axis: .vertical)
+                            .lineLimit(3...6)
+                            .accessibilityIdentifier("dog.preferences")
+                            .modifier(FormFieldStyle())
                     }
-                    .font(.truffloBody)
 
-                    if breedKind == "known" {
-                        TextField("Nom de la race", text: $breedLabel)
-                            .font(.truffloBody)
-                            .accessibilityIdentifier("dog.breedLabel")
-                    }
-                }
-
-                // MARK: - Preferences & Habits
-                Section("Besoins & Comportement") {
-                    TextField("Préférences de sortie, rythme, sociabilité...", text: $preferencesNote, axis: .vertical)
-                        .font(.truffloBody)
-                        .lineLimit(3...5)
-                        .accessibilityIdentifier("dog.preferences")
-                }
-
-                Section {
-                    Text("La race et l'âge sont déclaratifs et ne déclenchent aucune prescription vétérinaire automatique.")
-                        .font(.truffloCaption)
-                        .foregroundStyle(Color.truffloSlate)
-                }
-
-                if let errorMessage {
-                    Section {
+                    if let errorMessage {
                         Text(errorMessage)
-                            .font(.truffloCaption)
+                            .font(.subheadline.weight(.semibold))
                             .foregroundStyle(Color.truffloDanger)
                             .accessibilityIdentifier("dog.error")
                     }
+
+                    Text("La race et l'âge sont déclaratifs et ne déclenchent aucune prescription vétérinaire automatique.")
+                        .font(.footnote)
+                        .foregroundStyle(Color.truffloSlate)
                 }
+                .padding(.horizontal, TruffloTheme.Spacing.large)
+                .padding(.vertical, TruffloTheme.Spacing.medium)
             }
+            .scrollDismissesKeyboard(.interactively)
+            .safeAreaInset(edge: .bottom) {
+                Button(action: save) {
+                    Text("Enregistrer")
+                        .font(.headline)
+                        .frame(maxWidth: .infinity, minHeight: 56)
+                }
+                .buttonStyle(.glassProminent)
+                .tint(Color.truffloForest)
+                .accessibilityIdentifier("dog.save")
+                .padding(.horizontal, TruffloTheme.Spacing.large)
+                .padding(.bottom, TruffloTheme.Spacing.xSmall)
+            }
+            .background(Color.truffloSand.ignoresSafeArea())
             .onChange(of: selectedPhotoItem) { _, newItem in
                 Task {
                     if let data = try? await newItem?.loadTransferable(type: Data.self) {
-                        await MainActor.run {
-                            self.photoData = data
-                        }
+                        await MainActor.run { self.photoData = data }
                     }
                 }
             }
-            .navigationTitle(isEditing ? "Modifier le chien" : "Ajouter un chien")
-            .truffloScreen()
+            .navigationTitle(isEditing ? "Modifier le chien" : "Nouveau chien")
+            .navigationBarTitleDisplayMode(.inline)
+            .tint(Color.truffloForest)
             .toolbar {
                 ToolbarItem(placement: .cancellationAction) {
                     Button("Annuler") { dismiss() }
                 }
-                ToolbarItem(placement: .confirmationAction) {
-                    Button("Enregistrer", action: save)
-                        .fontWeight(.semibold)
-                        .accessibilityIdentifier("dog.save")
+            }
+        }
+    }
+
+    /// The face first: the photo when chosen, otherwise the initial as soon as
+    /// a name is typed, so the portrait is never an empty hole.
+    private var photoPicker: some View {
+        VStack(spacing: TruffloTheme.Spacing.xSmall) {
+            PhotosPicker(selection: $selectedPhotoItem, matching: .images, photoLibrary: .shared()) {
+                ZStack {
+                    if photoData != nil || !name.trimmingCharacters(in: .whitespaces).isEmpty {
+                        TruffloDogPortrait(name: name.isEmpty ? "?" : name, photoData: photoData, diameter: 112)
+                    } else {
+                        Circle()
+                            .strokeBorder(Color.truffloForest.opacity(0.35), style: StrokeStyle(lineWidth: 2, dash: [6, 5]))
+                            .frame(width: 112, height: 112)
+                            .overlay(Image(systemName: "camera").font(.title2).foregroundStyle(Color.truffloForest))
+                    }
                 }
             }
+            .accessibilityLabel(photoData == nil ? "Choisir une photo" : "Changer la photo")
+            HStack(spacing: TruffloTheme.Spacing.medium) {
+                PhotosPicker(selection: $selectedPhotoItem, matching: .images, photoLibrary: .shared()) {
+                    Text(photoData == nil ? "Choisir une photo" : "Changer la photo")
+                        .font(.subheadline.weight(.semibold))
+                        .foregroundStyle(Color.truffloForest)
+                        .frame(minHeight: 36)
+                }
+                if photoData != nil {
+                    Button("Retirer") {
+                        photoData = nil
+                        selectedPhotoItem = nil
+                    }
+                    .font(.subheadline.weight(.semibold))
+                    .foregroundStyle(Color.truffloDanger)
+                }
+            }
+        }
+    }
+
+    private var ageField: some View {
+        field("Âge") {
+            TextField("Par exemple : 3 ans", text: $ageDescription)
+                .accessibilityIdentifier("dog.age")
+                .modifier(FormFieldStyle())
+        }
+    }
+
+    /// Sex is optional: tapping the selected option again clears it.
+    private var sexField: some View {
+        field("Sexe") {
+            TruffloChoice(options: [("male", "Mâle"), ("female", "Femelle")],
+                          selection: $gender, clearsTo: "unspecified")
+        }
+    }
+
+    private func field<Content: View>(_ label: String, @ViewBuilder content: () -> Content) -> some View {
+        VStack(alignment: .leading, spacing: TruffloTheme.Spacing.xSmall) {
+            Text(label)
+                .font(.footnote.weight(.semibold))
+                .foregroundStyle(Color.truffloSlate)
+            content()
         }
     }
 
@@ -201,5 +218,50 @@ struct DogFormView: View {
     private func announce(_ message: String) {
         errorMessage = message
         AccessibilityNotification.Announcement(message).post()
+    }
+}
+
+/// A plain white field on sand, the same in both forms.
+struct FormFieldStyle: ViewModifier {
+    func body(content: Content) -> some View {
+        content
+            .font(.body)
+            .padding(.horizontal, 14)
+            .padding(.vertical, 14)
+            .background(Color.white, in: RoundedRectangle(cornerRadius: 14, style: .continuous))
+            .overlay(RoundedRectangle(cornerRadius: 14, style: .continuous)
+                .strokeBorder(Color.truffloForest.opacity(0.1), lineWidth: 1))
+    }
+}
+
+/// A row of choices that reads like a segmented control but wraps its labels
+/// at large text sizes instead of truncating them.
+struct TruffloChoice: View {
+    let options: [(String, String)]
+    @Binding var selection: String
+    var clearsTo: String? = nil
+
+    var body: some View {
+        HStack(spacing: 3) {
+            ForEach(options, id: \.0) { option in
+                let isOn = selection == option.0
+                Button {
+                    if isOn, let clearsTo { selection = clearsTo } else { selection = option.0 }
+                } label: {
+                    Text(option.1)
+                        .font(.subheadline.weight(.semibold))
+                        .multilineTextAlignment(.center)
+                        .foregroundStyle(isOn ? Color.truffloForest : Color.truffloCharcoal)
+                        .frame(maxWidth: .infinity, minHeight: 42)
+                        .background(isOn ? Color.white : Color.clear,
+                                    in: RoundedRectangle(cornerRadius: 11, style: .continuous))
+                        .shadow(color: isOn ? Color.truffloForestDeep.opacity(0.12) : .clear, radius: 2, y: 1)
+                }
+                .buttonStyle(.plain)
+                .accessibilityAddTraits(isOn ? .isSelected : [])
+            }
+        }
+        .padding(3)
+        .background(Color.truffloForest.opacity(0.07), in: RoundedRectangle(cornerRadius: 14, style: .continuous))
     }
 }

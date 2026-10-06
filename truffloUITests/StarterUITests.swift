@@ -192,7 +192,7 @@ final class StarterUITests: XCTestCase {
         name.typeText("Oslo")
         app.buttons["dog.save"].tap()
 
-        let start = app.buttons["Démarrer une balade GPS"]
+        let start = app.buttons["Démarrer une balade"]
         XCTAssertTrue(start.waitForExistence(timeout: 5))
         start.tap()
 
@@ -291,7 +291,7 @@ final class StarterUITests: XCTestCase {
 
         row.tap()
         let qualityRow = app.staticTexts.matching(
-            NSPredicate(format: "label CONTAINS[c] %@", "Qualité")
+            NSPredicate(format: "label CONTAINS[c] %@", "Mesure")
         ).firstMatch
         XCTAssertTrue(
             qualityRow.waitForExistence(timeout: 5),
@@ -330,7 +330,7 @@ final class StarterUITests: XCTestCase {
         name.typeText("Oslo")
         app.buttons["dog.save"].tap()
 
-        let start = app.buttons["Démarrer une balade GPS"]
+        let start = app.buttons["Démarrer une balade"]
         XCTAssertTrue(start.waitForExistence(timeout: 5))
         start.tap()
         XCTAssertTrue(
@@ -343,10 +343,10 @@ final class StarterUITests: XCTestCase {
         app.launch()
 
         XCTAssertTrue(
-            app.staticTexts["Session interrompue"].waitForExistence(timeout: 10),
+            app.staticTexts["Balade interrompue"].waitForExistence(timeout: 10),
             "AC-010 : après une fermeture forcée, la session doit apparaître interrompue"
         )
-        let show = app.buttons["Afficher"]
+        let show = app.buttons["Revenir à la balade"]
         XCTAssertTrue(show.waitForExistence(timeout: 5))
         show.tap()
 
@@ -385,7 +385,7 @@ final class StarterUITests: XCTestCase {
 
         let bannerGone = expectation(
             for: NSPredicate(format: "exists == false"),
-            evaluatedWith: app.buttons["Afficher"],
+            evaluatedWith: app.buttons["Revenir à la balade"],
             handler: nil
         )
         let outcome = XCTWaiter().wait(for: [bannerGone], timeout: 15)
@@ -437,7 +437,7 @@ final class StarterUITests: XCTestCase {
         name.typeText("Oslo")
         app.buttons["dog.save"].tap()
 
-        let start = app.buttons["Démarrer une balade GPS"]
+        let start = app.buttons["Démarrer une balade"]
         XCTAssertTrue(start.waitForExistence(timeout: 5))
         start.tap()
         XCTAssertTrue(
@@ -522,7 +522,7 @@ final class StarterUITests: XCTestCase {
         name.typeText("Oslo")
         app.buttons["dog.save"].tap()
 
-        let start = app.buttons["Démarrer une balade GPS"]
+        let start = app.buttons["Démarrer une balade"]
         XCTAssertTrue(start.waitForExistence(timeout: 5))
         start.tap()
         XCTAssertTrue(
@@ -611,20 +611,19 @@ final class StarterUITests: XCTestCase {
         name.typeText("Oslo")
         app.buttons["dog.save"].tap()
 
-        let start = app.buttons["Démarrer une balade GPS"]
+        let start = app.buttons["Démarrer une balade"]
         XCTAssertTrue(start.waitForExistence(timeout: 5))
         start.tap()
 
-        XCTAssertTrue(
-            app.buttons["walk.minimize"].waitForExistence(timeout: 10),
-            "l'écran de balade doit s'ouvrir pour expliquer le refus"
-        )
-
+        // A refused start is explained on Today, in a sheet: the live screen must
+        // not open behind it, since no walk has begun.
         let settings = app.buttons["walk.blocked.settings"]
         XCTAssertTrue(
             settings.waitForExistence(timeout: 10),
             "un refus doit proposer d'ouvrir les réglages"
         )
+        XCTAssertFalse(app.buttons["walk.minimize"].exists,
+                       "l'écran de balade ne doit pas s'ouvrir derrière un refus")
         let manual = app.buttons["walk.blocked.manual"]
         XCTAssertTrue(
             manual.exists,
@@ -636,33 +635,21 @@ final class StarterUITests: XCTestCase {
             ).firstMatch.exists,
             "le motif du refus doit être nommé"
         )
-        XCTAssertTrue(app.buttons["Annuler"].exists, "le refus doit rester annulable")
+        XCTAssertTrue(app.buttons["walk.blocked.dismiss"].exists, "le refus doit rester annulable")
 
-        // A presented alert exposes its buttons twice in the accessibility
-        // snapshot, so the tap takes the first match. The count is asserted so
-        // a genuinely doubled alert would still fail here.
-        XCTAssertEqual(app.alerts.count, 1, "un seul refus doit être présenté")
-
-        // Manual entry has to be genuinely reachable, not merely present: the
-        // form is a sheet presented from inside an alert action.
-        app.buttons.matching(identifier: "walk.blocked.manual").firstMatch.tap()
+        // Manual entry has to be genuinely reachable, not merely present.
+        manual.tap()
         XCTAssertTrue(
-            app.navigationBars["Ajouter une balade"].waitForExistence(timeout: 10),
+            app.navigationBars["Balade passée"].waitForExistence(timeout: 10),
             "la saisie manuelle doit s'ouvrir depuis le refus"
         )
         XCTAssertTrue(app.textFields["walk.minutes"].exists)
-        app.navigationBars["Ajouter une balade"].buttons["Annuler"].tap()
+        app.navigationBars["Balade passée"].buttons["Annuler"].tap()
 
-        // Leave the live walk screen: while the cover is up, the tab bar is not
-        // hittable and a Journal assertion would prove nothing. The sentinel is
-        // the start button, not `dog.add`: this journey created a dog, so the
-        // empty state is legitimately gone.
-        // AC-023: the chevron minimises; there is no "Fermer" button any more.
-        XCTAssertFalse(app.buttons["Fermer"].exists)
-        app.buttons["walk.minimize"].tap()
+        // Back on Today, with nothing started.
         XCTAssertTrue(
-            app.buttons["Démarrer une balade GPS"].waitForExistence(timeout: 10),
-            "l'accueil doit réapparaître après la réduction"
+            app.buttons["Démarrer une balade"].waitForExistence(timeout: 10),
+            "l'accueil doit rester affiché après le refus"
         )
 
         // No phantom session: a refused start must not leave a walk in the log.

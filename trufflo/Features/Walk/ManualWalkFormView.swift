@@ -15,61 +15,116 @@ struct ManualWalkFormView: View {
 
     var body: some View {
         NavigationStack {
-            Form {
-                Section("Chiens présents") {
-                    ForEach(dogs) { dog in
-                        Toggle(isOn: Binding(
-                            get: { selectedDogs.contains(dog.id) },
-                            set: { selected in
-                                if selected { selectedDogs.insert(dog.id) }
-                                else { selectedDogs.remove(dog.id) }
+            ScrollView {
+                VStack(alignment: .leading, spacing: TruffloTheme.Spacing.large) {
+                    label("Qui était là ?") {
+                        ScrollView(.horizontal, showsIndicators: false) {
+                            HStack(spacing: TruffloTheme.Spacing.xSmall) {
+                                ForEach(dogs) { dog in dogChip(dog) }
                             }
-                        )) {
-                            Text(dog.name)
-                                .font(.truffloHeadline)
-                                .foregroundStyle(Color.truffloForest)
                         }
                     }
-                }
-                Section("Balade passée") {
-                    DatePicker("Fin de la balade", selection: $endedAt,
-                               in: ...Date(), displayedComponents: [.date, .hourAndMinute])
-                        .font(.truffloBody)
-                    TextField("Durée en minutes", text: $minutesText)
-                        .font(.truffloBody)
-                        .keyboardType(.decimalPad)
-                        .accessibilityIdentifier("walk.minutes")
-                    TextField("Note facultative", text: $note, axis: .vertical)
-                        .font(.truffloBody)
-                        .lineLimit(2...5)
-                        .accessibilityIdentifier("walk.note")
-                    Text("Durée déclarée. Aucune distance ni aucun pas ne sont inventés.")
-                        .font(.truffloCaption)
-                        .foregroundStyle(Color.truffloSlate)
-                }
-                if let errorMessage {
-                    Section {
+
+                    label("Durée") {
+                        HStack(alignment: .firstTextBaseline, spacing: TruffloTheme.Spacing.xSmall) {
+                            TextField("0", text: $minutesText)
+                                .keyboardType(.decimalPad)
+                                .font(.truffloFigure(.largeTitle))
+                                .foregroundStyle(Color.truffloForest)
+                                .fixedSize()
+                                .accessibilityLabel("Durée en minutes")
+                                .accessibilityIdentifier("walk.minutes")
+                            Text("min")
+                                .font(.title3)
+                                .foregroundStyle(Color.truffloSlate)
+                            Spacer(minLength: 0)
+                        }
+                        .modifier(FormFieldStyle())
+                    }
+
+                    label("Fin de la balade") {
+                        DatePicker("Fin de la balade", selection: $endedAt, in: ...Date(),
+                                   displayedComponents: [.date, .hourAndMinute])
+                            .labelsHidden()
+                            .datePickerStyle(.compact)
+                            .tint(Color.truffloForest)
+                    }
+
+                    label("Note") {
+                        TextField("Comment s'est passée la balade ?", text: $note, axis: .vertical)
+                            .lineLimit(3...6)
+                            .accessibilityIdentifier("walk.note")
+                            .modifier(FormFieldStyle())
+                    }
+
+                    if let errorMessage {
                         Text(errorMessage)
-                            .font(.truffloCaption)
+                            .font(.subheadline.weight(.semibold))
                             .foregroundStyle(Color.truffloDanger)
                     }
+
+                    Text("Durée déclarée. Aucune distance n'est calculée.")
+                        .font(.footnote)
+                        .foregroundStyle(Color.truffloSlate)
                 }
+                .padding(.horizontal, TruffloTheme.Spacing.large)
+                .padding(.vertical, TruffloTheme.Spacing.medium)
             }
-            .navigationTitle("Ajouter une balade")
-            .truffloScreen()
+            .scrollDismissesKeyboard(.interactively)
+            .safeAreaInset(edge: .bottom) {
+                Button(action: save) {
+                    Text("Ajouter au journal")
+                        .font(.headline)
+                        .frame(maxWidth: .infinity, minHeight: 56)
+                }
+                .buttonStyle(.glassProminent)
+                .tint(Color.truffloForest)
+                .accessibilityIdentifier("walk.save")
+                .padding(.horizontal, TruffloTheme.Spacing.large)
+                .padding(.bottom, TruffloTheme.Spacing.xSmall)
+            }
+            .background(Color.truffloSand.ignoresSafeArea())
+            .navigationTitle("Balade passée")
+            .navigationBarTitleDisplayMode(.inline)
+            .tint(Color.truffloForest)
             .toolbar {
                 ToolbarItem(placement: .cancellationAction) {
                     Button("Annuler") { dismiss() }
-                }
-                ToolbarItem(placement: .confirmationAction) {
-                    Button("Enregistrer", action: save)
-                        .fontWeight(.semibold)
-                        .accessibilityIdentifier("walk.save")
                 }
             }
         }
         .onAppear {
             if selectedDogs.isEmpty, let first = dogs.first { selectedDogs.insert(first.id) }
+        }
+    }
+
+    /// Dogs are picked by their face, the way they appear everywhere else.
+    private func dogChip(_ dog: DogRecord) -> some View {
+        let isOn = selectedDogs.contains(dog.id)
+        return Button {
+            if isOn { selectedDogs.remove(dog.id) } else { selectedDogs.insert(dog.id) }
+        } label: {
+            HStack(spacing: TruffloTheme.Spacing.xSmall) {
+                TruffloDogPortrait(name: dog.name, photoData: dog.photoData, diameter: 32)
+                Text(dog.name).font(.subheadline.weight(.semibold))
+            }
+            .padding(.leading, 6)
+            .padding(.trailing, 16)
+            .frame(minHeight: 44)
+            .foregroundStyle(isOn ? Color.white : Color.truffloCharcoal)
+            .background(isOn ? Color.truffloForest : Color.white, in: Capsule())
+            .overlay(Capsule().strokeBorder(Color.truffloForest.opacity(isOn ? 0 : 0.15), lineWidth: 1))
+        }
+        .buttonStyle(.plain)
+        .accessibilityAddTraits(isOn ? .isSelected : [])
+    }
+
+    private func label<Content: View>(_ text: String, @ViewBuilder content: () -> Content) -> some View {
+        VStack(alignment: .leading, spacing: TruffloTheme.Spacing.xSmall) {
+            Text(text)
+                .font(.footnote.weight(.semibold))
+                .foregroundStyle(Color.truffloSlate)
+            content()
         }
     }
 

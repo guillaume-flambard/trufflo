@@ -10,13 +10,17 @@ import SwiftData
 /// rather than an empty field that looks like a route that failed to load.
 struct WalkActivityCard: View {
     let walk: WalkRecord
+    /// The journal groups cards under a day heading, so its cards show the time
+    /// alone; elsewhere the card says which day.
+    var showsDay = true
 
     @Query private var participants: [WalkDogRecord]
     @Query private var points: [TrackPointRecord]
     @Query(sort: \DogRecord.createdAt) private var dogs: [DogRecord]
 
-    init(walk: WalkRecord) {
+    init(walk: WalkRecord, showsDay: Bool = true) {
         self.walk = walk
+        self.showsDay = showsDay
         let walkID = walk.id
         _participants = Query(filter: #Predicate<WalkDogRecord> { $0.walkID == walkID })
         _points = Query(filter: #Predicate<TrackPointRecord> { $0.walkID == walkID },
@@ -24,6 +28,10 @@ struct WalkActivityCard: View {
     }
 
     private var isGPS: Bool { walk.source != .manual }
+    private var whenText: String {
+        showsDay ? WalkFormatting.relativeDayAndTime(date)
+                 : date.formatted(.dateTime.hour().minute().locale(Locale(identifier: "fr_FR")))
+    }
     private var date: Date { walk.endedAt ?? walk.startedAt }
     private var names: String {
         participants.map(\.dogNameSnapshot).sorted()
@@ -52,7 +60,7 @@ struct WalkActivityCard: View {
                     Text(names.isEmpty ? "Balade" : names)
                         .font(.subheadline.weight(.semibold))
                         .foregroundStyle(Color.truffloCharcoal)
-                    Text(isGPS ? WalkFormatting.dayAndTime(date) : "\(WalkFormatting.dayAndTime(date)), saisie à la main")
+                    Text(isGPS ? whenText : "\(whenText), saisie manuelle")
                         .font(.footnote)
                         .foregroundStyle(Color.truffloSlate)
                 }

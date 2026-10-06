@@ -124,8 +124,10 @@ struct TruffloTrackMap: View {
                 latitude: (box.minLat + box.maxLat) / 2,
                 longitude: (box.minLon + box.maxLon) / 2
             ),
-            span: MKCoordinateSpan(latitudeDelta: box.maxLat - box.minLat,
-                                   longitudeDelta: box.maxLon - box.minLon)
+            // A margin around the route, and a floor of a few hundred metres,
+            // so a short walk is framed as a walk and not as a dot.
+            span: MKCoordinateSpan(latitudeDelta: max((box.maxLat - box.minLat) * 1.6, 0.004),
+                                   longitudeDelta: max((box.maxLon - box.minLon) * 1.6, 0.004))
         )
     }
 

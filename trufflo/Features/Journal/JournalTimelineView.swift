@@ -26,7 +26,7 @@ struct JournalTimelineView: View {
                         .accessibilityAddTraits(.isHeader)
                     ForEach(day.walks) { walk in
                         NavigationLink(value: rowDestination(walk.id)) {
-                            WalkActivityCard(walk: walk)
+                            WalkActivityCard(walk: walk, showsDay: false)
                         }
                         .buttonStyle(.plain)
                     }

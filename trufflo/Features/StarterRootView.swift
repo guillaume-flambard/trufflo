@@ -35,6 +35,7 @@ struct StarterRootView: View {
     @State private var storageError = false
     @AppStorage("hasCompletedOnboarding") private var hasCompletedOnboarding = false
     @State private var showOnboardingSheet = false
+    @State private var startBlock: LocationBlock?
     @Environment(\.dynamicTypeSize) private var typeSize
 
     private var liveWalk: WalkRecord? {
@@ -87,25 +88,16 @@ struct StarterRootView: View {
                     } else {
                         ForEach(dogs) { dog in
                             NavigationLink(value: DogRoute(id: dog.id)) {
-                                HStack(spacing: TruffloTheme.Spacing.medium) {
-                                    TruffloDogPortrait(name: dog.name, photoData: dog.photoData, diameter: 56)
-                                    VStack(alignment: .leading, spacing: 2) {
-                                        Text(dog.name)
-                                            .font(.system(.title3, design: .rounded, weight: .bold))
-                                            .foregroundStyle(Color.truffloForest)
-                                        Text(walkCountText(for: dog))
-                                            .font(.subheadline)
-                                            .foregroundStyle(Color.truffloSlate)
-                                    }
-                                }
-                                .padding(.vertical, TruffloTheme.Spacing.xxSmall)
-                                .frame(maxWidth: .infinity, alignment: .leading)
-                                .accessibilityElement(children: .combine)
-                                .accessibilityIdentifier("dog.row.\(dog.id.uuidString)")
+                                dogCard(dog)
                             }
+                            .buttonStyle(.plain)
+                            .listRowBackground(Color.clear)
+                            .listRowSeparator(.hidden)
+                            .listRowInsets(EdgeInsets(top: 6, leading: 16, bottom: 6, trailing: 16))
                         }
                     }
                 }
+                .listStyle(.plain)
                 .navigationTitle("Mes chiens")
                 .truffloScreen()
                 .toolbar {
@@ -122,6 +114,23 @@ struct StarterRootView: View {
         .tint(Color.truffloForest)
         .sheet(isPresented: $showDogForm) { DogFormView() }
         .sheet(isPresented: $showWalkForm) { ManualWalkFormView(dogs: dogs) }
+        .sheet(item: $startBlock) { block in
+            StartBlockedSheet(block: block,
+                              openSettings: {
+                                  startBlock = nil
+                                  if let url = URL(string: UIApplication.openSettingsURLString) {
+                                      UIApplication.shared.open(url)
+                                  }
+                              },
+                              addManually: {
+                                  startBlock = nil
+                                  Task { @MainActor in
+                                      try? await Task.sleep(for: .milliseconds(400))
+                                      showWalkForm = true
+                                  }
+                              },
+                              dismiss: { startBlock = nil })
+        }
         .fullScreenCover(item: $activeWalkCover) { cover in
             switch cover {
             case .resume(let walkID):
@@ -197,9 +206,15 @@ struct StarterRootView: View {
             ScrollView {
                 VStack(alignment: .leading, spacing: TruffloTheme.Spacing.large) {
                     dogHeader
-                    if let currentWalk = liveWalk { liveWalkSection(currentWalk) }
-                    startActions
+                    if let currentWalk = liveWalk {
+                        liveWalkSection(currentWalk)
+                    } else {
+                        startActions
+                    }
                     weekSection
+                    if completedWalks.isEmpty {
+                        firstWalkPlaceholder
+                    }
                     if let lastWalk = completedWalks.first {
                         VStack(alignment: .leading, spacing: TruffloTheme.Spacing.small) {
                             sectionTitle("Dernière balade")
@@ -217,6 +232,41 @@ struct StarterRootView: View {
     }
 
     private var completedWalks: [WalkRecord] { walks.filter { $0.phase == .completed } }
+
+    /// A dog is a real object, so it is a card: face, name, declared facts, and
+    /// the number of walks shared with it. No ranking between dogs.
+    private func dogCard(_ dog: DogRecord) -> some View {
+        let facts = [dog.breedKind != "unknown" ? dog.breedDescription : "", dog.ageDescription]
+            .filter { !$0.isEmpty }.joined(separator: ", ")
+        let count = walkCount(for: dog)
+        return HStack(spacing: TruffloTheme.Spacing.medium) {
+            TruffloDogPortrait(name: dog.name, photoData: dog.photoData, diameter: 64)
+            VStack(alignment: .leading, spacing: 2) {
+                Text(dog.name)
+                    .font(.system(.title3, design: .rounded, weight: .heavy))
+                    .foregroundStyle(Color.truffloForest)
+                if !facts.isEmpty {
+                    Text(facts).font(.subheadline).foregroundStyle(Color.truffloSlate)
+                }
+            }
+            Spacer(minLength: 0)
+            VStack(alignment: .trailing, spacing: 0) {
+                Text("\(count)").font(.truffloFigure(.title2)).monospacedDigit().foregroundStyle(Color.truffloForest)
+                Text(count == 1 ? "balade" : "balades").font(.footnote).foregroundStyle(Color.truffloSlate)
+            }
+        }
+        .padding(14)
+        .background(Color.white, in: RoundedRectangle(cornerRadius: TruffloTheme.Radius.card, style: .continuous))
+        .overlay(RoundedRectangle(cornerRadius: TruffloTheme.Radius.card, style: .continuous)
+            .strokeBorder(Color.truffloForest.opacity(0.07), lineWidth: 1))
+        .accessibilityElement(children: .combine)
+        .accessibilityIdentifier("dog.row.\(dog.id.uuidString)")
+    }
+
+    private func walkCount(for dog: DogRecord) -> Int {
+        let finished = Set(completedWalks.map(\.id))
+        return links.filter { $0.dogID == dog.id && finished.contains($0.walkID) }.count
+    }
 
     private func walkCountText(for dog: DogRecord) -> String {
         let finished = Set(completedWalks.map(\.id))
@@ -294,7 +344,7 @@ struct StarterRootView: View {
                 }
                 TruffloStatRow {
                     TruffloStat("Balades", value: "\(week.count)")
-                    TruffloStat("Temps", value: WalkFormatting.minutes(week.map(\.confirmedSeconds).reduce(0, +)))
+                    TruffloStat("Temps enregistré", value: WalkFormatting.minutes(week.map(\.confirmedSeconds).reduce(0, +)))
                 }
             }
         }
@@ -309,52 +359,107 @@ struct StarterRootView: View {
         return formatter.localizedString(for: endedAt, relativeTo: Date())
     }
 
+    /// A walk in progress takes the place of the start button, so a second one
+    /// cannot be started by mistake. The time keeps running on screen: the
+    /// stored duration covers the last checkpoint, and while recording the
+    /// seconds since that checkpoint are added on top.
     private func liveWalkSection(_ walk: WalkRecord) -> some View {
         let isInterrupted = walk.phase == .interrupted
-        return HStack(alignment: .center, spacing: TruffloTheme.Spacing.medium) {
-            Circle()
-                .fill(isInterrupted ? Color.truffloPeach : Color.truffloSage)
-                .frame(width: 10, height: 10)
-                .accessibilityHidden(true)
-            VStack(alignment: .leading, spacing: 2) {
-                Text(isInterrupted ? "Session interrompue" : "Suivi GPS actif")
+        let isRecording = walk.phase == .recording
+        return VStack(alignment: .leading, spacing: TruffloTheme.Spacing.small) {
+            HStack(spacing: TruffloTheme.Spacing.xSmall) {
+                Circle()
+                    .fill(isInterrupted ? Color.truffloPeach : isRecording ? Color(red: 0.5, green: 0.83, blue: 0.65) : Color.white.opacity(0.7))
+                    .frame(width: 9, height: 9)
+                    .accessibilityHidden(true)
+                Text(isInterrupted ? "Balade interrompue" : isRecording ? "Balade en cours" : "Balade en pause")
+                    .font(.subheadline.weight(.semibold))
+                    .foregroundStyle(Color.truffloMint)
+            }
+            TimelineView(.periodic(from: .now, by: 1)) { context in
+                let seconds = walk.confirmedSeconds
+                    + (isRecording ? max(context.date.timeIntervalSince(walk.lastCheckpointAt), 0) : 0)
+                HStack(alignment: .top, spacing: TruffloTheme.Spacing.xLarge) {
+                    liveFigure("Durée", WalkFormatting.clock(seconds))
+                    liveFigure("Distance", WalkFormatting.distance(walk.recordedPathMeters))
+                }
+            }
+            if isInterrupted {
+                Text("Données enregistrées jusqu'au dernier point.")
+                    .font(.footnote)
+                    .foregroundStyle(Color.truffloMint)
+            }
+            Button {
+                activeWalkCover = .resume(walk.id)
+            } label: {
+                Text("Revenir à la balade")
                     .font(.headline)
                     .foregroundStyle(Color.truffloForest)
-                Text(walk.phase == .recording
-                     ? "En cours d'enregistrement..."
-                     : isInterrupted ? "Données enregistrées jusqu'au dernier point."
-                     : "En pause")
-                    .font(.footnote)
-                    .foregroundStyle(Color.truffloSlate)
+                    .frame(maxWidth: .infinity, minHeight: 50)
+                    .background(Color.white, in: RoundedRectangle(cornerRadius: 14, style: .continuous))
             }
-            Spacer(minLength: 0)
-            Button("Afficher") {
-                activeWalkCover = .resume(walk.id)
-            }
-            .buttonStyle(.glassProminent)
-            .tint(Color.truffloForest)
-            .fixedSize()
+            .buttonStyle(.plain)
         }
         .padding(TruffloTheme.Spacing.medium)
-        .background(Color.white, in: RoundedRectangle(cornerRadius: TruffloTheme.Radius.card, style: .continuous))
+        .frame(maxWidth: .infinity, alignment: .leading)
+        .background(Color.truffloForest, in: RoundedRectangle(cornerRadius: TruffloTheme.Radius.card, style: .continuous))
         .accessibilityElement(children: .contain)
         .accessibilityIdentifier("walk.live.banner")
     }
 
+    private func liveFigure(_ label: String, _ value: String) -> some View {
+        VStack(alignment: .leading, spacing: 2) {
+            Text(label).font(.footnote).foregroundStyle(Color.truffloMint)
+            Text(value)
+                .font(.truffloFigure(.title))
+                .monospacedDigit()
+                .foregroundStyle(.white)
+        }
+    }
+
+    /// Before the first walk: no zeros, no empty statistics, a dashed slot that
+    /// says what will appear here.
+    private var firstWalkPlaceholder: some View {
+        VStack(alignment: .leading, spacing: TruffloTheme.Spacing.xxSmall) {
+            Text("Sa première balade s'affichera ici")
+                .font(.system(.headline, design: .rounded, weight: .bold))
+                .foregroundStyle(Color.truffloForest)
+            Text("Avec sa durée, son tracé, et la note que vous voudrez y laisser.")
+                .font(.subheadline)
+                .foregroundStyle(Color.truffloSlate)
+        }
+        .padding(TruffloTheme.Spacing.medium)
+        .frame(maxWidth: .infinity, alignment: .leading)
+        .overlay(RoundedRectangle(cornerRadius: TruffloTheme.Radius.card, style: .continuous)
+            .strokeBorder(Color.truffloForest.opacity(0.25), style: StrokeStyle(lineWidth: 1.5, dash: [6, 5])))
+    }
+
+    /// Checks the permission before opening the live screen. A walk that cannot
+    /// start is explained on Today; the live screen keeps its own check for the
+    /// case where the permission changes after this one.
+    private func startWalk() {
+        if let unfinished = liveWalk {
+            activeWalkCover = .resume(unfinished.id)
+            return
+        }
+        guard dogs.first != nil else { return }
+        let probe = CoreLocationProvider()
+        switch probe.authorization {
+        case .denied: startBlock = .permissionDenied
+        case .restricted: startBlock = .permissionRestricted
+        case .notDetermined, .authorizedWhenInUse, .authorizedAlways:
+            if probe.authorization != .notDetermined && !probe.servicesAvailable {
+                startBlock = .servicesUnavailable
+            } else {
+                activeWalkCover = .start
+            }
+        }
+    }
+
     private var startActions: some View {
         VStack(spacing: TruffloTheme.Spacing.xSmall) {
-            Button {
-                // An unfinished walk, interrupted included, is not a reason to
-                // open a second session: the repository would hand the existing
-                // one back and the tap would look like it did nothing. Open that
-                // one instead.
-                if let unfinished = liveWalk {
-                    activeWalkCover = .resume(unfinished.id)
-                } else if dogs.first != nil {
-                    activeWalkCover = .start
-                }
-            } label: {
-                Label("Démarrer une balade GPS", systemImage: "location.fill")
+            Button(action: startWalk) {
+                Label("Démarrer une balade", systemImage: "location.fill")
                     .font(.system(.title3, design: .rounded, weight: .bold))
                     .multilineTextAlignment(.center)
                     .frame(maxWidth: .infinity, minHeight: 56)
@@ -380,4 +485,8 @@ struct StarterRootView: View {
         do { try JournalRepository(context: context).eraseAll() }
         catch { storageError = true }
     }
+}
+
+extension LocationBlock: Identifiable {
+    public var id: String { rawValue }
 }

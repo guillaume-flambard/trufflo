@@ -10,9 +10,13 @@ struct ComponentTests {
     func testOnboardingSteps() {
         let steps = OnboardingStep.defaultSteps
         #expect(steps.count == 3)
-        #expect(steps[0].imageName == "OnboardingWalk")
-        #expect(steps[1].imageName == "OnboardingRoutine")
-        #expect(steps[2].imageName == "OnboardingCommunity")
+        #expect(Set(steps.map(\.id)).count == 3)
+        // The introduction promises only what the app does today: no community,
+        // no companions, no habit tracking.
+        let promises = steps.map { ($0.title + " " + $0.description).lowercased() }
+        for forbidden in ["communauté", "compagnon", "habitude"] {
+            #expect(!promises.contains { $0.contains(forbidden) }, "l'introduction promet « \(forbidden) »")
+        }
     }
 
     @Test("Every badge style paints an opaque chip")

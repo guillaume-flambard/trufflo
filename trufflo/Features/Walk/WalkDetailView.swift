@@ -32,14 +32,9 @@ struct WalkDetailView: View {
             if let walk = matches.first {
                 content(for: walk)
             } else {
-                TruffloEmptyStateView(
-                    imageName: "EmptyWalk",
-                    title: "Cette balade n'existe plus",
-                    description: "Elle a été retirée de cet appareil."
-                )
+                TruffloNotice(title: "Cette balade n'existe plus", message: "Elle a été retirée de cet iPhone depuis un autre écran.", actionTitle: "Revenir au journal") { dismiss() }
             }
         }
-        .navigationTitle("Balade")
         .navigationBarTitleDisplayMode(.inline)
         .truffloScreen()
         .alert("Modification impossible", isPresented: Binding(
@@ -59,14 +54,15 @@ struct WalkDetailView: View {
     private func content(for walk: WalkRecord) -> some View {
         let names = participants.map(\.dogNameSnapshot).sorted()
         let date = walk.endedAt ?? walk.startedAt
+        let hasMap = trackCoordinates.count >= 2
         ScrollView {
             VStack(alignment: .leading, spacing: 0) {
-                if trackCoordinates.count >= 2 {
+                if hasMap {
                     TruffloTrackMap(points: trackCoordinates,
                                     isLive: false,
                                     showsMarkers: false,
                                     isFollowing: $isFollowingTrack)
-                        .frame(height: 280)
+                        .frame(height: 340)
                         .accessibilityIdentifier("walk.detail.map")
                 }
 
@@ -84,13 +80,15 @@ struct WalkDetailView: View {
                                         .font(.subheadline.weight(.semibold))
                                         .foregroundStyle(Color.truffloCharcoal)
                                 }
-                                Text(WalkFormatting.dayAndTime(date))
+                                Text(walk.source == .manual
+                                     ? "\(WalkFormatting.relativeDayAndTime(date)), saisie manuelle"
+                                     : WalkFormatting.relativeDayAndTime(date))
                                     .font(.footnote)
                                     .foregroundStyle(Color.truffloSlate)
                             }
                         }
                         Text(WalkFormatting.activityTitle(date))
-                            .font(.system(.title, design: .rounded, weight: .bold))
+                            .font(.system(.title, design: .rounded, weight: .heavy))
                             .foregroundStyle(Color.truffloForest)
                     }
 
@@ -110,12 +108,13 @@ struct WalkDetailView: View {
                     }
 
                     VStack(alignment: .leading, spacing: 0) {
-                        WalkSectionTitle("Détails")
-                            .padding(.bottom, TruffloTheme.Spacing.xSmall)
-                        WalkFactRow("Fin de la balade",
-                                    walk.endedAt.map(WalkFormatting.dayAndTime) ?? "En cours")
-                        WalkFactRow("Origine", walk.source == .manual ? "Saisie manuelle" : "Suivi GPS")
-                        WalkFactRow("Qualité", qualityText(walk.quality))
+                        WalkFactRow("Mesure", WalkFormatting.quality(walk.quality))
+                        if walk.source != .manual, let endedAt = walk.endedAt {
+                            WalkFactRow("Départ et retour", WalkFormatting.timeRange(walk.startedAt, endedAt))
+                        } else {
+                            WalkFactRow("Fin de la balade",
+                                        walk.endedAt.map(WalkFormatting.relativeDayAndTime) ?? "En cours")
+                        }
                     }
 
                     VStack(alignment: .leading, spacing: TruffloTheme.Spacing.xxSmall) {
@@ -139,6 +138,10 @@ struct WalkDetailView: View {
                 .padding(.bottom, TruffloTheme.Spacing.xLarge)
             }
         }
+        // The route runs under the bar, edge to edge; the back button floats in glass.
+        .ignoresSafeArea(edges: hasMap ? .top : [])
+        .toolbarBackgroundVisibility(hasMap ? .hidden : .automatic, for: .navigationBar)
+        .navigationTitle(hasMap ? "" : "Balade")
         .confirmationDialog("Supprimer cette balade ?", isPresented: $showDeleteConfirmation,
                             titleVisibility: .visible) {
             Button("Supprimer définitivement", role: .destructive) { delete(walkID: walk.id) }

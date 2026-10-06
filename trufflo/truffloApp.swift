@@ -35,11 +35,13 @@ struct TruffloApp: App {
                     .preferredColorScheme(.light)
             case .failure:
                 // Never replace a failed persistent store with a silent, empty memory store.
-                ContentUnavailableView(
-                    "Journal indisponible",
-                    systemImage: "externaldrive.badge.exclamationmark",
-                    description: Text("Le stockage n'a pas pu être ouvert. Vos données ne sont pas effacées. Fermez puis rouvrez l'application ; si le problème persiste, conservez l'installation pour le diagnostic.")
+                TruffloNotice(
+                    systemImage: "externaldrive",
+                    title: "Le journal ne s'ouvre pas",
+                    message: "Le stockage de l'iPhone n'a pas répondu. Vos balades ne sont pas effacées. Fermez Trufflo puis rouvrez-le.",
+                    footnote: "Si le problème revient, gardez l'app installée : la supprimer effacerait le journal."
                 )
+                .preferredColorScheme(.light)
             }
         }
     }
