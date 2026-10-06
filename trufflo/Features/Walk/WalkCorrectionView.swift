@@ -30,7 +30,7 @@ struct WalkCorrectionView: View {
             .map { ($0.dogID, $0.dogNameSnapshot) }
         _selectedDogs = State(initialValue: Set(participants.map(\.dogID)))
         _minutesText = State(initialValue: (walk.confirmedSeconds / 60)
-            .formatted(.number.precision(.fractionLength(0...1)).locale(Locale(identifier: "fr_FR"))))
+            .formatted(.number.precision(.fractionLength(0...1)).locale(TruffloLocale.french)))
         _endedAt = State(initialValue: walk.endedAt ?? walk.startedAt)
         _note = State(initialValue: walk.note)
     }
@@ -68,7 +68,7 @@ struct WalkCorrectionView: View {
                                        displayedComponents: [.date, .hourAndMinute])
                                 .labelsHidden()
                                 .tint(Color.truffloForest)
-                                .environment(\.locale, Locale(identifier: "fr_FR"))
+                                .environment(\.locale, TruffloLocale.french)
                         }
                     } else {
                         Text("La durée et le parcours ont été mesurés par GPS : ils ne se corrigent pas. Les chiens présents et la note, si.")

@@ -25,7 +25,7 @@ enum WalkFormatting {
         guard let meters else { return "Non mesurée" }
         if meters >= 1000 {
             let km = (meters / 1000).formatted(.number.precision(.fractionLength(1...2))
-                .locale(Locale(identifier: "fr_FR")))
+                .locale(TruffloLocale.french))
             return "\(km) km"
         }
         return String(format: "%.0f m", meters)
@@ -40,7 +40,7 @@ enum WalkFormatting {
         }
     }
 
-    private static let french = Locale(identifier: "fr_FR")
+    private static let french = TruffloLocale.french
 
     /// "18:42". The journal's margin: the hour is where a walk sits in the
     /// day, not a name invented for it ("Balade du soir" was removed on

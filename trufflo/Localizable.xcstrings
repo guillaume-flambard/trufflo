@@ -1,0 +1,94 @@
+{
+  "sourceLanguage": "fr",
+  "strings": {
+    "%lld balades": {
+      "localizations": {
+        "fr": {
+          "variations": {
+            "plural": {
+              "one": {
+                "stringUnit": {
+                  "state": "translated",
+                  "value": "%lld balade"
+                }
+              },
+              "other": {
+                "stringUnit": {
+                  "state": "translated",
+                  "value": "%lld balades"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "%lld balades reçues": {
+      "localizations": {
+        "fr": {
+          "variations": {
+            "plural": {
+              "one": {
+                "stringUnit": {
+                  "state": "translated",
+                  "value": "%lld balade reçue"
+                }
+              },
+              "other": {
+                "stringUnit": {
+                  "state": "translated",
+                  "value": "%lld balades reçues"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "%lld membres": {
+      "localizations": {
+        "fr": {
+          "variations": {
+            "plural": {
+              "one": {
+                "stringUnit": {
+                  "state": "translated",
+                  "value": "%lld membre"
+                }
+              },
+              "other": {
+                "stringUnit": {
+                  "state": "translated",
+                  "value": "%lld membres"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "walks_noun_one": {
+      "comment": "Noun under the walk count on a dog row; Xcode forbids a plural variant that omits the number.",
+      "localizations": {
+        "fr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "balade"
+          }
+        }
+      }
+    },
+    "walks_noun_other": {
+      "comment": "Noun under the walk count on a dog row; Xcode forbids a plural variant that omits the number.",
+      "localizations": {
+        "fr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "balades"
+          }
+        }
+      }
+    }
+  },
+  "version": "1.1"
+}

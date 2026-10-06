@@ -72,7 +72,7 @@ struct WalkDetailView: View {
                     HStack(alignment: .top, spacing: TruffloTheme.Spacing.medium) {
                         VStack(alignment: .leading, spacing: TruffloTheme.Spacing.xxSmall) {
                             // The dogs are the title; the hour is a fact, not a name.
-                            Text(names.isEmpty ? "Balade" : names.formatted(.list(type: .and).locale(Locale(identifier: "fr_FR"))))
+                            Text(names.isEmpty ? "Balade" : names.formatted(.list(type: .and).locale(TruffloLocale.french)))
                                 .font(.system(.title, design: .rounded, weight: .heavy))
                                 .foregroundStyle(Color.truffloForest)
                                 .fixedSize(horizontal: false, vertical: true)

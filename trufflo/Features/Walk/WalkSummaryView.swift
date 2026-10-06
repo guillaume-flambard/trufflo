@@ -168,7 +168,7 @@ struct WalkSummaryView: View {
     private var title: String {
         dogNames.isEmpty
             ? "Balade"
-            : dogNames.formatted(.list(type: .and).locale(Locale(identifier: "fr_FR")))
+            : dogNames.formatted(.list(type: .and).locale(TruffloLocale.french))
     }
 
     /// The first participant still on the device. A deleted profile leaves its name

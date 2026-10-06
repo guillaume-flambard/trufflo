@@ -322,7 +322,7 @@ struct HouseholdView: View {
         VStack(alignment: .leading, spacing: 0) {
             HouseholdBand(title: household.name,
                           subtitle: members.count <= 1 ? "Vous seul pour l'instant."
-                              : "\(members.count) membres, \(shared.count == 1 ? "1 balade reçue" : "\(shared.count) balades reçues").",
+                              : "\(String(localized: "\(members.count) membres")), \(String(localized: "\(shared.count) balades reçues")).",
                           faces: members.map { .person($0.displayName) },
                           badge: household.myRole.label)
 

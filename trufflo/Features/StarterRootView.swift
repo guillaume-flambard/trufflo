@@ -294,7 +294,7 @@ struct StarterRootView: View {
 
     /// "3 balades, Oslo, 30 derniers jours": says what the filtered list is.
     private func filterSummary(count: Int) -> String {
-        var parts = [count == 1 ? "1 balade" : "\(count) balades"]
+        var parts = [String(localized: "\(count) balades")]
         if let id = journalFilter.dogID, let dog = dogs.first(where: { $0.id == id }) { parts.append(dog.name) }
         if journalFilter.period != .all { parts.append(journalFilter.period.label.lowercased()) }
         return parts.joined(separator: ", ")
@@ -395,7 +395,7 @@ struct StarterRootView: View {
             Spacer(minLength: 0)
             VStack(alignment: .trailing, spacing: 0) {
                 Text("\(count)").font(.truffloFigure(.title2)).monospacedDigit().foregroundStyle(Color.truffloForest)
-                Text(count == 1 ? "balade" : "balades").font(.footnote).foregroundStyle(Color.truffloSlate)
+                Text(count == 1 ? String(localized: "walks_noun_one") : String(localized: "walks_noun_other")).font(.footnote).foregroundStyle(Color.truffloSlate)
             }
         }
         .contentShape(Rectangle())
@@ -496,7 +496,7 @@ struct StarterRootView: View {
     }
 
     private var dogNames: String {
-        dogs.map(\.name).formatted(.list(type: .and).locale(Locale(identifier: "fr_FR")))
+        dogs.map(\.name).formatted(.list(type: .and).locale(TruffloLocale.french))
     }
 
     /// Descriptive figures over the last seven days, never a target: how many
@@ -518,7 +518,7 @@ struct StarterRootView: View {
                     }
                 }
                 TruffloStatRow {
-                    TruffloStat("Balades", value: "\(week.count)")
+                    TruffloStat("Vos balades", value: "\(week.count)")
                     TruffloStat("Temps enregistré", value: WalkFormatting.minutes(week.map(\.confirmedSeconds).reduce(0, +)))
                 }
             }
@@ -529,8 +529,8 @@ struct StarterRootView: View {
         guard let endedAt = completedWalks.first?.endedAt else { return nil }
         if Date().timeIntervalSince(endedAt) < 60 { return "à l'instant" }
         let formatter = RelativeDateTimeFormatter()
-        formatter.locale = Locale(identifier: "fr_FR")
-        formatter.unitsStyle = .abbreviated
+        formatter.locale = TruffloLocale.french
+        formatter.unitsStyle = .full
         return formatter.localizedString(for: endedAt, relativeTo: Date())
     }
 

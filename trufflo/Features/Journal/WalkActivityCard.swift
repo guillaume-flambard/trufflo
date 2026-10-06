@@ -31,7 +31,7 @@ struct WalkActivityCard: View {
     private var date: Date { walk.endedAt ?? walk.startedAt }
     private var names: String {
         participants.map(\.dogNameSnapshot).sorted()
-            .formatted(.list(type: .and).locale(Locale(identifier: "fr_FR")))
+            .formatted(.list(type: .and).locale(TruffloLocale.french))
     }
     private var leadPhoto: Data? {
         let ids = Set(participants.map(\.dogID))

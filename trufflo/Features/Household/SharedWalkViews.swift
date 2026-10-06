@@ -13,7 +13,7 @@ struct SharedWalkCard: View {
 
     private var date: Date { walk.endedAt }
     private var names: String {
-        walk.dogNames.formatted(.list(type: .and).locale(Locale(identifier: "fr_FR")))
+        walk.dogNames.formatted(.list(type: .and).locale(TruffloLocale.french))
     }
     private var isGPS: Bool { walk.source != .manual }
     private var figures: [String] {
@@ -61,7 +61,7 @@ struct SharedWalkDetailView: View {
                 let author = members.first { $0.userID == walk.authorID }?.displayName ?? "un membre du foyer"
                 VStack(alignment: .leading, spacing: TruffloTheme.Spacing.large) {
                     VStack(alignment: .leading, spacing: TruffloTheme.Spacing.xxSmall) {
-                        Text(walk.dogNames.formatted(.list(type: .and).locale(Locale(identifier: "fr_FR"))))
+                        Text(walk.dogNames.formatted(.list(type: .and).locale(TruffloLocale.french)))
                             .font(.system(.title, design: .rounded, weight: .heavy))
                             .foregroundStyle(Color.truffloForest)
                         Text("\(WalkFormatting.relativeDayAndTime(walk.endedAt).capitalizedFirst), par \(author)")

@@ -92,7 +92,7 @@ struct DogDetailView: View {
 
                     if let count = walkCount, count > 0 {
                         TruffloStatRow {
-                            TruffloStat("Balades", value: "\(count)")
+                            TruffloStat("Vos balades", value: "\(count)")
                             TruffloStat("Temps enregistré", value: WalkFormatting.minutes(recordedSeconds))
                         }
                     }
@@ -196,7 +196,7 @@ struct DogDetailView: View {
                 Text("Aucune. Le journal fonctionne sans routine.")
                     .font(.body)
                     .foregroundStyle(Color.truffloSlate)
-                Button("Choisir des repères") { showRoutine = true }
+                Button("Choisir une routine") { showRoutine = true }
                     .font(.subheadline.weight(.semibold))
                     .foregroundStyle(Color.truffloForest)
                     .frame(minHeight: 44)

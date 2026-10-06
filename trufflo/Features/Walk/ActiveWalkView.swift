@@ -324,7 +324,7 @@ public struct ActiveWalkView: View {
     private var walkTitle: String {
         let names = viewModel.dogNames
         guard !names.isEmpty else { return "Balade" }
-        let list = names.formatted(.list(type: .and).locale(Locale(identifier: "fr_FR")))
+        let list = names.formatted(.list(type: .and).locale(TruffloLocale.french))
         return "Balade avec \(list)"
     }
 

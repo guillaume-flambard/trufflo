@@ -59,7 +59,7 @@ public struct DogRoutine: Equatable, Sendable {
         if let minutesPerOuting { parts.append("environ \(minutesPerOuting) min") }
         if !slots.isEmpty {
             let names = slots.sorted().map(\.label)
-            parts.append(names.formatted(.list(type: .and).locale(Locale(identifier: "fr_FR"))))
+            parts.append(names.formatted(.list(type: .and).locale(TruffloLocale.french)))
         }
         let text = parts.joined(separator: ", ")
         return text.prefix(1).uppercased() + text.dropFirst()

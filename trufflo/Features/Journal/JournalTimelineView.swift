@@ -13,7 +13,7 @@ struct JournalTimelineView: View {
     let rowDestination: (UUID) -> WalkRoute
 
     @Environment(\.calendar) private var calendar
-    private static let locale = Locale(identifier: "fr_FR")
+    private static let locale = TruffloLocale.french
 
     var body: some View {
         ScrollView {
