@@ -22,6 +22,20 @@ public enum TruffloTheme {
         public static let chocolate = Color("ChocolateColor", bundle: .main)
         /// Charbon (#2D2D2D) - High contrast dark text
         public static let charcoal = Color("CharcoalColor", bundle: .main)
+        /// Terracotta foncée (#A94A2A) - Terminal actions and error text.
+        ///
+        /// The original terracotta (#D97656) tops out at 2.9:1 on sand and 3.1:1 as
+        /// white text, so it works as an accent and nothing else. This darker variant
+        /// reaches 5.1:1 on sand and 5.6:1 as white text, which is what a button
+        /// label or an error message needs.
+        public static let danger = Color("DangerColor", bundle: .main)
+        /// Ambre (#B45309) - Weak GPS signal.
+        public static let amber = Color("AmberColor", bundle: .main)
+        /// Ardoise (#5B6472) - Legends and metadata.
+        public static let slate = Color("SlateColor", bundle: .main)
+        /// Forest profond (#14382B) - Opaque replacement for glass under
+        /// Reduce Transparency, where a blurred surface is not legible.
+        public static let forestDeep = Color(red: 20 / 255, green: 56 / 255, blue: 43 / 255)
     }
 
     // MARK: - Spacing Tokens
@@ -56,23 +70,41 @@ public extension Color {
     static var truffloSky: Color { TruffloTheme.Colors.sky }
     static var truffloChocolate: Color { TruffloTheme.Colors.chocolate }
     static var truffloCharcoal: Color { TruffloTheme.Colors.charcoal }
+    static var truffloDanger: Color { TruffloTheme.Colors.danger }
+    static var truffloAmber: Color { TruffloTheme.Colors.amber }
+    static var truffloSlate: Color { TruffloTheme.Colors.slate }
+    static var truffloForestDeep: Color { TruffloTheme.Colors.forestDeep }
 }
 
 // MARK: - Typography Extensions
+// Built on text styles so every size follows Dynamic Type.
 public extension Font {
-    static var truffloTitle: Font {
-        .system(size: 28, weight: .bold, design: .rounded)
+    static var truffloTitle: Font { .system(.title, design: .rounded, weight: .bold) }
+    static var truffloHeadline: Font { .system(.title3, design: .rounded, weight: .semibold) }
+    static var truffloSubheadline: Font { .system(.body, design: .rounded, weight: .medium) }
+    static var truffloBody: Font { .system(.callout, design: .rounded, weight: .regular) }
+    static var truffloCaption: Font { .system(.footnote, design: .rounded, weight: .regular) }
+}
+
+// MARK: - Screen chrome
+public extension View {
+    /// The one background and tint every list or form screen shares, so that
+    /// Today, Journal, Dogs, detail and form screens read as the same app.
+    func truffloScreen() -> some View {
+        self
+            .scrollContentBackground(.hidden)
+            .background(Color.truffloSand.ignoresSafeArea())
+            .tint(Color.truffloForest)
     }
-    static var truffloHeadline: Font {
-        .system(size: 20, weight: .semibold, design: .rounded)
+
+    /// Legends, footers and metadata.
+    func truffloSecondaryText() -> some View {
+        self.font(.truffloCaption).foregroundStyle(Color.truffloSlate)
     }
-    static var truffloSubheadline: Font {
-        .system(size: 17, weight: .medium, design: .rounded)
-    }
-    static var truffloBody: Font {
-        .system(size: 16, weight: .regular, design: .rounded)
-    }
-    static var truffloCaption: Font {
-        .system(size: 13, weight: .regular, design: .rounded)
+
+    /// Error text: always readable (5:1 on sand) and never colour alone, the
+    /// caller supplies the explicit sentence.
+    func truffloErrorText() -> some View {
+        self.font(.truffloCaption).foregroundStyle(Color.truffloDanger)
     }
 }

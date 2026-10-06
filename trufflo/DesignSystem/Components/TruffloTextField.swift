@@ -54,13 +54,13 @@ public struct TruffloTextField: View {
             .clipShape(RoundedRectangle(cornerRadius: TruffloTheme.Radius.medium, style: .continuous))
             .overlay(
                 RoundedRectangle(cornerRadius: TruffloTheme.Radius.medium, style: .continuous)
-                    .stroke(errorMessage != nil ? Color.red : Color.truffloForest.opacity(0.1), lineWidth: 1)
+                    .stroke(errorMessage != nil ? Color.truffloDanger : Color.truffloForest.opacity(0.1), lineWidth: 1)
             )
 
             if let errorMessage {
                 Text(errorMessage)
                     .font(.truffloCaption)
-                    .foregroundStyle(.red)
+                    .foregroundStyle(Color.truffloDanger)
             }
         }
     }

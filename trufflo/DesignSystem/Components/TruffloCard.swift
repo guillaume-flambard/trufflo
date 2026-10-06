@@ -33,7 +33,7 @@ public struct TruffloCard<Content: View>: View {
         case .mint:
             return Color.truffloMint.opacity(0.35)
         case .plain:
-            return Color(.secondarySystemGroupedBackground)
+            return Color.white
         }
     }
 }

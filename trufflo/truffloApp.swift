@@ -8,6 +8,9 @@ struct TruffloApp: App {
     private let boot: Result<ModelContainer, Error>
 
     init() {
+        let forest = UIColor(Color.truffloForest)
+        UINavigationBar.appearance().largeTitleTextAttributes = [.foregroundColor: forest]
+        UINavigationBar.appearance().titleTextAttributes = [.foregroundColor: forest]
         #if DEBUG
         let inMemory = ProcessInfo.processInfo.arguments.contains("--uitesting")
         #else
@@ -26,6 +29,10 @@ struct TruffloApp: App {
             case .success(let container):
                 StarterRootView()
                     .modelContainer(container)
+                    // The palette ships light values only; until adaptive colours
+                    // exist, dark mode would put forest text on a dark system
+                    // background on half the screens.
+                    .preferredColorScheme(.light)
             case .failure:
                 // Never replace a failed persistent store with a silent, empty memory store.
                 ContentUnavailableView(

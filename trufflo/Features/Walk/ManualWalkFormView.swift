@@ -45,27 +45,25 @@ struct ManualWalkFormView: View {
                         .accessibilityIdentifier("walk.note")
                     Text("Durée déclarée. Aucune distance ni aucun pas ne sont inventés.")
                         .font(.truffloCaption)
-                        .foregroundStyle(.secondary)
+                        .foregroundStyle(Color.truffloSlate)
                 }
                 if let errorMessage {
                     Section {
                         Text(errorMessage)
                             .font(.truffloCaption)
-                            .foregroundStyle(.red)
+                            .foregroundStyle(Color.truffloDanger)
                     }
                 }
             }
             .navigationTitle("Ajouter une balade")
-            .tint(Color.truffloForest)
+            .truffloScreen()
             .toolbar {
                 ToolbarItem(placement: .cancellationAction) {
                     Button("Annuler") { dismiss() }
-                        .font(.truffloSubheadline)
                 }
                 ToolbarItem(placement: .confirmationAction) {
                     Button("Enregistrer", action: save)
-                        .font(.truffloHeadline)
-                        .foregroundStyle(Color.truffloForest)
+                        .fontWeight(.semibold)
                         .accessibilityIdentifier("walk.save")
                 }
             }

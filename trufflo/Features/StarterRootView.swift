@@ -51,7 +51,7 @@ struct StarterRootView: View {
                                 .foregroundStyle(Color.truffloForest)
                             Text("Retrouvez les balades que vous avez enregistrées.")
                                 .font(.truffloSubheadline)
-                                .foregroundStyle(Color.truffloCharcoal.opacity(0.7))
+                                .foregroundStyle(Color.truffloSlate)
                         }
                         .padding(.vertical, TruffloTheme.Spacing.xSmall)
                     }
@@ -69,7 +69,7 @@ struct StarterRootView: View {
                                          : isInterrupted ? "Données enregistrées jusqu'au dernier point."
                                          : "En pause")
                                         .font(.truffloCaption)
-                                        .foregroundStyle(.secondary)
+                                        .foregroundStyle(Color.truffloSlate)
                                 }
                                 Spacer()
                                 Button("Afficher") {
@@ -131,7 +131,7 @@ struct StarterRootView: View {
                     }
                 }
                 .navigationTitle("Aujourd'hui")
-                .tint(Color.truffloForest)
+                .truffloScreen()
                 .toolbar {
                     ToolbarItem(placement: .topBarTrailing) {
                         Menu("Réglages", systemImage: "gearshape") {
@@ -163,7 +163,7 @@ struct StarterRootView: View {
                     }
                 }
                 .navigationTitle("Journal")
-                .tint(Color.truffloForest)
+                .truffloScreen()
                 .navigationDestination(for: WalkRoute.self) { WalkDetailView(walkID: $0.id) }
                 .navigationDestination(for: DogRoute.self) { DogDetailView(dogID: $0.id) }
             }
@@ -188,7 +188,7 @@ struct StarterRootView: View {
                                         .foregroundStyle(Color.truffloForest)
                                     Text(dog.breedDescription)
                                         .font(.truffloSubheadline)
-                                        .foregroundStyle(.secondary)
+                                        .foregroundStyle(Color.truffloSlate)
                                 }
                                 .frame(maxWidth: .infinity, alignment: .leading)
                                 .accessibilityElement(children: .combine)
@@ -198,7 +198,7 @@ struct StarterRootView: View {
                     }
                 }
                 .navigationTitle("Mes chiens")
-                .tint(Color.truffloForest)
+                .truffloScreen()
                 .toolbar {
                     ToolbarItem(placement: .topBarTrailing) {
                         Button("Ajouter", systemImage: "plus") { showDogForm = true }
@@ -263,7 +263,7 @@ struct StarterRootView: View {
                 if let endedAt = walk.endedAt {
                     Text(endedAt, format: .dateTime.day().month().hour().minute())
                         .font(.truffloCaption)
-                        .foregroundStyle(.secondary)
+                        .foregroundStyle(Color.truffloSlate)
                 }
             }
             if !walk.note.isEmpty {

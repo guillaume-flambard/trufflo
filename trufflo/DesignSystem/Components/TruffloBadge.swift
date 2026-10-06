@@ -23,7 +23,7 @@ public struct TruffloBadge: View {
         HStack(spacing: TruffloTheme.Spacing.xxSmall) {
             if let icon {
                 Image(systemName: icon)
-                    .font(.system(size: 12, weight: .bold))
+                    .font(.caption2.weight(.bold))
             }
             Text(title)
                 .font(.truffloCaption)
@@ -50,7 +50,7 @@ public struct TruffloBadge: View {
         switch style {
         case .forest: return .white
         case .sage: return Color.truffloForest
-        case .peach: return Color.truffloTerracotta
+        case .peach: return Color.truffloDanger
         case .sky: return Color.truffloForest
         case .sand: return Color.truffloCharcoal
         }

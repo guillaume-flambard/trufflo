@@ -57,7 +57,7 @@ struct DogFormView: View {
                                         .fill(Color.truffloSand)
                                         .frame(width: 90, height: 90)
                                     Image(systemName: "pawprint.fill")
-                                        .font(.system(size: 36))
+                                        .font(.largeTitle)
                                         .foregroundStyle(Color.truffloForest.opacity(0.6))
                                 }
                             }
@@ -132,14 +132,14 @@ struct DogFormView: View {
                 Section {
                     Text("La race et l'âge sont déclaratifs et ne déclenchent aucune prescription vétérinaire automatique.")
                         .font(.truffloCaption)
-                        .foregroundStyle(.secondary)
+                        .foregroundStyle(Color.truffloSlate)
                 }
 
                 if let errorMessage {
                     Section {
                         Text(errorMessage)
                             .font(.truffloCaption)
-                            .foregroundStyle(.red)
+                            .foregroundStyle(Color.truffloDanger)
                             .accessibilityIdentifier("dog.error")
                     }
                 }
@@ -154,16 +154,14 @@ struct DogFormView: View {
                 }
             }
             .navigationTitle(isEditing ? "Modifier le chien" : "Ajouter un chien")
-            .tint(Color.truffloForest)
+            .truffloScreen()
             .toolbar {
                 ToolbarItem(placement: .cancellationAction) {
                     Button("Annuler") { dismiss() }
-                        .font(.truffloSubheadline)
                 }
                 ToolbarItem(placement: .confirmationAction) {
                     Button("Enregistrer", action: save)
-                        .font(.truffloHeadline)
-                        .foregroundStyle(Color.truffloForest)
+                        .fontWeight(.semibold)
                         .accessibilityIdentifier("dog.save")
                 }
             }

@@ -35,7 +35,7 @@ struct DogDetailView: View {
         }
         .navigationTitle(matches.first?.name ?? "Chien")
         .navigationBarTitleDisplayMode(.inline)
-        .tint(Color.truffloForest)
+        .truffloScreen()
         .alert("Modification impossible", isPresented: Binding(
             get: { storageError != nil },
             set: { if !$0 { storageError = nil } }
@@ -81,7 +81,7 @@ struct DogDetailView: View {
             } footer: {
                 Text("La suppression retire le profil de cet appareil. Vos balades déjà enregistrées gardent le nom de votre chien.")
                     .font(.truffloCaption)
-                    .foregroundStyle(.secondary)
+                    .foregroundStyle(Color.truffloSlate)
             }
         }
         .sheet(isPresented: $showEdit) { DogFormView(profile: dog) }
