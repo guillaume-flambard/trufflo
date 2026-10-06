@@ -1,5 +1,25 @@
 # Backlog et portes de livraison
 
+## État au 2026-10-06
+
+Le paragraphe « Statuts initiaux » plus bas date du démarrage. Ce tableau le remplace pour l'état.
+La suite du travail est décrite dans `docs/specs/` (lots A à D). Un statut « Fait » renvoie à une
+preuve ; « Non vérifié » veut dire que personne n'a regardé, pas que c'est absent.
+
+| Ticket | Statut | Preuve ou manque |
+|---|---|---|
+| T00 à T05 (M0) | Fait | App SwiftUI/SwiftData native, tests unitaires et parcours UI en CI (ADR 0006). |
+| T10 profil | Fait | Âge, photo, édition, race inconnue : `DogFormView`, `DogDetailView`. Race par recherche : lot A (A-REQ-03). |
+| T11 à T15 moteur de balade | Fait | Chantier 2, `.agent/archive/chantier-2/` ; parcours GPS dans `tools/sim/gps-journeys.sh`. |
+| T16 mesures terrain | Ouvert | Aucune mesure sur appareil réel (risque R-09). Demande une vraie balade. |
+| T17 objectifs choisis | Fait en partie | Routines choisies et suspendables (PRD F04). Bilans de période : phrase des 7 jours sur Aujourd'hui, rien de plus. |
+| T18 export et suppressions | Fait | Export CSV/GPX (`ExportArchive`), suppression d'une balade et d'un profil, effacement global. |
+| T19 sauvegardes et audit des flux | Non vérifié | Seule la session du foyer est exclue des sauvegardes (`AuthSession`). Comportement de la sauvegarde iOS du journal non revu. |
+| T20 UX finale et accessibilité | En cours | Lot A : Aujourd'hui, Journal, Profil en variante A ; reste la matrice de captures (A-REQ-06). Mode sombre : décision D4. |
+| T30 à T33 (M2, foyer) | Fait, sauf recette réelle | Chantier 3, ADR 0007 et 0008, migrations en prod le 2026-10-06. Deux appareils réels : lot B (B-REQ-01). |
+| T40 à T44 (M3) | Non commencé | Spécifié dans `docs/specs/C-premiere-sortie.md`. |
+| T50 à T52 (M4) | Non commencé | |
+
 Statuts initiaux : les documents et le noyau testé sont fournis ; **aucun ticket d’intégration dans le projet de l’utilisateur n’est marqué terminé**. Les critères incluent tests et preuve, pas seulement code écrit. Ne pas estimer un calendrier sans examiner le projet local.
 
 ## M0 — Démarrage natif
