@@ -43,98 +43,9 @@ struct StarterRootView: View {
     var body: some View {
         TabView {
             NavigationStack {
-                List {
-                    Section {
-                        VStack(alignment: .leading, spacing: TruffloTheme.Spacing.xxSmall) {
-                            Text("À son rythme. Ensemble.")
-                                .font(.truffloTitle)
-                                .foregroundStyle(Color.truffloForest)
-                            Text("Retrouvez les balades que vous avez enregistrées.")
-                                .font(.truffloSubheadline)
-                                .foregroundStyle(Color.truffloSlate)
-                        }
-                        .padding(.vertical, TruffloTheme.Spacing.xSmall)
-                    }
-
-                    if let currentWalk = liveWalk {
-                        let isInterrupted = currentWalk.phase == .interrupted
-                        Section(isInterrupted ? "Balade interrompue" : "Balade en cours") {
-                            HStack {
-                                VStack(alignment: .leading, spacing: 4) {
-                                    Text(isInterrupted ? "Session interrompue" : "Suivi GPS actif")
-                                        .font(.truffloHeadline)
-                                        .foregroundStyle(Color.truffloForest)
-                                    Text(currentWalk.phase == .recording
-                                         ? "En cours d'enregistrement..."
-                                         : isInterrupted ? "Données enregistrées jusqu'au dernier point."
-                                         : "En pause")
-                                        .font(.truffloCaption)
-                                        .foregroundStyle(Color.truffloSlate)
-                                }
-                                Spacer()
-                                Button("Afficher") {
-                                    activeWalkCover = .resume(currentWalk.id)
-                                }
-                                .buttonStyle(.truffloPrimary)
-                            }
-                            .padding(.vertical, 4)
-                            .accessibilityIdentifier("walk.live.banner")
-                        }
-                    }
-
-                    if dogs.isEmpty {
-                        Section {
-                            TruffloEmptyStateView(
-                                imageName: "EmptyDog",
-                                title: "Bienvenue dans Trufflo",
-                                description: "Ajoutez votre chien pour commencer votre journal de balades.",
-                                buttonTitle: "Ajouter mon chien",
-                                action: { showDogForm = true }
-                            )
-                            .accessibilityIdentifier("dog.add")
-                        }
-                    } else {
-                        Section {
-                            Button {
-                                // An unfinished walk, interrupted included, is
-                                // not a reason to open a second session: the
-                                // repository would hand the existing one back
-                                // and the tap would look like it did nothing.
-                                // Open that one instead.
-                                if let unfinished = liveWalk {
-                                    activeWalkCover = .resume(unfinished.id)
-                                } else if dogs.first != nil {
-                                    activeWalkCover = .start
-                                }
-                            } label: {
-                                Label("Démarrer une balade GPS", systemImage: "location.fill")
-                                    .lineLimit(1)
-                                    .minimumScaleFactor(0.8)
-                            }
-                            .buttonStyle(.truffloPrimary)
-
-                            Button {
-                                showWalkForm = true
-                            } label: {
-                                Label("Ajouter une balade passée", systemImage: "plus")
-                                    .lineLimit(1)
-                                    .minimumScaleFactor(0.8)
-                            }
-                            .buttonStyle(.truffloOutline)
-                            .accessibilityIdentifier("walk.manual.add")
-                        }
-                        .listRowBackground(Color.clear)
-                        .listRowSeparator(.hidden)
-                        if let lastWalk = walks.first(where: { $0.phase == .completed }) {
-                            Section("Dernière balade enregistrée") {
-                                NavigationLink(value: WalkRoute(id: lastWalk.id)) {
-                                    row(for: lastWalk)
-                                }
-                            }
-                        }
-                    }
-                }
+                todayContent
                 .navigationTitle("Aujourd'hui")
+                .navigationBarTitleDisplayMode(.inline)
                 .truffloScreen()
                 .toolbar {
                     ToolbarItem(placement: .topBarTrailing) {
@@ -247,6 +158,216 @@ struct StarterRootView: View {
         } message: {
             Text("La modification n'a pas été enregistrée. Les données précédentes ont été conservées.")
         }
+    }
+
+    // MARK: - Today
+
+    /// Today is not a list. The dog is the subject, the start button is the one
+    /// action, and the last walk is read as a short passage rather than a card.
+    /// Facts here are descriptive (a count, an age of the last outing) and never a
+    /// target, a streak or a comparison.
+    @ViewBuilder
+    private var todayContent: some View {
+        if dogs.isEmpty {
+            List {
+                Section {
+                    TruffloEmptyStateView(
+                        imageName: "EmptyDog",
+                        title: "Bienvenue dans Trufflo",
+                        description: "Ajoutez votre chien pour commencer votre journal de balades.",
+                        buttonTitle: "Ajouter mon chien",
+                        action: { showDogForm = true }
+                    )
+                    .accessibilityIdentifier("dog.add")
+                }
+            }
+        } else {
+            ScrollView {
+                VStack(alignment: .leading, spacing: TruffloTheme.Spacing.large) {
+                    dogHeader
+                    if let currentWalk = liveWalk { liveWalkSection(currentWalk) }
+                    startActions
+                    if let lastWalk = walks.first(where: { $0.phase == .completed }) {
+                        lastWalkSection(lastWalk)
+                    }
+                }
+                .padding(.horizontal, TruffloTheme.Spacing.large)
+                .padding(.vertical, TruffloTheme.Spacing.medium)
+            }
+        }
+    }
+
+    /// Name and breed at the left, the portrait offset to the right. With several
+    /// dogs the names are joined and the first dog's portrait stands for them;
+    /// the walk itself is started with all of them, as before.
+    private var dogHeader: some View {
+        let lead = dogs[0]
+        return HStack(alignment: .top, spacing: TruffloTheme.Spacing.medium) {
+            VStack(alignment: .leading, spacing: TruffloTheme.Spacing.xSmall) {
+                Text(dogNames)
+                    .font(.system(.largeTitle, design: .rounded, weight: .heavy))
+                    .foregroundStyle(Color.truffloForest)
+                    .fixedSize(horizontal: false, vertical: true)
+                if dogs.count == 1 {
+                    VStack(alignment: .leading, spacing: 2) {
+                        Text(lead.breedDescription)
+                        if !lead.ageDescription.isEmpty { Text(lead.ageDescription) }
+                    }
+                    .font(.subheadline)
+                    .foregroundStyle(Color.truffloSlate)
+                } else {
+                    Text("\(dogs.count) chiens")
+                        .font(.subheadline)
+                        .foregroundStyle(Color.truffloSlate)
+                }
+                if let sentence = recentActivitySentence {
+                    Text(sentence)
+                        .font(.subheadline)
+                        .foregroundStyle(Color.truffloSlate)
+                        .padding(.top, TruffloTheme.Spacing.xSmall)
+                }
+            }
+            Spacer(minLength: 0)
+            TruffloDogPortrait(name: lead.name, photoData: lead.photoData, diameter: 120)
+                .padding(.top, TruffloTheme.Spacing.xxSmall)
+        }
+        .accessibilityElement(children: .contain)
+    }
+
+    private var dogNames: String {
+        dogs.map(\.name).formatted(.list(type: .and).locale(Locale(identifier: "fr_FR")))
+    }
+
+    /// "Dernière sortie il y a 18 h" and "3 balades enregistrées cette semaine".
+    /// The week is the last seven days, not the calendar week: a calendar week
+    /// resets to zero on Monday and reads like a fresh debt. Nothing is shown for
+    /// an empty journal rather than a zero.
+    private var recentActivitySentence: String? {
+        let completed = walks.filter { $0.phase == .completed }
+        guard let last = completed.first, let endedAt = last.endedAt else { return nil }
+        let formatter = RelativeDateTimeFormatter()
+        formatter.locale = Locale(identifier: "fr_FR")
+        formatter.unitsStyle = .short
+        var lines = ["Dernière sortie \(formatter.localizedString(for: endedAt, relativeTo: Date()))"]
+        let weekAgo = Date().addingTimeInterval(-7 * 24 * 3600)
+        let count = completed.filter { ($0.endedAt ?? $0.startedAt) >= weekAgo }.count
+        if count > 0 {
+            lines.append(count == 1
+                         ? "1 balade enregistrée cette semaine"
+                         : "\(count) balades enregistrées cette semaine")
+        }
+        return lines.joined(separator: "\n")
+    }
+
+    private func liveWalkSection(_ walk: WalkRecord) -> some View {
+        let isInterrupted = walk.phase == .interrupted
+        return HStack(alignment: .center, spacing: TruffloTheme.Spacing.medium) {
+            VStack(alignment: .leading, spacing: 2) {
+                Text(isInterrupted ? "Session interrompue" : "Suivi GPS actif")
+                    .font(.headline)
+                    .foregroundStyle(Color.truffloForest)
+                Text(walk.phase == .recording
+                     ? "En cours d'enregistrement..."
+                     : isInterrupted ? "Données enregistrées jusqu'au dernier point."
+                     : "En pause")
+                    .font(.footnote)
+                    .foregroundStyle(Color.truffloSlate)
+            }
+            Spacer(minLength: 0)
+            Button("Afficher") {
+                activeWalkCover = .resume(walk.id)
+            }
+            .buttonStyle(.truffloPrimary)
+            .fixedSize()
+        }
+        .accessibilityElement(children: .contain)
+        .accessibilityIdentifier("walk.live.banner")
+    }
+
+    private var startActions: some View {
+        VStack(spacing: TruffloTheme.Spacing.small) {
+            Button {
+                // An unfinished walk, interrupted included, is not a reason to
+                // open a second session: the repository would hand the existing
+                // one back and the tap would look like it did nothing. Open that
+                // one instead.
+                if let unfinished = liveWalk {
+                    activeWalkCover = .resume(unfinished.id)
+                } else if dogs.first != nil {
+                    activeWalkCover = .start
+                }
+            } label: {
+                Label("Démarrer une balade GPS", systemImage: "location.fill")
+                    .font(.system(.title3, design: .rounded, weight: .semibold))
+                    .lineLimit(1)
+                    .minimumScaleFactor(0.8)
+                    .frame(maxWidth: .infinity, minHeight: 56)
+            }
+            .buttonStyle(.glassProminent)
+            .buttonBorderShape(.roundedRectangle(radius: TruffloTheme.Radius.medium))
+            .tint(Color.truffloForest)
+
+            Button {
+                showWalkForm = true
+            } label: {
+                Text("Ajouter une balade passée")
+                    .font(.subheadline.weight(.semibold))
+                    .foregroundStyle(Color.truffloForest)
+                    .frame(maxWidth: .infinity, minHeight: 44)
+            }
+            .accessibilityIdentifier("walk.manual.add")
+        }
+    }
+
+    /// The last walk as a passage, not a card: a heading, when it happened, the
+    /// duration as the figure, and the start of the note. No badge says where it
+    /// came from; the detail screen states origin and quality in words.
+    private func lastWalkSection(_ walk: WalkRecord) -> some View {
+        let names = links.filter { $0.walkID == walk.id }
+            .map(\.dogNameSnapshot).sorted().joined(separator: ", ")
+        return NavigationLink(value: WalkRoute(id: walk.id)) {
+            VStack(alignment: .leading, spacing: TruffloTheme.Spacing.xSmall) {
+                Text("Dernière balade")
+                    .font(.system(.title2, design: .rounded, weight: .semibold))
+                    .foregroundStyle(Color.truffloForest)
+                if let endedAt = walk.endedAt {
+                    Text(endedAt, format: .dateTime.weekday(.wide).day().month().hour().minute()
+                        .locale(Locale(identifier: "fr_FR")))
+                        .font(.subheadline)
+                        .foregroundStyle(Color.truffloSlate)
+                }
+                HStack(alignment: .firstTextBaseline) {
+                    Text("\(minutes(walk.confirmedSeconds)) min")
+                        .font(.system(.title, design: .rounded, weight: .bold))
+                        .monospacedDigit()
+                        .foregroundStyle(Color.truffloForest)
+                    if !names.isEmpty {
+                        Text("avec \(names)")
+                            .font(.subheadline)
+                            .foregroundStyle(Color.truffloSlate)
+                    }
+                    Spacer(minLength: 0)
+                    Image(systemName: "chevron.right")
+                        .font(.footnote.weight(.semibold))
+                        .foregroundStyle(Color.truffloSlate)
+                        .accessibilityHidden(true)
+                }
+                if !walk.note.isEmpty {
+                    Text(walk.note)
+                        .font(.body)
+                        .foregroundStyle(Color.truffloCharcoal)
+                        .lineLimit(3)
+                }
+            }
+            .frame(maxWidth: .infinity, alignment: .leading)
+            .padding(.top, TruffloTheme.Spacing.medium)
+            .overlay(alignment: .top) {
+                Rectangle().fill(Color.truffloForest.opacity(0.12)).frame(height: 1)
+            }
+        }
+        .buttonStyle(.plain)
+        .accessibilityElement(children: .combine)
+        .accessibilityIdentifier("walk.row.\(walk.id.uuidString)")
     }
 
     private func row(for walk: WalkRecord) -> some View {
