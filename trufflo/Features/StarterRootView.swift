@@ -112,6 +112,9 @@ struct StarterRootView: View {
                             buttonTitle: "Ajouter un chien",
                             action: { showDogForm = true }
                         )
+                        // On the sand, not in a white card: a card holds an object.
+                        .listRowBackground(Color.clear)
+                        .listRowSeparator(.hidden)
                     } else {
                         ForEach(dogs) { dog in
                             // The link sits behind the card so the list draws no
@@ -265,6 +268,8 @@ struct StarterRootView: View {
                     title: "Aucune balade enregistrée",
                     description: "Les sorties ajoutées à votre journal apparaîtront ici."
                 )
+                .listRowBackground(Color.clear)
+                .listRowSeparator(.hidden)
             }
         } else if shown.isEmpty && sharedShown.isEmpty {
             TruffloNotice(title: "Aucune balade pour ce filtre",
@@ -352,6 +357,8 @@ struct StarterRootView: View {
                         action: { showDogForm = true }
                     )
                     .accessibilityIdentifier("dog.add")
+                    .listRowBackground(Color.clear)
+                    .listRowSeparator(.hidden)
                 }
             }
         } else {
