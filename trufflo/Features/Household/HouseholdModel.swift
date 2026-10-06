@@ -24,7 +24,8 @@ final class HouseholdModel {
     /// False in UI tests: no network, no keychain, the screen says so.
     let isAvailable: Bool
     private let container: ModelContainer
-    private let client: SupabaseClient?
+    /// Shared with the community screens: one account, one session.
+    let client: SupabaseClient?
     private let remote: (any HouseholdRemote)?
     private var liveChannel: RealtimeChannelV2?
     private var liveTask: Task<Void, Never>?

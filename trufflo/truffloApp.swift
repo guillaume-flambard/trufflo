@@ -29,15 +29,6 @@ struct TruffloApp: App {
             #endif
             return container
         }
-        #if DEBUG
-        if let request = InMemoryCommunityServer.DemoRequest(arguments: ProcessInfo.processInfo.arguments) {
-            community = InMemoryCommunityServer.demoModel(request)
-        } else {
-            community = nil
-        }
-        #else
-        community = nil
-        #endif
         // UI tests run with no network and no keychain: the household screen
         // says it is unavailable instead of talking to the real server.
         household = (try? boot.get()).map { container in
@@ -48,6 +39,24 @@ struct TruffloApp: App {
             #endif
             return inMemory ? HouseholdModel.unavailable(container: container) : HouseholdModel.production(container: container)
         }
+        community = Self.makeCommunity(household: household)
+    }
+
+    /// The Sorties tab exists only when something answers for it: the in-memory
+    /// demo in DEBUG, or the real server once it is open. Until then no event is
+    /// shown that a server did not send (ADR 0010).
+    private static func makeCommunity(household: HouseholdModel?) -> CommunityModel? {
+        #if DEBUG
+        let arguments = ProcessInfo.processInfo.arguments
+        if let request = InMemoryCommunityServer.DemoRequest(arguments: arguments) {
+            return InMemoryCommunityServer.demoModel(request)
+        }
+        let forced = arguments.contains("--community-server")
+        #else
+        let forced = false
+        #endif
+        guard CommunityBackend.isOpen || forced, let client = household?.client else { return nil }
+        return CommunityModel(remote: SupabaseCommunityRemote(client: client))
     }
 
     var body: some Scene {

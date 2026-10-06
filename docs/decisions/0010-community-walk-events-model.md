@@ -123,25 +123,58 @@ règles sont exécutées par `trufflo/Features/Community/InMemoryCommunityServer
 `truffloTests/CommunityRulesTests.swift`. Le serveur réel doit tenir les mêmes tests, écrits en
 pgTAP.
 
-### Fonctions appelées par le client
+### Appels exacts du client
 
-| Client (`CommunityRemote`) | Serveur | Forme |
+Source : `trufflo/Services/SupabaseCommunityRemote.swift`. Le client est celui du foyer (même
+session, rôle `authenticated`). Dates en ISO 8601 ; réponses décodées par `HouseholdCoding`, qui
+accepte `2026-10-11T10:00:00+00:00` et `2026-10-11 10:00:00.123456+00`.
+
+**Lectures par table ou vue** (`select`, filtrées par la RLS) :
+
+| Objet | Colonnes lues | Filtre posé par le client |
 |---|---|---|
-| `zones()` | table `community_zones` | lecture, zones ouvertes seulement |
-| `myProfile()`, `saveProfile` | `community_profiles` | `saveProfile` refuse sans `adult_declared` vrai ; la date de déclaration ne se réécrit pas |
-| `myDogs()`, `saveDog`, `deleteDog` | `community_dogs` | le propriétaire seulement |
-| `events(zoneID)` | vue ou fonction `visible_events` | sorties `published` de la zone, à partir d'hier, blocs retirés dans les deux sens ; colonnes de `WalkEventDTO`, dont `organizer_name`, `humans_accepted`, `dogs_accepted`, `my_status` |
-| `myEvents()` | idem | sorties organisées ou avec une demande, toutes dates |
-| `participants(eventID)` | `list_participants(event)` | organisateur : tous ; participant accepté : les acceptés (sans la colonne `attended`) ; sinon refus |
-| `updates(eventID)` | `list_event_updates(event)` | organisateur, demandeur, accepté |
-| `requestToJoin` | `request_to_join(event, dog_ids)` | rpc |
-| `withdraw`, `declareAttendance` | `withdraw(event)`, `declare_attendance(event, attended)` | rpc |
-| `isOrganizer(zoneID)` | table `community_organizers` | booléen pour `auth.uid()` |
-| `createEvent`, `updateEvent`, `cancelEvent` | `create_event`, `update_event`, `cancel_event` | rpc, organisateur seulement |
-| `decide` | `decide_request(event, user, accept)` | rpc, verrou `FOR UPDATE` sur la sortie |
-| `report`, `block`, `unblock` | `report`, `block`, `unblock` | rpc |
+| table `community_zones` | `id`, `name`, `is_open` | `is_open = true`, tri par `name` |
+| table `community_profiles` | `user_id`, `display_name`, `zone_id`, `adult_declared_at`, `suspended_at` | `user_id = auth.uid()` |
+| table `community_dogs` | `id`, `owner_id`, `name`, `breed_label`, `public_note`, `deleted_at` | `owner_id = auth.uid()`, `deleted_at is null` |
+| table `community_organizers` | `user_id`, `zone_id` | `user_id = auth.uid()`, `zone_id = <zone>` |
+| vue `visible_events` | `id`, `organizer_id`, `organizer_name`, `zone_id`, `starts_at`, `duration_minutes`, `meeting_point`, `rules`, `human_capacity`, `dog_capacity`, `humans_accepted`, `dogs_accepted`, `status`, `my_status`, `my_attended` | `zone_id = <zone>`, tri `starts_at`. La vue applique les règles de visibilité (zone, `published`, depuis hier, blocs dans les deux sens) |
+| vue `my_events` | mêmes colonnes | sorties organisées ou avec une demande de `auth.uid()`, toutes dates, tri `starts_at` décroissant |
+| vue `my_blocks` | `user_id`, `display_name` | personnes bloquées par `auth.uid()` |
 
-Les noms de colonnes JSON sont les `CodingKeys` des DTO (`snake_case`).
+**À vérifier avant d'écrire les vues** (non relu dans la documentation au moment de la rédaction) :
+une vue PostgreSQL s'exécute avec les droits de son propriétaire, donc elle peut contourner la RLS
+de l'appelant, à moins d'être créée avec l'option `security_invoker` (PostgreSQL 15 et suivants,
+`CREATE VIEW ... WITH (security_invoker = true)`). Pour `visible_events`, `my_events` et
+`my_blocks`, soit l'option est posée et la RLS des tables fait le travail, soit la vue filtre
+elle-même sur `auth.uid()`. Dans les deux cas, le test pgTAP de visibilité (C-AC-01) doit prouver
+qu'un inconnu ne voit rien. Version de Postgres de `trufflo-db` : à lire sur le serveur.
+
+**Écritures directes** : `upsert` dans `community_dogs` (ligne `CommunityDogDTO`, sans lecture en
+retour) ; `update community_dogs set deleted_at` pour supprimer un chien.
+
+**Fonctions** (`rpc`, corps JSON des paramètres nommés, `security invoker` exposées, voir le modèle du foyer) :
+
+| Fonction | Paramètres | Retour |
+|---|---|---|
+| `save_profile` | `display_name text`, `zone_id text`, `adult_declared boolean` | rien. Refuse si `adult_declared` est faux, ne réécrit pas `adult_declared_at` |
+| `list_participants` | `event_id uuid` | tableau de `{user_id, display_name, status, dog_names text[], attended boolean ou nul}`. Organisateur : toutes les lignes avec `attended` ; accepté : les acceptés, `attended` nul ; sinon `not allowed` |
+| `list_event_updates` | `event_id uuid` | tableau de `{id, event_id, kind, previous, current, created_at}`, plus récent d'abord |
+| `request_to_join` | `event_id uuid`, `dog_ids uuid[]` | rien |
+| `withdraw` | `event_id uuid` | rien |
+| `declare_attendance` | `event_id uuid`, `attended boolean` | rien |
+| `create_event` | `zone_id text`, `starts_at timestamptz`, `duration_minutes int`, `meeting_point text`, `rules text`, `human_capacity int`, `dog_capacity int` | l'identifiant `uuid` de la sortie (un JSON scalaire) |
+| `decide_request` | `event_id uuid`, `user_id uuid`, `accept boolean` | rien |
+| `update_event` | `event_id uuid`, `starts_at timestamptz`, `meeting_point text` | rien |
+| `cancel_event` | `event_id uuid` | rien |
+| `report` | `target_kind text` (`event`, `profile`, `dog`), `target_id uuid`, `reason text` (`danger`, `harassment`, `inappropriate`, `spam`, `other`), `detail text` | rien |
+| `block`, `unblock` | `user_id uuid` | rien |
+
+**Non couvert par un test d'intégration** : aucun de ces appels n'a été exécuté contre un serveur
+(il n'existe pas encore). Les réponses d'exemple sont décodées en test
+(`truffloTests/CommunityNetworkTests.swift`), les règles sont tenues par le serveur en mémoire. Le
+test d'intégration à deux comptes en HTTP réel reste à écrire avec le serveur, comme
+`HouseholdIntegrationTests` l'a été pour le foyer ; il devra aussi inscrire un organisateur, ce
+que seul un modérateur peut faire.
 
 ### Messages d'erreur que le client reconnaît
 
@@ -155,6 +188,10 @@ Le client lit le texte de l'exception du serveur (`CommunityError(serverMessage:
 | `no profile` | l'écran de création de profil |
 | `not allowed` | « Action non autorisée. » |
 | autre | « Le serveur n'a pas répondu. Réessayez. » |
+
+Hors message du serveur : session absente ou refusée (`PGRST30x`, HTTP 401) donne « Connectez-vous »
+et renvoie vers l'écran de connexion Apple du foyer ; un refus RLS (SQLSTATE `42501`) donne
+« Action non autorisée » ; pas de réseau donne « Pas de connexion ».
 
 ### Règles que les tests figent (à reprendre en pgTAP)
 

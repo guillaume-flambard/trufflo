@@ -198,6 +198,10 @@ public enum CommunityError: Error, Equatable, Sendable {
     case eventFull
     case eventGone
     case blocked
+    /// No session, or one the server refused: the person must sign in again.
+    case signedOut
+    /// No network, or the server did not answer.
+    case offline
     case network(String)
 
     public init(serverMessage message: String) {

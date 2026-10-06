@@ -6,6 +6,7 @@ struct EventRoute: Hashable { let id: UUID }
 /// server to talk to, and shows what that server said and nothing else.
 struct CommunityRootView: View {
     @Environment(CommunityModel.self) private var model
+    @State private var showSignIn = false
 
     var body: some View {
         Group {
@@ -13,6 +14,12 @@ struct CommunityRootView: View {
             case .loading:
                 ProgressView("Chargement des sorties")
                     .frame(maxWidth: .infinity, maxHeight: .infinity)
+            case .needsSignIn:
+                TruffloNotice(systemImage: "person.crop.circle.badge.questionmark",
+                              title: "Connectez-vous pour voir les sorties",
+                              message: "Les sorties passent par le même compte Apple que le foyer partagé. Vos balades et vos notes restent sur cet iPhone.",
+                              actionTitle: "Se connecter avec Apple") { showSignIn = true }
+                    .accessibilityIdentifier("community.signin")
             case .needsProfile:
                 ProfileSetupView()
             case .failed(let message):
@@ -25,6 +32,8 @@ struct CommunityRootView: View {
         .background(Color.truffloSand.ignoresSafeArea())
         .navigationDestination(for: EventRoute.self) { EventDetailView(eventID: $0.id) }
         .task { await model.refresh() }
+        // The sign-in is the household's: same account, same session.
+        .sheet(isPresented: $showSignIn, onDismiss: { Task { await model.refresh() } }) { HouseholdView() }
     }
 }
 

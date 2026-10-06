@@ -7,7 +7,7 @@ import Observation
 @MainActor
 @Observable
 final class CommunityModel {
-    enum Phase: Equatable { case loading, needsProfile, ready, failed(String) }
+    enum Phase: Equatable { case loading, needsSignIn, needsProfile, ready, failed(String) }
 
     private(set) var phase = Phase.loading
     private(set) var isBusy = false
@@ -58,6 +58,9 @@ final class CommunityModel {
         } catch CommunityError.noProfile {
             profile = nil
             phase = .needsProfile
+        } catch CommunityError.signedOut {
+            profile = nil
+            phase = .needsSignIn
         } catch {
             if phase == .loading || phase == .needsProfile { phase = .failed(Self.message(for: error)) }
             else { errorMessage = Self.message(for: error) }
@@ -151,6 +154,8 @@ final class CommunityModel {
         case .eventFull: return "La sortie est complète."
         case .eventGone: return "Cette sortie n'est plus disponible."
         case .blocked: return "Vous ne pouvez pas rejoindre cette sortie."
+        case .signedOut: return "Votre session a expiré. Reconnectez-vous avec Apple."
+        case .offline: return "Pas de connexion. Rien n'est perdu, réessayez dans un instant."
         case .network: return "Le serveur n'a pas répondu. Réessayez."
         }
     }
