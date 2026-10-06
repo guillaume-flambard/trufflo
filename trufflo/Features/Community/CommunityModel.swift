@@ -16,6 +16,7 @@ final class CommunityModel {
     private(set) var events: [WalkEventDTO] = []
     private(set) var myEvents: [WalkEventDTO] = []
     private(set) var myDogs: [CommunityDogDTO] = []
+    private(set) var blocked: [BlockedPersonDTO] = []
     private(set) var isOrganizer = false
     private(set) var userID: UUID?
     /// Moves after every action and reload, so a screen that reads something the
@@ -50,7 +51,8 @@ final class CommunityModel {
             async let mine = remote.myEvents()
             async let dogs = remote.myDogs()
             async let organizer = remote.isOrganizer(zoneID: profile.zoneID)
-            (events, myEvents, myDogs, isOrganizer) = try await (upcoming, mine, dogs, organizer)
+            async let blockedPeople = remote.blockedPeople()
+            (events, myEvents, myDogs, isOrganizer, blocked) = try await (upcoming, mine, dogs, organizer, blockedPeople)
             phase = .ready
             revision += 1
         } catch CommunityError.noProfile {

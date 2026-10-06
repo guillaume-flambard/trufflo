@@ -79,6 +79,7 @@ final class InMemoryCommunityServer: @unchecked Sendable {
     private func withMine(_ dto: WalkEventDTO, _ user: UUID) -> WalkEventDTO {
         var out = dto
         out.myStatus = participations[dto.id]?[user]?.status
+        out.myAttended = participations[dto.id]?[user]?.attended
         let accepted = participations[dto.id]?.values.filter { $0.status == .accepted } ?? []
         out.humansAccepted = accepted.count
         out.dogsAccepted = accepted.reduce(0) { $0 + $1.dogIDs.count }
@@ -221,6 +222,13 @@ final class InMemoryCommunityServer: @unchecked Sendable {
         if on { blocks.insert([blocker, blocked]) } else { blocks.remove([blocker, blocked]) }
     }
 
+    fileprivate func blocked(by user: UUID) throws -> [BlockedPersonDTO] {
+        _ = try valid(user)
+        return blocks.filter { $0.first == user }.compactMap { pair in
+            profiles[pair[1]].map { BlockedPersonDTO(userID: pair[1], displayName: $0.displayName) }
+        }.sorted { $0.displayName < $1.displayName }
+    }
+
     fileprivate func profile(of user: UUID) -> CommunityProfileDTO? {
         profiles[user].flatMap { $0.suspended ? nil : $0 }
     }
@@ -270,6 +278,7 @@ struct InMemoryCommunityRemote: CommunityRemote {
     }
     func block(userID: UUID) async throws { try server.run("block") { try server.setBlock(user, userID, true) } }
     func unblock(userID: UUID) async throws { try server.run("unblock") { try server.setBlock(user, userID, false) } }
+    func blockedPeople() async throws -> [BlockedPersonDTO] { try server.run("blockedPeople") { try server.blocked(by: user) } }
 }
 #endif
 
@@ -331,6 +340,9 @@ extension InMemoryCommunityServer {
             server.participations[first, default: [:]][sam] = Participation(status: .accepted, dogIDs: [], attended: nil)
             if request == .member {
                 server.participations[second, default: [:]][me] = Participation(status: .requested, dogIDs: [dog], attended: nil)
+                // A walk that ended an hour ago, where I was accepted: the attendance question.
+                let over = event(marc, "Marc", Date().addingTimeInterval(-3 * 3600), 120, "Quai de la Saône", "", humans: 5, dogs: 5)
+                server.participations[over, default: [:]][me] = Participation(status: .accepted, dogIDs: [dog], attended: nil)
             }
         }
         if request == .organizer {

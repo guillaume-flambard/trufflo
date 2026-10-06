@@ -7,6 +7,7 @@ struct EventsListView: View {
     @Environment(\.calendar) private var calendar
     @State private var tab = "upcoming"
     @State private var showEditor = false
+    @State private var showBlocked = false
 
     private var shown: [WalkEventDTO] { tab == "upcoming" ? model.events : model.myEvents }
 
@@ -64,7 +65,17 @@ struct EventsListView: View {
                         .accessibilityIdentifier("event.create")
                 }
             }
+            ToolbarItem(placement: .topBarLeading) {
+                Menu("Réglages des sorties", systemImage: "ellipsis.circle") {
+                    Button("Personnes bloquées", systemImage: "hand.raised") { showBlocked = true }
+                    if let contact = CommunityContact.url {
+                        Link(destination: contact) { Label("Contacter l'équipe", systemImage: "envelope") }
+                    }
+                }
+                .accessibilityIdentifier("community.menu")
+            }
         }
+        .navigationDestination(isPresented: $showBlocked) { BlockedPeopleView() }
         .sheet(isPresented: $showEditor) { EventEditorView(mode: .create(prefill: nil)) }
         // The page names itself in large type: a bar title would say it twice.
         .navigationTitle("")

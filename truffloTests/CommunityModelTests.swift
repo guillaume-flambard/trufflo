@@ -159,3 +159,64 @@ func aGuestCannotOrganize() async throws {
     #expect(await guest.createEvent(draft) == nil)
     #expect(guest.errorMessage == "Action non autorisée.")
 }
+
+@MainActor
+@Test("After the walk, a registered person says whether they were there; the organizer sees it")
+func attendanceIsDeclaredAfterTheWalk() async throws {
+    let (server, eventID) = try await world()
+    let guest = CommunityModel(remote: server.client(camille))
+    await guest.saveProfile(displayName: "Camille", zoneID: lyon.id, adultDeclared: true)
+    await guest.requestToJoin(eventID, dogIDs: [])
+    try await server.client(organizer).decide(eventID: eventID, userID: camille, accept: true)
+    await guest.refresh()
+    #expect(guest.event(eventID)?.myAttended == nil)
+
+    // Too early: refused, said in words, nothing recorded.
+    await guest.declareAttendance(eventID, attended: true)
+    #expect(guest.errorMessage == "Action non autorisée.")
+
+    server.clock = { now.addingTimeInterval(86400 + 3 * 3600) }
+    await guest.declareAttendance(eventID, attended: true)
+    #expect(guest.event(eventID)?.myAttended == true)
+    let seen = try await server.client(organizer).participants(eventID: eventID).first
+    #expect(seen?.attended == true)
+    #expect(seen?.status == .accepted)
+}
+
+@MainActor
+@Test("Blocking the organizer hides their events; the blocked list can undo it")
+func blockingIsUndoable() async throws {
+    let (server, eventID) = try await world()
+    let guest = CommunityModel(remote: server.client(camille))
+    await guest.saveProfile(displayName: "Camille", zoneID: lyon.id, adultDeclared: true)
+    #expect(guest.events.map(\.id) == [eventID])
+
+    await guest.block(organizer)
+    #expect(guest.events.isEmpty)
+    #expect(guest.blocked.map(\.displayName) == ["Léa"])
+
+    await guest.unblock(organizer)
+    #expect(guest.blocked.isEmpty)
+    #expect(guest.events.map(\.id) == [eventID])
+}
+
+@MainActor
+@Test("A report is filed once and the person is told it went through")
+func reportingReturnsTrue() async throws {
+    let (server, eventID) = try await world()
+    let guest = CommunityModel(remote: server.client(camille))
+    await guest.saveProfile(displayName: "Camille", zoneID: lyon.id, adultDeclared: true)
+    #expect(await guest.report(.event, id: eventID, reason: .danger, detail: "Point de rendez-vous isolé"))
+    #expect(server.reports.count == 1)
+    #expect(server.reports.first?.reason == .danger)
+    // Without a profile the report is refused and says so.
+    let nobody = CommunityModel(remote: server.client(UUID()))
+    #expect(await nobody.report(.event, id: eventID, reason: .spam, detail: "") == false)
+}
+
+@Test("The public contact is not configured yet, and the pilot says so")
+func theContactIsAnOpenItem() {
+    // C-REQ-09: Apple asks for published contact information. Until decision D6
+    // names it, this stays false and the pilot is not opened to the public.
+    #expect(CommunityContact.isConfigured == false)
+}

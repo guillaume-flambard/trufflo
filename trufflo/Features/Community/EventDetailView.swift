@@ -16,6 +16,9 @@ struct EventDetailView: View {
     @State private var showReschedule = false
     @State private var showRepropose = false
     @State private var confirmCancel = false
+    @State private var showReportEvent = false
+    @State private var showReportPerson = false
+    @State private var confirmBlock = false
 
     private var event: WalkEventDTO? { model.event(eventID) }
 
@@ -31,6 +34,38 @@ struct EventDetailView: View {
         }
         .background(Color.truffloSand.ignoresSafeArea())
         .navigationBarTitleDisplayMode(.inline)
+        .toolbar {
+            if let event, event.organizerID != model.userID {
+                ToolbarItem(placement: .topBarTrailing) {
+                    Menu("Plus", systemImage: "ellipsis.circle") {
+                        Button("Signaler cette sortie", systemImage: "flag") { showReportEvent = true }
+                        Button("Signaler \(event.organizerName)", systemImage: "person.crop.circle.badge.exclamationmark") {
+                            showReportPerson = true
+                        }
+                        Divider()
+                        Button("Bloquer \(event.organizerName)", systemImage: "hand.raised", role: .destructive) {
+                            confirmBlock = true
+                        }
+                    }
+                    .accessibilityIdentifier("event.menu")
+                }
+            }
+        }
+        .sheet(isPresented: $showReportEvent) {
+            if let event { ReportSheet(target: .event, targetID: event.id, title: event.meetingPoint) }
+        }
+        .sheet(isPresented: $showReportPerson) {
+            if let event { ReportSheet(target: .profile, targetID: event.organizerID, title: event.organizerName) }
+        }
+        .confirmationDialog("Bloquer \(event?.organizerName ?? "cette personne") ?", isPresented: $confirmBlock,
+                            titleVisibility: .visible) {
+            Button("Bloquer", role: .destructive) {
+                guard let event else { return }
+                Task { await model.block(event.organizerID) }
+            }
+        } message: {
+            Text("Vous ne verrez plus ses sorties et elle ne verra plus les vôtres. Vous pourrez la débloquer depuis la liste des sorties.")
+        }
         .task(id: model.revision) { await loadExtras() }
     }
 
@@ -68,6 +103,10 @@ struct EventDetailView: View {
 
                 CommunityErrorLine()
 
+                if event.myStatus == .accepted, EventFormatting.hasEnded(event), event.status == .published {
+                    attendanceSection(event)
+                }
+
                 if !updates.isEmpty { updatesSection }
 
                 if !event.rules.isEmpty {
@@ -99,6 +138,30 @@ struct EventDetailView: View {
             Button("Me retirer", role: .destructive) { Task { await model.withdraw(eventID) } }
         } message: {
             Text("La place est libérée. Vous pourrez redemander tant qu'il en reste.")
+        }
+    }
+
+    /// Registered is not the same as having been there: asked once it is over.
+    private func attendanceSection(_ event: WalkEventDTO) -> some View {
+        section("Y étiez-vous ?") {
+            if let attended = event.myAttended {
+                Text(attended ? "Vous avez indiqué y avoir été." : "Vous avez indiqué ne pas y avoir été.")
+                    .foregroundStyle(Color.truffloCharcoal)
+                    .accessibilityIdentifier("event.attendance.done")
+            } else {
+                VStack(alignment: .leading, spacing: TruffloTheme.Spacing.xSmall) {
+                    Text("Seul l'organisateur le voit.").font(.subheadline).foregroundStyle(Color.truffloSlate)
+                    HStack(spacing: TruffloTheme.Spacing.large) {
+                        Button("J'y étais") { Task { await model.declareAttendance(eventID, attended: true) } }
+                            .accessibilityIdentifier("event.attended.yes")
+                        Button("Je n'y étais pas") { Task { await model.declareAttendance(eventID, attended: false) } }
+                            .accessibilityIdentifier("event.attended.no")
+                    }
+                    .font(.headline)
+                    .foregroundStyle(Color.truffloForest)
+                    .frame(minHeight: 44)
+                }
+            }
         }
     }
 
@@ -146,7 +209,7 @@ struct EventDetailView: View {
                 }
             }
             if !accepted.isEmpty {
-                section(isOrganizer ? "Participants" : "Qui vient") {
+                section(isOrganizer ? "Participants" : (EventFormatting.hasEnded(event) ? "Qui était inscrit" : "Qui vient")) {
                     VStack(alignment: .leading, spacing: 0) {
                         ForEach(accepted) { person in
                             HStack {
@@ -192,7 +255,8 @@ struct EventDetailView: View {
                     .buttonBorderShape(.roundedRectangle(radius: TruffloTheme.Radius.medium))
                     .tint(Color.truffloForest)
                     .accessibilityIdentifier("event.request")
-                } else if event.myStatus == .requested || event.myStatus == .accepted, event.status == .published {
+                } else if event.myStatus == .requested || event.myStatus == .accepted,
+                          event.status == .published, !EventFormatting.hasEnded(event) {
                     VStack(spacing: 2) {
                         Text(EventFormatting.myStatus(event) ?? "")
                             .font(.system(.title3, design: .rounded, weight: .bold))

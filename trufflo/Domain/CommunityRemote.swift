@@ -80,6 +80,8 @@ public struct WalkEventDTO: Codable, Equatable, Sendable, Identifiable {
     public var status: WalkEventStatus
     /// This person's own request, if any.
     public var myStatus: ParticipationStatus?
+    /// What this person declared about having been there, once it is over.
+    public var myAttended: Bool?
 
     enum CodingKeys: String, CodingKey {
         case id, rules, status
@@ -87,6 +89,7 @@ public struct WalkEventDTO: Codable, Equatable, Sendable, Identifiable {
         case startsAt = "starts_at", durationMinutes = "duration_minutes", meetingPoint = "meeting_point"
         case humanCapacity = "human_capacity", dogCapacity = "dog_capacity"
         case humansAccepted = "humans_accepted", dogsAccepted = "dogs_accepted", myStatus = "my_status"
+        case myAttended = "my_attended"
     }
 
     public var humanPlacesLeft: Int { max(humanCapacity - humansAccepted, 0) }
@@ -161,6 +164,28 @@ public struct EventUpdateDTO: Codable, Equatable, Sendable, Identifiable {
     }
 }
 
+/// Someone this person blocked, by the name they chose, so it can be undone.
+public struct BlockedPersonDTO: Codable, Equatable, Sendable, Identifiable {
+    public var userID: UUID
+    public var displayName: String
+    public var id: UUID { userID }
+
+    enum CodingKeys: String, CodingKey { case userID = "user_id", displayName = "display_name" }
+
+    public init(userID: UUID, displayName: String) {
+        self.userID = userID
+        self.displayName = displayName
+    }
+}
+
+/// Where people reach the team (Apple 1.2: published contact information).
+/// Set from decision D6, with the responsible person; until it is set the
+/// pilot is not opened to the public (docs/specs/C-premiere-sortie.md C-REQ-09).
+public enum CommunityContact {
+    public static let url: URL? = nil
+    public static var isConfigured: Bool { url != nil }
+}
+
 public enum ReportTarget: String, Codable, Sendable { case event, profile, dog }
 public enum ReportReason: String, Codable, Sendable, CaseIterable { case danger, harassment, inappropriate, spam, other }
 
@@ -220,4 +245,5 @@ public protocol CommunityRemote: Sendable {
     func report(_ target: ReportTarget, id: UUID, reason: ReportReason, detail: String) async throws
     func block(userID: UUID) async throws
     func unblock(userID: UUID) async throws
+    func blockedPeople() async throws -> [BlockedPersonDTO]
 }

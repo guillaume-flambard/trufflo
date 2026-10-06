@@ -34,13 +34,21 @@ public enum EventFormatting {
         return "\(people), \(dogText)"
     }
 
-    /// What this person's own request says, if there is one.
-    public static func myStatus(_ event: WalkEventDTO, organizerIsMe: Bool = false) -> String? {
-        if organizerIsMe { return "Vous organisez" }
+    /// What this person's own request says, if there is one. Once the walk is
+    /// over the tense changes: « Vous venez » would be false.
+    public static func myStatus(_ event: WalkEventDTO, organizerIsMe: Bool = false, now: Date = .now) -> String? {
+        let over = hasEnded(event, now: now)
+        if organizerIsMe { return over ? "Vous organisiez" : "Vous organisez" }
         if event.status == .cancelled { return "Annulée" }
         switch event.myStatus {
-        case .requested: return "Demande envoyée"
-        case .accepted: return "Vous venez"
+        case .requested: return over ? "Demande restée sans réponse" : "Demande envoyée"
+        case .accepted:
+            guard over else { return "Vous venez" }
+            switch event.myAttended {
+            case .some(true): return "Vous y étiez"
+            case .some(false): return "Vous n'y étiez pas"
+            case .none: return "Vous y étiez inscrit"
+            }
         case .declined: return "Demande refusée"
         case .withdrawn, .none: return nil
         }

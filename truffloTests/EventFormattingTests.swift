@@ -23,12 +23,31 @@ func durationReadsInFrench(_ minutes: Int, _ expected: String) {
 }
 
 @Test func myOwnRequestIsSaidInWords() {
-    #expect(EventFormatting.myStatus(event(mine: .requested)) == "Demande envoyée")
-    #expect(EventFormatting.myStatus(event(mine: .accepted)) == "Vous venez")
-    #expect(EventFormatting.myStatus(event(mine: .declined)) == "Demande refusée")
-    #expect(EventFormatting.myStatus(event(mine: .withdrawn)) == nil)
-    #expect(EventFormatting.myStatus(event(), organizerIsMe: true) == "Vous organisez")
-    #expect(EventFormatting.myStatus(event(status: .cancelled, mine: .accepted)) == "Annulée")
+    // The default event is in 1970: « now » is set before it, so it is still to come.
+    let before = Date(timeIntervalSince1970: 1_000_000)
+    func said(_ event: WalkEventDTO, organizer: Bool = false) -> String? {
+        EventFormatting.myStatus(event, organizerIsMe: organizer, now: before)
+    }
+    #expect(said(event(mine: .requested)) == "Demande envoyée")
+    #expect(said(event(mine: .accepted)) == "Vous venez")
+    #expect(said(event(mine: .declined)) == "Demande refusée")
+    #expect(said(event(mine: .withdrawn)) == nil)
+    #expect(said(event(), organizer: true) == "Vous organisez")
+    #expect(said(event(status: .cancelled, mine: .accepted)) == "Annulée")
+}
+
+@Test func afterTheWalkTheTenseChangesAndAttendanceIsSaid() {
+    let past = Date(timeIntervalSince1970: 1_000_000)
+    let later = past.addingTimeInterval(3 * 3600)
+    var accepted = event(mine: .accepted, at: past)
+    #expect(EventFormatting.myStatus(accepted, now: later) == "Vous y étiez inscrit")
+    accepted.myAttended = true
+    #expect(EventFormatting.myStatus(accepted, now: later) == "Vous y étiez")
+    accepted.myAttended = false
+    #expect(EventFormatting.myStatus(accepted, now: later) == "Vous n'y étiez pas")
+    #expect(EventFormatting.myStatus(accepted, now: past.addingTimeInterval(-60)) == "Vous venez")
+    #expect(EventFormatting.myStatus(event(mine: .requested, at: past), now: later) == "Demande restée sans réponse")
+    #expect(EventFormatting.myStatus(event(at: past), organizerIsMe: true, now: later) == "Vous organisiez")
 }
 
 @Test func onlyAFutureOpenEventCanBeRequested() {
