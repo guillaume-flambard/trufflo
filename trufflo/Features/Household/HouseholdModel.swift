@@ -17,6 +17,9 @@ final class HouseholdModel {
     /// Set when a sync finds this person is no longer a member: the name of
     /// the household that was forgotten, so the screens can say so once.
     var lostHousehold: String?
+    /// A code that arrived through an invitation link (B-REQ-02), waiting for
+    /// the household screen to place it in « Rejoindre ».
+    var pendingInviteCode: String?
 
     /// False in UI tests: no network, no keychain, the screen says so.
     let isAvailable: Bool

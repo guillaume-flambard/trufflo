@@ -71,11 +71,14 @@ struct HouseholdView: View {
                 await model.refreshSessionState()
                 await model.syncNow()
                 resumable = await model.householdToResume()
+                applyPendingInvite()
             }
             .onChange(of: model.isSignedIn) { _, signedIn in
                 guard signedIn else { resumable = nil; return }
+                applyPendingInvite()
                 Task { resumable = await model.householdToResume() }
             }
+            .onChange(of: model.pendingInviteCode) { _, _ in applyPendingInvite() }
             .onChange(of: model.suggestedName) { _, name in if displayName.isEmpty { displayName = name } }
             .disabled(model.isBusy)
         }
@@ -640,6 +643,23 @@ private struct FieldBlock<Content: View>: View {
 }
 
 extension HouseholdView {
+    /// Places a code from an invitation link in « Rejoindre ». Signed out, it
+    /// waits for the sign-in. Already in a household, it is dropped with a
+    /// sentence: one household per iPhone.
+    fileprivate func applyPendingInvite() {
+        guard let pending = model.pendingInviteCode else { return }
+        if household != nil {
+            model.pendingInviteCode = nil
+            model.errorMessage = "Cet iPhone fait déjà partie d'un foyer. Pour en rejoindre un autre, quittez d'abord celui-ci."
+        } else if model.isSignedIn {
+            model.pendingInviteCode = nil
+            code = pending
+            withAnimation { path = .join }
+        }
+    }
+}
+
+extension HouseholdView {
     /// The way out, as the server allows it: leave, name another owner first,
     /// or, alone, delete the household (B-REQ-05).
     @ViewBuilder
@@ -774,6 +794,13 @@ private struct SyncStatusCard: View {
 /// copied in one tap, sent with the system share sheet.
 private struct InviteTicket: View {
     let code: String
+
+    /// The link opens the app on « Rejoindre » with the code in place; the
+    /// code stays in the message for someone who types it instead.
+    private var shareMessage: String {
+        let link = InviteLink.url(for: code).map { "\n\($0.absoluteString)" } ?? ""
+        return "Rejoins le foyer « \(householdName) » dans Trufflo :\(link)\n\nOu, dans l'app, Réglages, Foyer partagé, Rejoindre, avec ce code : \(code)"
+    }
     let householdName: String
     @State private var copied = false
 
@@ -812,7 +839,7 @@ private struct InviteTicket: View {
                 }
                 .buttonStyle(.glass)
                 .tint(.white)
-                ShareLink(item: "Rejoins le foyer « \(householdName) » dans Trufflo avec ce code : \(code)") {
+                ShareLink(item: shareMessage) {
                     Label("Envoyer", systemImage: "square.and.arrow.up")
                         .font(.subheadline.weight(.semibold))
                         .frame(maxWidth: .infinity, minHeight: 44)

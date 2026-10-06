@@ -146,6 +146,13 @@ struct StarterRootView: View {
         .tint(Color.truffloForest)
         .sheet(isPresented: $showDogForm) { DogFormView() }
         .sheet(isPresented: $showHousehold) { HouseholdView() }
+        // https://trufflo.memolabs.dev/rejoindre/<code> (B-REQ-02, ADR 0009).
+        // Anything else that reaches the app is ignored.
+        .onOpenURL { url in
+            guard let code = InviteLink.code(in: url) else { return }
+            household.pendingInviteCode = code
+            showHousehold = true
+        }
         .task {
             await household.refreshSessionState()
             await household.syncNow()
