@@ -222,7 +222,7 @@ struct StarterRootView: View {
                     .fixedSize(horizontal: false, vertical: true)
                 if dogs.count == 1 {
                     VStack(alignment: .leading, spacing: 2) {
-                        Text(lead.breedDescription)
+                        if lead.breedKind != "unknown" { Text(lead.breedDescription) }
                         if !lead.ageDescription.isEmpty { Text(lead.ageDescription) }
                     }
                     .font(.subheadline)

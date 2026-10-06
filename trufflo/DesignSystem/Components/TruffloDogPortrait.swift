@@ -54,7 +54,7 @@ public struct TruffloDogPortrait: View {
 
     /// Decodes at most `maxPixel` on the long side, without ever materialising the
     /// full-size bitmap.
-    private static func downsampled(_ data: Data, to maxPixel: CGFloat) -> UIImage? {
+    static func downsampled(_ data: Data, to maxPixel: CGFloat) -> UIImage? {
         let sourceOptions = [kCGImageSourceShouldCache: false] as CFDictionary
         guard let source = CGImageSourceCreateWithData(data as CFData, sourceOptions) else { return nil }
         let options = [

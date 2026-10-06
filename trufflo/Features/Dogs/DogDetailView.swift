@@ -12,6 +12,8 @@ struct DogDetailView: View {
     @Environment(\.dismiss) private var dismiss
 
     @Query private var matches: [DogRecord]
+    @Query private var participations: [WalkDogRecord]
+    @Query(filter: #Predicate<WalkRecord> { $0.phaseRaw == "completed" }) private var finishedWalks: [WalkRecord]
 
     @State private var showEdit = false
     @State private var showDeleteConfirmation = false
@@ -48,43 +50,53 @@ struct DogDetailView: View {
 
     @ViewBuilder
     private func content(for dog: DogRecord) -> some View {
-        List {
-            Section("Profil") {
-                LabeledContent("Nom") {
-                    Text(dog.name)
-                        .font(.truffloHeadline)
-                        .foregroundStyle(Color.truffloForest)
-                }
-                LabeledContent("Race") {
-                    TruffloBadge(dog.breedDescription, icon: "pawprint.fill", style: .sage)
-                }
-            }
+        ScrollView {
+            VStack(alignment: .leading, spacing: 0) {
+                TruffloDogHero(name: dog.name, photoData: dog.photoData)
 
-            Section {
-                Button {
-                    showEdit = true
-                } label: {
-                    Label("Modifier", systemImage: "pencil")
-                        .font(.truffloSubheadline)
-                        .foregroundStyle(Color.truffloForest)
-                }
-                .accessibilityIdentifier("dog.edit")
+                VStack(alignment: .leading, spacing: TruffloTheme.Spacing.large) {
+                    identity(of: dog)
 
-                Button(role: .destructive) {
-                    showDeleteConfirmation = true
-                } label: {
-                    Label("Supprimer le profil", systemImage: "trash")
-                        .font(.truffloSubheadline)
-                        .foregroundStyle(Color.truffloDanger)
+                    if let count = walkCount, count > 0 {
+                        Text(count == 1 ? "1 balade enregistrée" : "\(count) balades enregistrées")
+                            .font(.system(.title3, design: .rounded, weight: .semibold))
+                            .foregroundStyle(Color.truffloForest)
+                    }
+
+                    if !dog.preferencesNote.isEmpty {
+                        VStack(alignment: .leading, spacing: TruffloTheme.Spacing.xSmall) {
+                            Text("Préférences de sortie")
+                                .font(.system(.title3, design: .rounded, weight: .semibold))
+                                .foregroundStyle(Color.truffloForest)
+                            Text(dog.preferencesNote)
+                                .font(.body)
+                                .foregroundStyle(Color.truffloCharcoal)
+                        }
+                    }
+
+                    VStack(alignment: .leading, spacing: TruffloTheme.Spacing.xSmall) {
+                        Button(role: .destructive) {
+                            showDeleteConfirmation = true
+                        } label: {
+                            Text("Supprimer le profil")
+                                .font(.subheadline.weight(.semibold))
+                                .foregroundStyle(Color.truffloDanger)
+                                .frame(minHeight: 44, alignment: .leading)
+                        }
+                        .accessibilityIdentifier("dog.delete")
+                        .accessibilityLabel("Supprimer le profil de \(dog.name)")
+                        Text("La suppression retire le profil de cet appareil. Vos balades déjà enregistrées gardent le nom de votre chien.")
+                            .font(.footnote)
+                            .foregroundStyle(Color.truffloSlate)
+                    }
+                    .padding(.top, TruffloTheme.Spacing.small)
                 }
-                .accessibilityIdentifier("dog.delete")
-                .accessibilityLabel("Supprimer le profil de \(dog.name)")
-            } footer: {
-                Text("La suppression retire le profil de cet appareil. Vos balades déjà enregistrées gardent le nom de votre chien.")
-                    .font(.truffloCaption)
-                    .foregroundStyle(Color.truffloSlate)
+                .padding(.horizontal, TruffloTheme.Spacing.large)
+                .padding(.top, TruffloTheme.Spacing.medium)
+                .padding(.bottom, TruffloTheme.Spacing.xLarge)
             }
         }
+        .ignoresSafeArea(edges: .top)
         .sheet(isPresented: $showEdit) { DogFormView(profile: dog) }
         .confirmationDialog("Supprimer ce profil ?", isPresented: $showDeleteConfirmation,
                             titleVisibility: .visible) {
@@ -93,6 +105,47 @@ struct DogDetailView: View {
         } message: {
             Text("Ce profil sera supprimé. Les balades déjà enregistrées conservent le nom de votre chien.")
         }
+    }
+
+    /// Breed, then age and sex joined with a comma. What the person declared and
+    /// nothing else: no trait is read from the walks.
+    private func identity(of dog: DogRecord) -> some View {
+        VStack(alignment: .leading, spacing: TruffloTheme.Spacing.small) {
+            VStack(alignment: .leading, spacing: 2) {
+                // An unknown breed is the absence of a fact, not a fact to print.
+                if dog.breedKind != "unknown" {
+                    Text(dog.breedDescription)
+                        .font(.title3.weight(.medium))
+                        .foregroundStyle(Color.truffloCharcoal)
+                }
+                let details = [dog.ageDescription, dog.genderDescription]
+                    .filter { !$0.isEmpty && $0 != "Non renseigné" }
+                if !details.isEmpty {
+                    Text(details.joined(separator: ", "))
+                        .font(.subheadline)
+                        .foregroundStyle(Color.truffloSlate)
+                }
+            }
+            Button {
+                showEdit = true
+            } label: {
+                Label("Modifier", systemImage: "pencil")
+                    .font(.subheadline.weight(.semibold))
+                    .padding(.horizontal, TruffloTheme.Spacing.xSmall)
+                    .frame(minHeight: 44)
+            }
+            .buttonStyle(.glass)
+            .tint(Color.truffloForest)
+            .accessibilityIdentifier("dog.edit")
+        }
+    }
+
+    private var walkCount: Int? {
+        guard let dog = matches.first else { return nil }
+        // A walk counts for a dog through its participation record, and only
+        // once it is finished; a recording in progress is not yet a walk.
+        let finished = Set(finishedWalks.map(\.id))
+        return participations.filter { $0.dogID == dog.id && finished.contains($0.walkID) }.count
     }
 
     private func delete(dogID: UUID) {
