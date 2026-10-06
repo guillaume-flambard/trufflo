@@ -84,7 +84,15 @@ struct TruffloTrackMap: View {
     // MARK: - Camera
 
     private func followIfNeeded() {
-        guard isFollowing, isLive, !points.isEmpty else { return }
+        guard !points.isEmpty else { return }
+        // A finished walk's points arrive after the first layout, from a query:
+        // framing once on an empty list left the map on the default city. Frame
+        // again whenever the stored track changes, unless the person has moved it.
+        if !isLive {
+            if lastRequestedRegion == nil || isFollowing { requestFrame() }
+            return
+        }
+        guard isFollowing else { return }
         requestFrame()
     }
 
@@ -126,8 +134,8 @@ struct TruffloTrackMap: View {
             ),
             // A margin around the route, and a floor of a few hundred metres,
             // so a short walk is framed as a walk and not as a dot.
-            span: MKCoordinateSpan(latitudeDelta: max((box.maxLat - box.minLat) * 1.6, 0.004),
-                                   longitudeDelta: max((box.maxLon - box.minLon) * 1.6, 0.004))
+            span: MKCoordinateSpan(latitudeDelta: max((box.maxLat - box.minLat) * 1.6, 0.0018),
+                                   longitudeDelta: max((box.maxLon - box.minLon) * 1.6, 0.0018))
         )
     }
 

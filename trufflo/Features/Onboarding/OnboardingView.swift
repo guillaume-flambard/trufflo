@@ -95,6 +95,8 @@ public struct OnboardingView: View {
             .padding(.horizontal, TruffloTheme.Spacing.large)
             .padding(.bottom, TruffloTheme.Spacing.medium)
         }
+        // Light status bar on the forest page, dark on the sand ones.
+        .preferredColorScheme(isFirst ? .dark : .light)
     }
 
     @ViewBuilder

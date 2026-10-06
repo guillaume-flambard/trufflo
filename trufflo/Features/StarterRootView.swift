@@ -87,10 +87,10 @@ struct StarterRootView: View {
                         )
                     } else {
                         ForEach(dogs) { dog in
-                            NavigationLink(value: DogRoute(id: dog.id)) {
-                                dogCard(dog)
-                            }
-                            .buttonStyle(.plain)
+                            // The link sits behind the card so the list draws no
+                            // disclosure chevron outside it.
+                            dogCard(dog)
+                                .background(NavigationLink(value: DogRoute(id: dog.id)) { EmptyView() }.opacity(0))
                             .listRowBackground(Color.clear)
                             .listRowSeparator(.hidden)
                             .listRowInsets(EdgeInsets(top: 6, leading: 16, bottom: 6, trailing: 16))

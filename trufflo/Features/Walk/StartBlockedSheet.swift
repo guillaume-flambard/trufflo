@@ -88,8 +88,8 @@ struct StartBlockedSheet: View {
         }
         .padding(.horizontal, TruffloTheme.Spacing.large)
         .padding(.top, TruffloTheme.Spacing.large)
-        .frame(maxWidth: .infinity, alignment: .leading)
-        .presentationDetents([.medium, .large])
+        .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .topLeading)
+        .presentationDetents([.height(560), .large])
         .presentationBackground(Color.truffloSand)
     }
 }

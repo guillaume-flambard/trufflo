@@ -32,7 +32,9 @@ public struct TruffloDogPortrait: View {
                     .resizable()
                     .scaledToFill()
             } else {
-                Color.truffloSage.opacity(0.22)
+                // Opaque, so the initial stays readable on any background,
+                // forest chips included.
+                Color(red: 0.83, green: 0.92, blue: 0.88)
                 Text(initial)
                     .font(.system(size: diameter * 0.46, weight: .heavy, design: .rounded))
                     .foregroundStyle(Color.truffloForest)

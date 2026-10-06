@@ -48,6 +48,7 @@ struct ManualWalkFormView: View {
                             .labelsHidden()
                             .datePickerStyle(.compact)
                             .tint(Color.truffloForest)
+                            .environment(\.locale, Locale(identifier: "fr_FR"))
                     }
 
                     label("Note") {
