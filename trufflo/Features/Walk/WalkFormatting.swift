@@ -39,4 +39,33 @@ enum WalkFormatting {
         case .unavailable: "Non mesurée"
         }
     }
+
+    private static let french = Locale(identifier: "fr_FR")
+
+    /// "Balade du matin", "Balade du soir": a name from the time of day, the way
+    /// an activity feed names an outing. Descriptive, never a judgement.
+    static func activityTitle(_ date: Date) -> String {
+        switch Calendar.current.component(.hour, from: date) {
+        case 5..<12: "Balade du matin"
+        case 12..<14: "Balade de midi"
+        case 14..<18: "Balade de l'après-midi"
+        case 18..<22: "Balade du soir"
+        default: "Balade de nuit"
+        }
+    }
+
+    /// "42 min" under an hour, "1 h 08" above. Rounded to the minute, which is
+    /// what a person reads; the live screen keeps the second-accurate clock.
+    static func minutes(_ seconds: TimeInterval) -> String {
+        // Under a minute, "0 min" would erase a real outing: give the seconds.
+        if seconds < 60 { return "\(Int(seconds)) s" }
+        let total = Int((seconds / 60).rounded())
+        if total < 60 { return "\(total) min" }
+        return String(format: "%d h %02d", total / 60, total % 60)
+    }
+
+    /// "mardi 6 oct., 14:48".
+    static func dayAndTime(_ date: Date) -> String {
+        date.formatted(.dateTime.weekday(.wide).day().month().hour().minute().locale(french))
+    }
 }

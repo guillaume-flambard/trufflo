@@ -58,16 +58,15 @@ struct DogDetailView: View {
                     identity(of: dog)
 
                     if let count = walkCount, count > 0 {
-                        Text(count == 1 ? "1 balade enregistrée" : "\(count) balades enregistrées")
-                            .font(.system(.title3, design: .rounded, weight: .semibold))
-                            .foregroundStyle(Color.truffloForest)
+                        TruffloStatRow {
+                            TruffloStat("Balades", value: "\(count)")
+                            TruffloStat("Temps enregistré", value: WalkFormatting.minutes(recordedSeconds))
+                        }
                     }
 
                     if !dog.preferencesNote.isEmpty {
                         VStack(alignment: .leading, spacing: TruffloTheme.Spacing.xSmall) {
-                            Text("Préférences de sortie")
-                                .font(.system(.title3, design: .rounded, weight: .semibold))
-                                .foregroundStyle(Color.truffloForest)
+                            WalkSectionTitle("Préférences de sortie")
                             Text(dog.preferencesNote)
                                 .font(.body)
                                 .foregroundStyle(Color.truffloCharcoal)
@@ -138,6 +137,14 @@ struct DogDetailView: View {
             .tint(Color.truffloForest)
             .accessibilityIdentifier("dog.edit")
         }
+    }
+
+    /// Time is descriptive and safe to sum: every walk has a duration, declared
+    /// or measured. Distance is not, so it is not summed here.
+    private var recordedSeconds: TimeInterval {
+        guard let dog = matches.first else { return 0 }
+        let mine = Set(participations.filter { $0.dogID == dog.id }.map(\.walkID))
+        return finishedWalks.filter { mine.contains($0.id) }.map(\.confirmedSeconds).reduce(0, +)
     }
 
     private var walkCount: Int? {

@@ -35,6 +35,7 @@ struct StarterRootView: View {
     @State private var storageError = false
     @AppStorage("hasCompletedOnboarding") private var hasCompletedOnboarding = false
     @State private var showOnboardingSheet = false
+    @Environment(\.dynamicTypeSize) private var typeSize
 
     private var liveWalk: WalkRecord? {
         walks.first { $0.phase == .recording || $0.phase == .paused || $0.phase == .interrupted }
@@ -86,14 +87,18 @@ struct StarterRootView: View {
                     } else {
                         ForEach(dogs) { dog in
                             NavigationLink(value: DogRoute(id: dog.id)) {
-                                VStack(alignment: .leading, spacing: 4) {
-                                    Text(dog.name)
-                                        .font(.truffloHeadline)
-                                        .foregroundStyle(Color.truffloForest)
-                                    Text(dog.breedDescription)
-                                        .font(.truffloSubheadline)
-                                        .foregroundStyle(Color.truffloSlate)
+                                HStack(spacing: TruffloTheme.Spacing.medium) {
+                                    TruffloDogPortrait(name: dog.name, photoData: dog.photoData, diameter: 56)
+                                    VStack(alignment: .leading, spacing: 2) {
+                                        Text(dog.name)
+                                            .font(.system(.title3, design: .rounded, weight: .bold))
+                                            .foregroundStyle(Color.truffloForest)
+                                        Text(walkCountText(for: dog))
+                                            .font(.subheadline)
+                                            .foregroundStyle(Color.truffloSlate)
+                                    }
                                 }
+                                .padding(.vertical, TruffloTheme.Spacing.xxSmall)
                                 .frame(maxWidth: .infinity, alignment: .leading)
                                 .accessibilityElement(children: .combine)
                                 .accessibilityIdentifier("dog.row.\(dog.id.uuidString)")
@@ -163,12 +168,7 @@ struct StarterRootView: View {
                 )
             }
         } else {
-            JournalTimelineView(walks: completed,
-                                dogNames: { walkID in
-                                    links.filter { $0.walkID == walkID }
-                                        .map(\.dogNameSnapshot).sorted().joined(separator: ", ")
-                                },
-                                rowDestination: { WalkRoute(id: $0) })
+            JournalTimelineView(walks: completed, rowDestination: { WalkRoute(id: $0) })
         }
     }
 
@@ -199,85 +199,123 @@ struct StarterRootView: View {
                     dogHeader
                     if let currentWalk = liveWalk { liveWalkSection(currentWalk) }
                     startActions
-                    if let lastWalk = walks.first(where: { $0.phase == .completed }) {
-                        lastWalkSection(lastWalk)
+                    weekSection
+                    if let lastWalk = completedWalks.first {
+                        VStack(alignment: .leading, spacing: TruffloTheme.Spacing.small) {
+                            sectionTitle("Dernière balade")
+                            NavigationLink(value: WalkRoute(id: lastWalk.id)) {
+                                WalkActivityCard(walk: lastWalk)
+                            }
+                            .buttonStyle(.plain)
+                        }
                     }
                 }
-                .padding(.horizontal, TruffloTheme.Spacing.large)
+                .padding(.horizontal, TruffloTheme.Spacing.medium)
                 .padding(.vertical, TruffloTheme.Spacing.medium)
             }
         }
     }
 
-    /// Name and breed at the left, the portrait offset to the right. With several
-    /// dogs the names are joined and the first dog's portrait stands for them;
-    /// the walk itself is started with all of them, as before.
+    private var completedWalks: [WalkRecord] { walks.filter { $0.phase == .completed } }
+
+    private func walkCountText(for dog: DogRecord) -> String {
+        let finished = Set(completedWalks.map(\.id))
+        let count = links.filter { $0.dogID == dog.id && finished.contains($0.walkID) }.count
+        switch count {
+        case 0: return "Pas encore de balade"
+        case 1: return "1 balade enregistrée"
+        default: return "\(count) balades enregistrées"
+        }
+    }
+
+    private func sectionTitle(_ text: String) -> some View {
+        Text(text)
+            .font(.system(.title3, design: .rounded, weight: .bold))
+            .foregroundStyle(Color.truffloForest)
+            .accessibilityAddTraits(.isHeader)
+    }
+
+    /// The dog leads. Side by side at normal sizes; at accessibility sizes the
+    /// portrait goes above the name so neither is squeezed.
+    @ViewBuilder
     private var dogHeader: some View {
         let lead = dogs[0]
-        return HStack(alignment: .top, spacing: TruffloTheme.Spacing.medium) {
-            VStack(alignment: .leading, spacing: TruffloTheme.Spacing.xSmall) {
-                Text(dogNames)
-                    .font(.system(.largeTitle, design: .rounded, weight: .heavy))
-                    .foregroundStyle(Color.truffloForest)
-                    .fixedSize(horizontal: false, vertical: true)
-                if dogs.count == 1 {
-                    VStack(alignment: .leading, spacing: 2) {
-                        if lead.breedKind != "unknown" { Text(lead.breedDescription) }
-                        if !lead.ageDescription.isEmpty { Text(lead.ageDescription) }
-                    }
-                    .font(.subheadline)
-                    .foregroundStyle(Color.truffloSlate)
-                } else {
-                    Text("\(dogs.count) chiens")
-                        .font(.subheadline)
-                        .foregroundStyle(Color.truffloSlate)
-                }
-                if let sentence = recentActivitySentence {
-                    Text(sentence)
-                        .font(.subheadline)
-                        .foregroundStyle(Color.truffloSlate)
-                        .padding(.top, TruffloTheme.Spacing.xSmall)
-                }
-            }
-            Spacer(minLength: 0)
-            TruffloDogPortrait(name: lead.name, photoData: lead.photoData, diameter: 120)
-                .padding(.top, TruffloTheme.Spacing.xxSmall)
+        let identity = VStack(alignment: .leading, spacing: TruffloTheme.Spacing.xxSmall) {
+            Text(dogNames)
+                .font(.system(.largeTitle, design: .rounded, weight: .heavy))
+                .foregroundStyle(Color.truffloForest)
+                .fixedSize(horizontal: false, vertical: true)
+            Text(dogSubtitle(lead))
+                .font(.subheadline)
+                .foregroundStyle(Color.truffloSlate)
         }
-        .accessibilityElement(children: .contain)
+        if typeSize.isAccessibilitySize {
+            VStack(alignment: .leading, spacing: TruffloTheme.Spacing.small) {
+                TruffloDogPortrait(name: lead.name, photoData: lead.photoData, diameter: 88)
+                identity
+            }
+        } else {
+            HStack(alignment: .center, spacing: TruffloTheme.Spacing.medium) {
+                identity
+                Spacer(minLength: 0)
+                TruffloDogPortrait(name: lead.name, photoData: lead.photoData, diameter: 104)
+            }
+        }
+    }
+
+    private func dogSubtitle(_ lead: DogRecord) -> String {
+        guard dogs.count == 1 else { return "\(dogs.count) chiens" }
+        let parts = [lead.breedKind != "unknown" ? lead.breedDescription : "", lead.ageDescription]
+            .filter { !$0.isEmpty }
+        return parts.isEmpty ? "Prêt pour la balade" : parts.joined(separator: ", ")
     }
 
     private var dogNames: String {
         dogs.map(\.name).formatted(.list(type: .and).locale(Locale(identifier: "fr_FR")))
     }
 
-    /// "Dernière sortie il y a 18 h" and "3 balades enregistrées cette semaine".
-    /// The week is the last seven days, not the calendar week: a calendar week
-    /// resets to zero on Monday and reads like a fresh debt. Nothing is shown for
-    /// an empty journal rather than a zero.
-    private var recentActivitySentence: String? {
-        let completed = walks.filter { $0.phase == .completed }
-        guard let last = completed.first, let endedAt = last.endedAt else { return nil }
+    /// Descriptive figures over the last seven days, never a target: how many
+    /// walks, how much time recorded, how long since the last outing. Distance
+    /// is not summed, because declared walks have none. Hidden when the week is
+    /// empty rather than showing zeros.
+    @ViewBuilder
+    private var weekSection: some View {
+        let weekAgo = Date().addingTimeInterval(-7 * 24 * 3600)
+        let week = completedWalks.filter { ($0.endedAt ?? $0.startedAt) >= weekAgo }
+        if !week.isEmpty {
+            VStack(alignment: .leading, spacing: TruffloTheme.Spacing.small) {
+                VStack(alignment: .leading, spacing: 2) {
+                    sectionTitle("Cette semaine")
+                    if let ago = lastOutingAgo {
+                        Text("Dernière sortie \(ago)")
+                            .font(.subheadline)
+                            .foregroundStyle(Color.truffloSlate)
+                    }
+                }
+                TruffloStatRow {
+                    TruffloStat("Balades", value: "\(week.count)")
+                    TruffloStat("Temps", value: WalkFormatting.minutes(week.map(\.confirmedSeconds).reduce(0, +)))
+                }
+            }
+        }
+    }
+
+    private var lastOutingAgo: String? {
+        guard let endedAt = completedWalks.first?.endedAt else { return nil }
+        if Date().timeIntervalSince(endedAt) < 60 { return "à l'instant" }
         let formatter = RelativeDateTimeFormatter()
         formatter.locale = Locale(identifier: "fr_FR")
-        formatter.unitsStyle = .short
-        // Under a minute, "il y a 9 s" reads like a stopwatch; say it plainly.
-        let ago = Date().timeIntervalSince(endedAt) < 60
-            ? "à l'instant"
-            : formatter.localizedString(for: endedAt, relativeTo: Date())
-        var lines = ["Dernière sortie \(ago)"]
-        let weekAgo = Date().addingTimeInterval(-7 * 24 * 3600)
-        let count = completed.filter { ($0.endedAt ?? $0.startedAt) >= weekAgo }.count
-        if count > 0 {
-            lines.append(count == 1
-                         ? "1 balade enregistrée cette semaine"
-                         : "\(count) balades enregistrées cette semaine")
-        }
-        return lines.joined(separator: "\n")
+        formatter.unitsStyle = .abbreviated
+        return formatter.localizedString(for: endedAt, relativeTo: Date())
     }
 
     private func liveWalkSection(_ walk: WalkRecord) -> some View {
         let isInterrupted = walk.phase == .interrupted
         return HStack(alignment: .center, spacing: TruffloTheme.Spacing.medium) {
+            Circle()
+                .fill(isInterrupted ? Color.truffloPeach : Color.truffloSage)
+                .frame(width: 10, height: 10)
+                .accessibilityHidden(true)
             VStack(alignment: .leading, spacing: 2) {
                 Text(isInterrupted ? "Session interrompue" : "Suivi GPS actif")
                     .font(.headline)
@@ -293,15 +331,18 @@ struct StarterRootView: View {
             Button("Afficher") {
                 activeWalkCover = .resume(walk.id)
             }
-            .buttonStyle(.truffloPrimary)
+            .buttonStyle(.glassProminent)
+            .tint(Color.truffloForest)
             .fixedSize()
         }
+        .padding(TruffloTheme.Spacing.medium)
+        .background(Color.white, in: RoundedRectangle(cornerRadius: TruffloTheme.Radius.card, style: .continuous))
         .accessibilityElement(children: .contain)
         .accessibilityIdentifier("walk.live.banner")
     }
 
     private var startActions: some View {
-        VStack(spacing: TruffloTheme.Spacing.small) {
+        VStack(spacing: TruffloTheme.Spacing.xSmall) {
             Button {
                 // An unfinished walk, interrupted included, is not a reason to
                 // open a second session: the repository would hand the existing
@@ -314,9 +355,8 @@ struct StarterRootView: View {
                 }
             } label: {
                 Label("Démarrer une balade GPS", systemImage: "location.fill")
-                    .font(.system(.title3, design: .rounded, weight: .semibold))
-                    .lineLimit(1)
-                    .minimumScaleFactor(0.8)
+                    .font(.system(.title3, design: .rounded, weight: .bold))
+                    .multilineTextAlignment(.center)
                     .frame(maxWidth: .infinity, minHeight: 56)
             }
             .buttonStyle(.glassProminent)
@@ -329,99 +369,11 @@ struct StarterRootView: View {
                 Text("Ajouter une balade passée")
                     .font(.subheadline.weight(.semibold))
                     .foregroundStyle(Color.truffloForest)
+                    .multilineTextAlignment(.center)
                     .frame(maxWidth: .infinity, minHeight: 44)
             }
             .accessibilityIdentifier("walk.manual.add")
         }
-    }
-
-    /// The last walk as a passage, not a card: a heading, when it happened, the
-    /// duration as the figure, and the start of the note. No badge says where it
-    /// came from; the detail screen states origin and quality in words.
-    private func lastWalkSection(_ walk: WalkRecord) -> some View {
-        let names = links.filter { $0.walkID == walk.id }
-            .map(\.dogNameSnapshot).sorted().joined(separator: ", ")
-        return NavigationLink(value: WalkRoute(id: walk.id)) {
-            VStack(alignment: .leading, spacing: TruffloTheme.Spacing.xSmall) {
-                Text("Dernière balade")
-                    .font(.system(.title2, design: .rounded, weight: .semibold))
-                    .foregroundStyle(Color.truffloForest)
-                if let endedAt = walk.endedAt {
-                    Text(endedAt.formatted(.dateTime.weekday(.wide).day().month().hour().minute()
-                        .locale(Locale(identifier: "fr_FR"))))
-                        .font(.subheadline)
-                        .foregroundStyle(Color.truffloSlate)
-                }
-                HStack(alignment: .firstTextBaseline) {
-                    Text("\(minutes(walk.confirmedSeconds)) min")
-                        .font(.system(.title, design: .rounded, weight: .bold))
-                        .monospacedDigit()
-                        .foregroundStyle(Color.truffloForest)
-                    if !names.isEmpty {
-                        Text("avec \(names)")
-                            .font(.subheadline)
-                            .foregroundStyle(Color.truffloSlate)
-                    }
-                    Spacer(minLength: 0)
-                    Image(systemName: "chevron.right")
-                        .font(.footnote.weight(.semibold))
-                        .foregroundStyle(Color.truffloSlate)
-                        .accessibilityHidden(true)
-                }
-                if !walk.note.isEmpty {
-                    Text(walk.note)
-                        .font(.body)
-                        .foregroundStyle(Color.truffloCharcoal)
-                        .lineLimit(3)
-                }
-            }
-            .frame(maxWidth: .infinity, alignment: .leading)
-            .padding(.top, TruffloTheme.Spacing.medium)
-            .overlay(alignment: .top) {
-                Rectangle().fill(Color.truffloForest.opacity(0.12)).frame(height: 1)
-            }
-        }
-        .buttonStyle(.plain)
-        .accessibilityElement(children: .combine)
-        .accessibilityIdentifier("walk.row.\(walk.id.uuidString)")
-    }
-
-    private func row(for walk: WalkRecord) -> some View {
-        let names = links.filter { $0.walkID == walk.id }
-            .map(\.dogNameSnapshot).sorted().joined(separator: ", ")
-        return VStack(alignment: .leading, spacing: TruffloTheme.Spacing.xxSmall) {
-            HStack {
-                Text(names.isEmpty ? "Balade" : names)
-                    .font(.truffloHeadline)
-                    .foregroundStyle(Color.truffloForest)
-                Spacer()
-                TruffloBadge("\(minutes(walk.confirmedSeconds)) min", icon: "timer", style: .sage)
-            }
-            HStack(spacing: TruffloTheme.Spacing.xSmall) {
-                TruffloBadge(walk.source == .manual ? "Saisie manuelle" : "Suivi GPS",
-                             icon: walk.source == .manual ? "square.and.pencil" : "location.fill",
-                             style: walk.source == .manual ? .sand : .peach)
-                if let endedAt = walk.endedAt {
-                    Text(endedAt, format: .dateTime.day().month().hour().minute())
-                        .font(.truffloCaption)
-                        .foregroundStyle(Color.truffloSlate)
-                }
-            }
-            if !walk.note.isEmpty {
-                Text(walk.note)
-                    .font(.truffloBody)
-                    .foregroundStyle(Color.truffloCharcoal)
-                    .padding(.top, 2)
-            }
-        }
-        .padding(.vertical, 4)
-        .frame(maxWidth: .infinity, alignment: .leading)
-        .accessibilityElement(children: .combine)
-        .accessibilityIdentifier("walk.row.\(walk.id.uuidString)")
-    }
-
-    private func minutes(_ seconds: TimeInterval) -> String {
-        (seconds / 60).formatted(.number.precision(.fractionLength(0...1)))
     }
 
     private func eraseAll() {

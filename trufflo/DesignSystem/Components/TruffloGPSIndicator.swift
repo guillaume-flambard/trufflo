@@ -100,7 +100,7 @@ public struct TruffloWalkMetrics: View {
     private func metric(value: String, caption: String, identifier: String, dimmed: Bool) -> some View {
         VStack(alignment: .leading, spacing: 2) {
             Text(value)
-                .font(.system(size: 32, weight: .bold, design: .rounded))
+                .font(.truffloFigure(.largeTitle))
                 // Tabular figures, or the row jitters on every tick.
                 .monospacedDigit()
                 .foregroundStyle(dimmed ? .white.opacity(0.72) : .white)
@@ -113,9 +113,8 @@ public struct TruffloWalkMetrics: View {
                 .accessibilityIdentifier(identifier)
                 .accessibilityAddTraits(.updatesFrequently)
             Text(caption)
-                .font(.system(size: 11, weight: .semibold, design: .rounded))
-                .textCase(.uppercase)
-                .foregroundStyle(.white.opacity(0.66))
+                .font(.footnote)
+                .foregroundStyle(.white.opacity(0.72))
                 .accessibilityHidden(true)
         }
         .frame(maxWidth: .infinity, alignment: .leading)

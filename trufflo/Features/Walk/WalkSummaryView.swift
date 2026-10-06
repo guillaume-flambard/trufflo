@@ -82,29 +82,29 @@ struct WalkSummaryView: View {
                 hero(for: walk)
 
                 VStack(alignment: .leading, spacing: TruffloTheme.Spacing.large) {
-                    VStack(alignment: .leading, spacing: 2) {
+                    VStack(alignment: .leading, spacing: TruffloTheme.Spacing.xxSmall) {
                         Text(title)
-                            .font(.system(.title2, design: .rounded, weight: .semibold))
+                            .font(.subheadline.weight(.semibold))
+                            .foregroundStyle(Color.truffloCharcoal)
+                        Text(WalkFormatting.activityTitle(walk.endedAt ?? walk.startedAt))
+                            .font(.system(.title, design: .rounded, weight: .bold))
                             .foregroundStyle(Color.truffloForest)
                         if let endedAt = walk.endedAt {
-                            Text(endedAt.formatted(.dateTime.weekday(.wide).day().month()
-                                .hour().minute().locale(Locale(identifier: "fr_FR"))))
-                                .font(.subheadline)
+                            Text(WalkFormatting.dayAndTime(endedAt))
+                                .font(.footnote)
                                 .foregroundStyle(Color.truffloSlate)
                         }
                     }
 
-                    HStack(alignment: .firstTextBaseline, spacing: TruffloTheme.Spacing.xLarge) {
-                        measurement(value: WalkFormatting.clock(walk.confirmedSeconds), caption: "durée")
+                    TruffloStatRow {
+                        TruffloStat("Durée", value: WalkFormatting.clock(walk.confirmedSeconds))
                         if let meters = walk.recordedPathMeters {
-                            measurement(value: WalkFormatting.distance(meters), caption: "distance")
+                            TruffloStat("Distance", value: WalkFormatting.distance(meters))
                         }
                     }
 
                     VStack(alignment: .leading, spacing: TruffloTheme.Spacing.xSmall) {
-                        Text("Note")
-                            .font(.system(.title3, design: .rounded, weight: .semibold))
-                            .foregroundStyle(Color.truffloForest)
+                        WalkSectionTitle("Note")
                         TextField("Comment s'est passée la balade ?", text: $note, axis: .vertical)
                             .font(.body)
                             .lineLimit(3...8)

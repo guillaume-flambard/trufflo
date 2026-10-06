@@ -10,20 +10,20 @@ public struct OnboardingStep: Identifiable, Sendable {
         OnboardingStep(
             id: 0,
             imageName: "OnboardingWalk",
-            title: "Suivez ses balades",
-            description: "Enregistrez vos promenades au quotidien, gardez un journal clair de sa durée et de ses sorties."
+            title: "Partez, on s'occupe du reste",
+            description: "Lancez une balade : la durée et le parcours s'enregistrent pendant que vous marchez."
         ),
         OnboardingStep(
             id: 1,
             imageName: "OnboardingRoutine",
-            title: "Comprenez son rythme",
-            description: "Observez les habitudes de votre chien et adaptez ses promenades à ses besoins sans pression."
+            title: "Un carnet, pas un score",
+            description: "Chaque sortie rejoint son journal. Aucun objectif, aucun classement : juste ce que vous avez vécu ensemble."
         ),
         OnboardingStep(
             id: 2,
             imageName: "OnboardingCommunity",
-            title: "Rencontrez sa communauté",
-            description: "Trouvez des compagnons de promenade près de chez vous et organisez des balades en petit groupe."
+            title: "À son rythme. Ensemble.",
+            description: "Vos balades restent sur cet iPhone. Rien n'est publié sans vous."
         )
     ]
 }
@@ -64,7 +64,7 @@ public struct OnboardingView: View {
 
                         VStack(spacing: TruffloTheme.Spacing.small) {
                             Text(step.title)
-                                .font(.truffloTitle)
+                                .font(.system(.title, design: .rounded, weight: .heavy))
                                 .foregroundStyle(Color.truffloForest)
                                 .multilineTextAlignment(.center)
 
