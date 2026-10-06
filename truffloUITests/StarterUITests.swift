@@ -197,7 +197,7 @@ final class StarterUITests: XCTestCase {
         start.tap()
 
         XCTAssertTrue(
-            app.navigationBars["Balade en direct"].waitForExistence(timeout: 10),
+            app.buttons["walk.minimize"].waitForExistence(timeout: 10),
             "l'écran de balade en direct doit s'ouvrir"
         )
         XCTAssertTrue(
@@ -208,21 +208,28 @@ final class StarterUITests: XCTestCase {
             app.staticTexts["walk.distance"].waitForExistence(timeout: 5),
             "la distance doit être exposée à l'accessibilité"
         )
-        XCTAssertTrue(
-            app.staticTexts["SIGNAL GPS"].waitForExistence(timeout: 5),
-            "l'état du signal doit être affiché"
-        )
-        let signalLive = app.staticTexts["Actif"].waitForExistence(timeout: 20)
-        let signalSearching = app.staticTexts["Recherche"].exists
+        let signalLive = Self.signal(app, reads: "Actif").waitForExistence(timeout: 20)
+        let signalSearching = Self.signal(app, reads: "Recherche").exists
         XCTAssertTrue(
             signalLive || signalSearching,
             "le signal doit passer en Actif avec une position simulée, sinon afficher Recherche"
         )
+        // AC-018: one primary while recording. Finishing is a paused-state choice.
+        XCTAssertFalse(
+            app.buttons["walk.finish"].exists,
+            "Terminer ne doit pas être proposé pendant l'enregistrement"
+        )
+        XCTAssertFalse(app.buttons["walk.note"].exists, "aucune note pendant la balade")
+        XCTAssertFalse(app.buttons["walk.more"].exists, "aucun menu pendant la balade")
 
         app.buttons["Mettre en pause"].tap()
         XCTAssertTrue(
             app.buttons["Reprendre la balade"].waitForExistence(timeout: 5),
             "la pause doit proposer la reprise"
+        )
+        XCTAssertTrue(
+            app.buttons["Terminer la balade"].exists,
+            "AC-019 : la pause doit proposer la fin, en second"
         )
 
         app.buttons["Reprendre la balade"].tap()
@@ -231,6 +238,8 @@ final class StarterUITests: XCTestCase {
             "la reprise doit revenir à l'enregistrement"
         )
 
+        app.buttons["Mettre en pause"].tap()
+        XCTAssertTrue(app.buttons["walk.finish"].waitForExistence(timeout: 5))
         app.buttons["walk.finish"].tap()
         let finishSheet = app.sheets["Terminer et enregistrer la balade ?"]
         let confirmationShown = finishSheet.waitForExistence(timeout: 5)
@@ -259,6 +268,15 @@ final class StarterUITests: XCTestCase {
         XCTAssertTrue(confirmFinish.waitForExistence(timeout: 5))
         confirmFinish.tap()
 
+        // AC-021: the summary takes the screen over, and the note is written there.
+        let done = app.buttons["walk.summary.done"]
+        XCTAssertTrue(done.waitForExistence(timeout: 10), "le bilan doit s'ouvrir après la fin")
+        let summaryNote = app.textFields["walk.summary.note"]
+        XCTAssertTrue(summaryNote.waitForExistence(timeout: 5), "le bilan doit proposer la note")
+        summaryNote.tap()
+        summaryNote.typeText("Balade au parc.")
+        done.tap()
+
         let journal = app.tabBars.buttons["Journal"]
         XCTAssertTrue(journal.waitForExistence(timeout: 10))
         journal.tap()
@@ -278,6 +296,10 @@ final class StarterUITests: XCTestCase {
         XCTAssertTrue(
             qualityRow.waitForExistence(timeout: 5),
             "AC-013 : la fiche source doit afficher la qualité de mesure dans le détail"
+        )
+        XCTAssertTrue(
+            app.staticTexts["Balade au parc."].waitForExistence(timeout: 5),
+            "AC-022 : la note saisie au bilan doit être lisible dans le détail"
         )
     }
 
@@ -305,7 +327,7 @@ final class StarterUITests: XCTestCase {
         XCTAssertTrue(start.waitForExistence(timeout: 5))
         start.tap()
         XCTAssertTrue(
-            app.navigationBars["Balade en direct"].waitForExistence(timeout: 10),
+            app.buttons["walk.minimize"].waitForExistence(timeout: 10),
             "l'écran de balade en direct doit s'ouvrir"
         )
         XCTAssertTrue(app.staticTexts["walk.timer"].waitForExistence(timeout: 5))
@@ -322,7 +344,7 @@ final class StarterUITests: XCTestCase {
         show.tap()
 
         XCTAssertTrue(
-            app.navigationBars["Balade en direct"].waitForExistence(timeout: 10),
+            app.buttons["walk.minimize"].waitForExistence(timeout: 10),
             "AC-010 : la session interrompue doit se rouvrir"
         )
         XCTAssertTrue(
@@ -333,16 +355,26 @@ final class StarterUITests: XCTestCase {
             app.buttons["Terminer avec les données enregistrées"].exists,
             "AC-010 : la fin avec les données enregistrées doit être proposée"
         )
+        // AC-020: correction left the live screen; manual entry lives on the home tab.
+        XCTAssertFalse(app.buttons["Corriger"].exists, "aucun bouton Corriger pendant la balade")
         XCTAssertTrue(
-            app.buttons["Corriger"].exists,
-            "AC-010 : la correction doit être proposée"
-        )
-        XCTAssertTrue(
-            app.staticTexts["Interrompue"].exists,
+            Self.signal(app, reads: "Interrompue").waitForExistence(timeout: 5),
             "l'état affiché doit nommer l'interruption"
         )
+        XCTAssertTrue(
+            app.staticTexts.matching(
+                NSPredicate(format: "label CONTAINS %@", "Données conservées jusqu'au dernier point enregistré")
+            ).firstMatch.waitForExistence(timeout: 5),
+            "le message temporaire doit dire ce qui est conservé"
+        )
 
-        app.buttons["walk.recover.finish"].tap()
+        app.buttons["walk.finish"].tap()
+        let recoverSheet = app.sheets["Terminer avec les données enregistrées ?"]
+        XCTAssertTrue(recoverSheet.waitForExistence(timeout: 5), "la fin doit être confirmée")
+        recoverSheet.buttons["Terminer avec les données enregistrées"].tap()
+        let done = app.buttons["walk.summary.done"]
+        XCTAssertTrue(done.waitForExistence(timeout: 10), "le bilan doit s'ouvrir après la fin")
+        done.tap()
 
         let bannerGone = expectation(
             for: NSPredicate(format: "exists == false"),
@@ -402,11 +434,11 @@ final class StarterUITests: XCTestCase {
         XCTAssertTrue(start.waitForExistence(timeout: 5))
         start.tap()
         XCTAssertTrue(
-            app.navigationBars["Balade en direct"].waitForExistence(timeout: 10),
+            app.buttons["walk.minimize"].waitForExistence(timeout: 10),
             "l'écran de balade en direct doit s'ouvrir"
         )
         XCTAssertTrue(
-            app.staticTexts["Actif"].waitForExistence(timeout: 20),
+            Self.signal(app, reads: "Actif").waitForExistence(timeout: 20),
             "la position simulée doit rendre le signal actif avant l'arrière-plan"
         )
         let timerEl = app.staticTexts["walk.timer"]
@@ -429,7 +461,7 @@ final class StarterUITests: XCTestCase {
 
         app.activate()
         XCTAssertTrue(
-            app.navigationBars["Balade en direct"].waitForExistence(timeout: 15),
+            app.buttons["walk.minimize"].waitForExistence(timeout: 15),
             "après le retour au premier plan, l'écran de balade doit être affiché"
         )
         let timerAfter = app.staticTexts["walk.timer"]
@@ -440,7 +472,7 @@ final class StarterUITests: XCTestCase {
             "la durée doit continuer de croître en arrière-plan (avant \(timerBefore), après \(timerAfter.label))"
         )
         XCTAssertTrue(
-            app.staticTexts["Actif"].waitForExistence(timeout: 20),
+            Self.signal(app, reads: "Actif").waitForExistence(timeout: 20),
             "le signal GPS doit repasser à Actif au retour"
         )
 
@@ -487,11 +519,11 @@ final class StarterUITests: XCTestCase {
         XCTAssertTrue(start.waitForExistence(timeout: 5))
         start.tap()
         XCTAssertTrue(
-            app.navigationBars["Balade en direct"].waitForExistence(timeout: 10),
+            app.buttons["walk.minimize"].waitForExistence(timeout: 10),
             "l'écran de balade en direct doit s'ouvrir"
         )
         XCTAssertTrue(
-            app.staticTexts["Actif"].waitForExistence(timeout: 20),
+            Self.signal(app, reads: "Actif").waitForExistence(timeout: 20),
             "le signal doit être actif avant la révocation"
         )
         let timerEl = app.staticTexts["walk.timer"]
@@ -502,36 +534,34 @@ final class StarterUITests: XCTestCase {
 
         try? "go".write(toFile: "/tmp/trufflo-revoke-go", atomically: true, encoding: .utf8)
 
+        // AC-020: the cause and what is kept arrive as one temporary notice, not
+        // as a modal the person has to dismiss while holding a leash.
         let interruption = app.staticTexts.matching(
-            NSPredicate(format: "label CONTAINS %@", "La localisation n'est plus autorisée")
+            NSPredicate(format: "label CONTAINS %@ AND label CONTAINS %@",
+                        "La localisation n'est plus autorisée",
+                        "Données conservées jusqu'au dernier point enregistré")
         ).firstMatch
         XCTAssertTrue(
             interruption.waitForExistence(timeout: 45),
             "la révocation en cours de balade doit afficher le message d'interruption"
         )
-        XCTAssertTrue(
-            app.buttons["OK"].waitForExistence(timeout: 5),
-            "le message d'interruption doit être refermable"
-        )
-        app.buttons["OK"].tap()
+        XCTAssertFalse(app.alerts.firstMatch.exists, "aucune alerte modale pour une interruption")
 
         XCTAssertTrue(
-            app.staticTexts["Interrompue"].waitForExistence(timeout: 5),
-            "le badge doit nommer l'interruption"
+            Self.signal(app, reads: "Interrompue").waitForExistence(timeout: 5),
+            "le signal doit nommer l'interruption, jamais « Arrêté »"
         )
-        XCTAssertTrue(app.staticTexts["Arrêté"].exists, "le signal doit afficher l'arrêt de la collecte")
-        XCTAssertTrue(
-            app.staticTexts.matching(
-                NSPredicate(format: "label BEGINSWITH %@", "Cette balade s'est interrompue")
-            ).firstMatch.exists,
-            "l'explication des données conservées doit être visible"
-        )
+        XCTAssertFalse(Self.signal(app, reads: "Arrêté").exists)
         XCTAssertTrue(app.buttons["Reprendre à partir de maintenant"].exists, "la reprise doit être proposée")
         XCTAssertTrue(
             app.buttons["Terminer avec les données enregistrées"].exists,
             "la fin avec les données enregistrées doit être proposée"
         )
-        XCTAssertTrue(app.buttons["Corriger"].exists, "la correction doit être proposée")
+        XCTAssertFalse(app.buttons["Corriger"].exists, "aucun bouton Corriger pendant la balade")
+        XCTAssertTrue(
+            app.buttons["walk.interrupted.settings"].exists,
+            "un refus de permission doit proposer les réglages, seule issue qui répare"
+        )
 
         let settle = expectation(description: "état interrompu stabilisé")
         _ = XCTWaiter().wait(for: [settle], timeout: 3)
@@ -579,7 +609,7 @@ final class StarterUITests: XCTestCase {
         start.tap()
 
         XCTAssertTrue(
-            app.navigationBars["Balade en direct"].waitForExistence(timeout: 10),
+            app.buttons["walk.minimize"].waitForExistence(timeout: 10),
             "l'écran de balade doit s'ouvrir pour expliquer le refus"
         )
 
@@ -620,10 +650,12 @@ final class StarterUITests: XCTestCase {
         // hittable and a Journal assertion would prove nothing. The sentinel is
         // the start button, not `dog.add`: this journey created a dog, so the
         // empty state is legitimately gone.
-        app.buttons["Fermer"].tap()
+        // AC-023: the chevron minimises; there is no "Fermer" button any more.
+        XCTAssertFalse(app.buttons["Fermer"].exists)
+        app.buttons["walk.minimize"].tap()
         XCTAssertTrue(
             app.buttons["Démarrer une balade GPS"].waitForExistence(timeout: 10),
-            "l'accueil doit réapparaître après la fermeture"
+            "l'accueil doit réapparaître après la réduction"
         )
 
         // No phantom session: a refused start must not leave a walk in the log.
@@ -632,6 +664,15 @@ final class StarterUITests: XCTestCase {
             app.staticTexts["Aucune balade enregistrée"].waitForExistence(timeout: 5),
             "un refus ne doit créer aucune balade"
         )
+    }
+
+    /// The signal indicator is one accessibility element whose label is
+    /// "Signal GPS : <mot>". Matching on identifier and full label keeps "Actif"
+    /// from colliding with other texts that merely contain the word.
+    private static func signal(_ app: XCUIApplication, reads word: String) -> XCUIElement {
+        app.descendants(matching: .any).matching(
+            NSPredicate(format: "identifier == %@ AND label == %@", "walk.signal", "Signal GPS : \(word)")
+        ).firstMatch
     }
 
     private static var distanceValuePredicate: NSPredicate {

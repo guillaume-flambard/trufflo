@@ -16,8 +16,8 @@ Trois destinations initiales : Aujourd’hui, Journal, Mon chien/Mes chiens. Com
 |---|---|---|---|
 | Accueil initial | Promesse et création simple du profil. | Ajouter mon chien. | Nom absent, race inconnue, erreur de sauvegarde. |
 | Aujourd’hui | Chien, dernière sortie et résumé. | Partir en balade en M1. | Aucun chien, aucune sortie, session active. |
-| Enregistrement | Temps confirmé, qualité, carte secondaire. | Pause / Terminer. | Acquisition du signal, perte de GPS, stockage en échec. |
-| Bilan | Durée, parcours, qualité, note. | Enregistrer puis partager séparément. | GPS partiel, aucune distance, sauvegarde en cours. |
+| Enregistrement | Carte plein écran ; une surface : titre chien, état GPS, durée, distance. | Pause (puis Reprendre / Terminer en pause). | Acquisition du signal, interruption, stockage en échec. |
+| Bilan | Durée, parcours, qualité, chiens, note éditable. | Terminé (enregistre la note). | GPS partiel, aucune distance, sauvegarde en cours. |
 | Journal | Liste, filtre et bilan simple. | Ouvrir une sortie / ajout manuel. | Vide, données partielles, suppression. |
 | Profil | Race, âge, routine, membres autorisés. | Modifier. | Race inconnue, âge approximatif, droits limités. |
 | Compagnons | Créneaux réels et points publics. | Demander à participer. | Zone vide, capacité atteinte, sortie annulée. |
@@ -43,7 +43,44 @@ En M0, les couleurs système suffisent. Introduire les couleurs adaptatives via 
 
 Police système et styles dynamiques. Titre d’écran natif ; grand indicateur de durée seulement pendant l’enregistrement. Espacement sur base 4/8 points, marges de 16–20 points comme hypothèse de départ. Cibles tactiles de 48 points visées. Aucun texte tronqué dans les tailles d’accessibilité retenues.
 
-Éviter les cadres de carte trop dominants : la commande d’arrêt doit rester facile à atteindre. Le fond cartographique ne doit pas être une condition à l’usage hors réseau.
+Pendant l’enregistrement, la carte est la surface de l’écran, pas un cadre à l’intérieur d’un empilement : les mesures et les commandes restent lisibles au-dessus, sur une seule surface en verre teinté forêt (opaque sous Réduire la transparence), et l’action primaire demeure atteignable d’une main. Le fond cartographique n’est jamais une condition à l’usage hors réseau : une tuile absente laisse les mesures et les contrôles intacts.
+
+## Écran de balade : une surface, une action
+
+Référence structurelle : l’écran Record de Strava (pas une copie visuelle). Cible : simplicité d’enregistrement Strava × Apple Plans × chaleur Trufflo. La personne marche et tient une laisse : l’écran ne demande presque rien à lire ni à décider.
+
+Trois éléments au-dessus de la carte, pas plus : un chevron rond (réduire), un cercle rond (recentrer), et **une seule surface de contrôle** en Liquid Glass en bas. La surface empile : en-tête (titre chien, mot GPS), deux mesures, ligne d’action. Le contenu est chaud (bilan sur sable), les contrôles sont en verre. La carte garde 75-85 % du champ visuel (mesuré 22,5 % de hauteur pour la surface en enregistrement, 27 % en interruption avec le lien Réglages, iPhone 17e).
+
+### Enregistrement
+
+| Contrôle | Pourquoi il existe |
+|---|---|
+| Carte | C’est l’écran. Le tracé est la seule chose à regarder en marchant. |
+| Chevron (haut gauche) | Réduire pour revenir à l’app sans décider de la balade. Icône, pas « Fermer » : rien ne se ferme. |
+| Titre « Balade avec Oslo » | Confirmer de qui il s’agit, en un coup d’œil, sans puce ni badge. |
+| Mot GPS (Actif / Recherche / Faible) | La seule information d’état utile en marchant. Un point et un mot, jamais la couleur seule. |
+| Durée | Mesure primaire 1. |
+| Distance | Mesure primaire 2. « Non mesurée » plutôt que 0. Pas d’allure : métrique sportive, hors recherche utilisateur. |
+| Recentrer (cercle, bas droite) | La carte ne se recadre jamais seule après un geste. Visible dès qu’un point est tracé. |
+| **Pause** | L’unique action primaire. Terminer n’apparaît pas : finir est une décision de l’arrêt, pas de la marche. |
+
+Retirés : champ de note, crayon, « Corriger », menu « … », puce chien, pastilles d’état, bannière. La note se saisit au bilan.
+
+### Pause
+
+Mêmes éléments ; le mot GPS lit « En pause » ; la ligne d’action devient **Reprendre** (primaire, forêt, pleine largeur) + **Terminer** (discret, verre, contour). Poids visuel inégal volontaire : reprendre est fréquent, terminer est terminal. Terminer ouvre toujours une confirmation (« Terminer et enregistrer la balade ? »).
+
+### Interrompue
+
+État récupérable, jamais « Arrêté ». Le mot GPS lit **« Interrompue »**. Un message temporaire (8 s, verre, sous le chevron) dit la cause éventuelle puis « Données conservées jusqu’au dernier point enregistré. » Pas de bannière permanente ni d’alerte modale. Actions : **Reprendre** (accessibilité : « Reprendre à partir de maintenant ») + **Terminer** (« Terminer avec les données enregistrées », confirmé par une feuille du même nom). Un seul contrôle conditionnel : « Ouvrir les réglages », uniquement quand la cause est un refus de permission, seule cause que Réglages répare.
+
+### Bilan
+
+Écran chaud (sable), après la fin confirmée, dans la même couverture. Contenu : carte figée du parcours (si au moins deux points), durée et distance, qualité avec sa phrase canonique (« Une partie du parcours n’a pas été mesurée. »), chiens, champ de note. Une action : **Terminé**, qui enregistre la note (500 caractères max.) puis ferme. C’est ici, et seulement ici, qu’on écrit.
+
+### Libellés d’accessibilité
+
+Visible court, parlé complet : Pause → « Mettre en pause » ; Reprendre → « Reprendre la balade » / « Reprendre à partir de maintenant » ; Terminer → « Terminer la balade » / « Terminer avec les données enregistrées » ; chevron → « Réduire la balade » ; signal → « Signal GPS : Actif ». Les parcours UI s’appuient sur ces libellés et sur les identifiants `walk.*`.
 
 ## Composants à construire progressivement
 
@@ -58,7 +95,7 @@ Police système et styles dynamiques. Titre d’écran natif ; grand indicateur 
 | Sauvegarde | Confirmation légère, sans confettis. | Seulement après écriture confirmée. |
 | Ouverture d’un bilan | Transition système ou 180–220 ms. | Respecter Reduce Motion. |
 | Mise à jour du temps | Chiffres stables ; transition limitée. | Pas de défilement qui distrait de la promenade. |
-| Carte | Recentrage explicite. | Ne pas recentrer automatiquement après déplacement manuel. |
+| Carte | Recentrage explicite par un contrôle dédié. | Le suivi de la position s’arrête dès que la personne déplace la carte ; elle la reprend quand elle le décide. |
 
 Pas d’animation permanente du bouton principal, de vibration répétée, de récompense pour distance accrue ou de héros animé masquant une erreur. Avec réduction des animations, préférer une mise à jour immédiate ou une opacité très brève.
 

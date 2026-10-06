@@ -140,7 +140,10 @@ run_tests() {
         # inutile de payer toute l'attente quand les tests sont deja tranches.
         # Il faut however les attendre tous, sinon les suivants sont tues avant
         # d'avoir ete joues.
-        reported="$(grep -cE "^Test Case .*\]' (passed|failed)" "$logfile" 2>/dev/null || echo 0)"
+        # `grep -c` prints "0" and exits 1 when nothing matches, so `|| echo 0`
+        # produced "0\n0" and broke the integer test below on every idle tick.
+        reported="$(grep -cE "^Test Case .*\]' (passed|failed)" "$logfile" 2>/dev/null)"
+        reported="${reported:-0}"
         if [ "$reported" -ge "$expected" ]; then
             decided=yes
             kill -TERM "$pid" 2>/dev/null

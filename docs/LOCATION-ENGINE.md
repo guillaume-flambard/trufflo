@@ -43,7 +43,7 @@ La permission technique n’autorise pas automatiquement d’autres usages des t
 
 Le chronomètre visuel peut afficher une projection depuis un ancrage monotone tant que le processus est vivant. Le domaine reçoit les deltas valides ; le stockage conserve régulièrement le confirmé. Les timers de vue ne sont jamais l’unique mécanisme de mesure.
 
-Au lancement à froid, toute session précédemment active est présentée comme interrompue et aucune durée depuis le dernier checkpoint n’est ajoutée. Proposer « Reprendre à partir de maintenant », « Terminer avec les données enregistrées » ou une correction déclarative. Une session terminée n’est jamais ressuscitée.
+Au lancement à froid, toute session précédemment active est présentée comme interrompue et aucune durée depuis le dernier checkpoint n’est ajoutée. Proposer « Reprendre à partir de maintenant » et « Terminer avec les données enregistrées » (ce dernier derrière une confirmation). La correction déclarative n’est plus un bouton de l’écran de balade : elle reste atteignable depuis l’onglet Aujourd’hui (« Ajouter une balade passée ») et depuis l’alerte de démarrage refusé. Une session terminée n’est jamais ressuscitée.
 
 La preuve de durabilité porte sur la dernière transaction confirmée. Une fermeture entre deux écritures peut faire perdre la portion non persistée ; l’app ne doit ni la reconstruire sans source ni affirmer qu’aucune donnée n’a été perdue.
 

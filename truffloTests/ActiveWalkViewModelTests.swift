@@ -50,10 +50,14 @@ struct ActiveWalkViewModelTests {
         let vm = ActiveWalkViewModel(modelContainer: container, locationProvider: fakeLocation)
 
         vm.startSession(dogIDs: [dog.id])
-        vm.note = "Belle promenade sous le soleil."
+        let started = vm.walkID
 
         await vm.finish()
 
         #expect(vm.phase == .completed)
+        // The summary screen needs the closed walk's identifier after `walkID`
+        // has been released, so finishing hands it over separately.
+        #expect(vm.walkID == nil)
+        #expect(vm.finishedWalkID == started)
     }
 }

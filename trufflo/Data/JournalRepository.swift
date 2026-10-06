@@ -220,6 +220,20 @@ struct JournalRepository {
         return walk
     }
 
+    /// Writes the note of an existing walk. Used by the post-walk summary, which
+    /// is where notes belong: the live screen has no text field, so the note is
+    /// written after the fact, under the same rules as a manual entry (trimmed,
+    /// 500 characters at most).
+    func updateWalkNote(_ id: UUID, note: String) throws {
+        let cleanNote = note.trimmingCharacters(in: .whitespacesAndNewlines)
+        guard cleanNote.count <= 500 else { throw WalkError.noteTooLong }
+        guard let walk = requireWalk(id) else { throw JournalError.walkMissing }
+        try commit {
+            walk.note = cleanNote
+            walk.revision += 1
+        }
+    }
+
     /// Removes the walk, its participations and its recorded points in one
     /// transaction. Nothing is left behind pointing at a walk that no longer exists.
     func deleteWalk(_ id: UUID) throws {

@@ -123,7 +123,11 @@ struct ActiveWalkViewModelSessionTests {
 
         #expect(viewModel.phase == .interrupted)
         #expect(await waitForStop(fake, atLeast: 1))
-        #expect(viewModel.errorMessage != nil)
+        // An interruption is a recoverable state, not an error: it feeds the
+        // screen's temporary notice and names its cause, and raises no modal.
+        #expect(viewModel.interruptionNotice == "La localisation n'est plus autorisée.")
+        #expect(viewModel.errorMessage == nil)
+        #expect(viewModel.signalState == .interrupted)
         #expect(viewModel.confirmedSeconds >= 1.0)
 
         let check = JournalRepository(context: ModelContext(container))

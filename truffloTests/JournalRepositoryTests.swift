@@ -158,3 +158,53 @@ import Testing
     #expect(try verification.fetch(FetchDescriptor<WalkRecord>()).isEmpty)
     #expect(try verification.fetch(FetchDescriptor<WalkDogRecord>()).isEmpty)
 }
+
+// MARK: - Post-walk note
+
+@MainActor
+@Test func updatingTheNoteOfAFinishedWalkKeepsEverythingElse() throws {
+    let container = try PersistenceFactory.make(inMemory: true)
+    let repository = JournalRepository(context: container.mainContext)
+    let dog = try repository.addDog(try DogInput(name: "Oslo", breedKind: "unknown"))
+    let walk = try repository.addManualWalk(
+        try ManualWalkInput(dogIDs: [dog.id], durationSeconds: 900),
+        endedAt: .now
+    )
+    let revisionBefore = walk.revision
+
+    try repository.updateWalkNote(walk.id, note: "  Belle promenade au parc.  ")
+
+    let verification = ModelContext(container)
+    let stored = try #require(try verification.fetch(FetchDescriptor<WalkRecord>()).first)
+    #expect(stored.note == "Belle promenade au parc.", "la note est nettoyée avant écriture")
+    #expect(stored.confirmedSeconds == 900)
+    #expect(stored.phase == .completed)
+    #expect(stored.revision == revisionBefore + 1)
+}
+
+@MainActor
+@Test func aNoteOverFiveHundredCharactersIsRefusedAndNothingIsWritten() throws {
+    let container = try PersistenceFactory.make(inMemory: true)
+    let repository = JournalRepository(context: container.mainContext)
+    let dog = try repository.addDog(try DogInput(name: "Oslo", breedKind: "unknown"))
+    let walk = try repository.addManualWalk(
+        try ManualWalkInput(dogIDs: [dog.id], durationSeconds: 900, note: "Courte."),
+        endedAt: .now
+    )
+
+    #expect(throws: WalkError.noteTooLong) {
+        try repository.updateWalkNote(walk.id, note: String(repeating: "a", count: 501))
+    }
+
+    let stored = try #require(try ModelContext(container).fetch(FetchDescriptor<WalkRecord>()).first)
+    #expect(stored.note == "Courte.")
+}
+
+@MainActor
+@Test func updatingTheNoteOfAMissingWalkFails() throws {
+    let container = try PersistenceFactory.make(inMemory: true)
+    let repository = JournalRepository(context: container.mainContext)
+    #expect(throws: JournalError.walkMissing) {
+        try repository.updateWalkNote(UUID(), note: "Perdue.")
+    }
+}

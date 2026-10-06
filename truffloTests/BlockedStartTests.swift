@@ -83,9 +83,11 @@ struct BlockedStartTests {
         #expect(viewModel.phase == .interrupted)
         #expect(viewModel.interruptionBlock == .servicesUnavailable)
 
-        let message = try #require(viewModel.errorMessage)
+        // The cause feeds the screen's temporary notice, never a modal error.
+        let message = try #require(viewModel.interruptionNotice)
         #expect(message.contains("désactivée"))
         #expect(!message.contains("n'est plus autorisée"))
+        #expect(viewModel.errorMessage == nil)
 
         let stored = try #require(
             JournalRepository(context: ModelContext(container)).walk(id: viewModel.walkID ?? UUID())
@@ -105,7 +107,8 @@ struct BlockedStartTests {
         #expect(viewModel.phase == .interrupted)
         #expect(viewModel.interruptionBlock == .permissionDenied)
         #expect(viewModel.interruptionBlock?.offersSettings == true)
-        #expect(viewModel.errorMessage?.contains("n'est plus autorisée") == true)
+        #expect(viewModel.interruptionNotice?.contains("n'est plus autorisée") == true)
+        #expect(viewModel.errorMessage == nil)
     }
 
     // MARK: - T36, the refused start must be actionable

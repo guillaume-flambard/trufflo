@@ -16,6 +16,8 @@ struct WalkDetailView: View {
 
     @State private var showDeleteConfirmation = false
     @State private var storageError: String?
+    /// A finished walk is framed once and never chases the camera afterwards.
+    @State private var isFollowingTrack = false
 
     init(walkID: UUID) {
         _matches = Query(filter: #Predicate<WalkRecord> { $0.id == walkID })
@@ -38,7 +40,7 @@ struct WalkDetailView: View {
         }
         .navigationTitle("Balade")
         .navigationBarTitleDisplayMode(.inline)
-        .tint(Color.truffloForest)
+        .truffloScreen()
         .alert("Modification impossible", isPresented: Binding(
             get: { storageError != nil },
             set: { if !$0 { storageError = nil } }
@@ -57,7 +59,7 @@ struct WalkDetailView: View {
                 if names.isEmpty {
                     Text("Aucun chien associé à cette balade.")
                         .font(.truffloBody)
-                        .foregroundStyle(.secondary)
+                        .foregroundStyle(Color.truffloSlate)
                 } else {
                     HStack(spacing: TruffloTheme.Spacing.xSmall) {
                         ForEach(names, id: \.self) { name in
@@ -69,7 +71,10 @@ struct WalkDetailView: View {
 
             if trackCoordinates.count >= 2 {
                 Section {
-                    TruffloTrackMap(points: trackCoordinates)
+                    TruffloTrackMap(points: trackCoordinates,
+                                    isLive: false,
+                                    showsMarkers: false,
+                                    isFollowing: $isFollowingTrack)
                         .frame(height: 220)
                         .listRowInsets(EdgeInsets())
                         .accessibilityIdentifier("walk.detail.map")
@@ -109,7 +114,7 @@ struct WalkDetailView: View {
                     } else {
                         Text("Non mesurée")
                             .font(.truffloSubheadline)
-                            .foregroundStyle(.secondary)
+                            .foregroundStyle(Color.truffloSlate)
                     }
                 }
             }
@@ -134,7 +139,7 @@ struct WalkDetailView: View {
             } footer: {
                 Text("La balade, les chiens qui y figurent et les points enregistrés sont retirés de cet appareil.")
                     .font(.truffloCaption)
-                    .foregroundStyle(.secondary)
+                    .foregroundStyle(Color.truffloSlate)
             }
         }
         .confirmationDialog("Supprimer cette balade ?", isPresented: $showDeleteConfirmation,
