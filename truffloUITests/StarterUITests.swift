@@ -354,6 +354,14 @@ final class StarterUITests: XCTestCase {
             app.buttons["walk.minimize"].waitForExistence(timeout: 10),
             "AC-010 : la session interrompue doit se rouvrir"
         )
+        // The notice lives eight seconds by design: read it first, before the
+        // other checks spend that time on a slow runner (CI run 37507936154).
+        XCTAssertTrue(
+            app.staticTexts.matching(
+                NSPredicate(format: "label CONTAINS %@", "Données conservées jusqu'au dernier point enregistré")
+            ).firstMatch.waitForExistence(timeout: 5),
+            "le message temporaire doit dire ce qui est conservé"
+        )
         XCTAssertTrue(
             app.buttons["Reprendre à partir de maintenant"].waitForExistence(timeout: 5),
             "AC-010 : la reprise à partir de maintenant doit être proposée"
@@ -367,12 +375,6 @@ final class StarterUITests: XCTestCase {
         XCTAssertTrue(
             Self.signal(app, reads: "Interrompue").waitForExistence(timeout: 5),
             "l'état affiché doit nommer l'interruption"
-        )
-        XCTAssertTrue(
-            app.staticTexts.matching(
-                NSPredicate(format: "label CONTAINS %@", "Données conservées jusqu'au dernier point enregistré")
-            ).firstMatch.waitForExistence(timeout: 5),
-            "le message temporaire doit dire ce qui est conservé"
         )
 
         app.buttons["walk.finish"].tap()
