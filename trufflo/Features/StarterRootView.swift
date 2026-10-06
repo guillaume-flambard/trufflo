@@ -8,7 +8,7 @@ struct WalkRoute: Hashable { let id: UUID }
 
 private enum ActiveWalkCover: Identifiable {
     case resume(UUID)
-    case start
+    case start([UUID])
 
     var id: String {
         switch self {
@@ -37,6 +37,7 @@ struct StarterRootView: View {
     @State private var showOnboardingSheet = false
     @State private var startBlock: LocationBlock?
     @State private var exportFile: SharedFile?
+    @State private var showWhoIsWalking = false
     @State private var journalFilter = JournalFilter()
     @State private var exportError: String?
     @Environment(\.dynamicTypeSize) private var typeSize
@@ -126,6 +127,17 @@ struct StarterRootView: View {
         .tint(Color.truffloForest)
         .sheet(isPresented: $showDogForm) { DogFormView() }
         .sheet(isPresented: $showWalkForm) { ManualWalkFormView(dogs: dogs) }
+        .sheet(isPresented: $showWhoIsWalking) {
+            WhoIsWalkingSheet(dogs: dogs,
+                              start: { ids in
+                                  showWhoIsWalking = false
+                                  Task { @MainActor in
+                                      try? await Task.sleep(for: .milliseconds(350))
+                                      activeWalkCover = .start(ids)
+                                  }
+                              },
+                              cancel: { showWhoIsWalking = false })
+        }
         .sheet(item: $exportFile) { file in
             ShareSheet(items: [file.url])
                 .presentationDetents([.medium, .large])
@@ -159,8 +171,8 @@ struct StarterRootView: View {
             switch cover {
             case .resume(let walkID):
                 ActiveWalkView(modelContainer: context.container, existingWalkID: walkID)
-            case .start:
-                ActiveWalkView(modelContainer: context.container, dogIDs: dogs.map(\.id))
+            case .start(let dogIDs):
+                ActiveWalkView(modelContainer: context.container, dogIDs: dogIDs)
             }
         }
         .fullScreenCover(isPresented: $showOnboardingSheet) {
@@ -484,7 +496,7 @@ struct StarterRootView: View {
     /// says what will appear here.
     private var firstWalkPlaceholder: some View {
         VStack(alignment: .leading, spacing: TruffloTheme.Spacing.xxSmall) {
-            Text("Sa première balade s'affichera ici")
+            Text(dogs.count > 1 ? "Leur première balade s'affichera ici" : "Sa première balade s'affichera ici")
                 .font(.system(.headline, design: .rounded, weight: .bold))
                 .foregroundStyle(Color.truffloForest)
             Text("Avec sa durée, son tracé, et la note que vous voudrez y laisser.")
@@ -513,8 +525,10 @@ struct StarterRootView: View {
         case .notDetermined, .authorizedWhenInUse, .authorizedAlways:
             if probe.authorization != .notDetermined && !probe.servicesAvailable {
                 startBlock = .servicesUnavailable
+            } else if dogs.count > 1 {
+                showWhoIsWalking = true
             } else {
-                activeWalkCover = .start
+                activeWalkCover = .start(dogs.map(\.id))
             }
         }
     }

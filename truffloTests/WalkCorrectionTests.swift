@@ -102,3 +102,13 @@ private func journal() throws -> (ModelContainer, JournalRepository, DogRecord, 
         .map(\.dogNameSnapshot).sorted()
     #expect(names == ["Mirabelle", "Oslo"])
 }
+
+@MainActor
+@Test func aWalkStartedWithSomeDogsLinksOnlyThoseAndCountsOnceForTheHousehold() throws {
+    let (container, repository, oslo, mira) = try journal()
+    let walk = try repository.startGpsSession(dogIDs: [mira.id])
+    let links = try ModelContext(container).fetch(FetchDescriptor<WalkDogRecord>())
+    #expect(links.map(\.dogID) == [mira.id], "Oslo est resté à la maison")
+    #expect(!links.contains { $0.dogID == oslo.id })
+    #expect(try ModelContext(container).fetch(FetchDescriptor<WalkRecord>()).map(\.id) == [walk.id])
+}
