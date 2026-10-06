@@ -37,6 +37,7 @@ struct StarterRootView: View {
     @State private var showOnboardingSheet = false
     @State private var startBlock: LocationBlock?
     @State private var exportFile: SharedFile?
+    @State private var journalFilter = JournalFilter()
     @State private var exportError: String?
     @Environment(\.dynamicTypeSize) private var typeSize
 
@@ -76,6 +77,11 @@ struct StarterRootView: View {
                 journalContent
                 .navigationTitle("Journal")
                 .truffloScreen()
+                .toolbar {
+                    if walks.contains(where: { $0.phase == .completed }) {
+                        ToolbarItem(placement: .topBarTrailing) { journalFilterMenu }
+                    }
+                }
                 .navigationDestination(for: WalkRoute.self) { WalkDetailView(walkID: $0.id) }
                 .navigationDestination(for: DogRoute.self) { DogDetailView(dogID: $0.id) }
             }
@@ -186,6 +192,10 @@ struct StarterRootView: View {
     @ViewBuilder
     private var journalContent: some View {
         let completed = walks.filter { $0.phase == .completed }
+        let shown = completed.filter { walk in
+            journalFilter.includes(date: walk.endedAt ?? walk.startedAt,
+                                   dogIDs: Set(links.filter { $0.walkID == walk.id }.map(\.dogID)))
+        }
         if completed.isEmpty {
             List {
                 TruffloEmptyStateView(
@@ -194,9 +204,44 @@ struct StarterRootView: View {
                     description: "Les sorties ajoutées à votre journal apparaîtront ici."
                 )
             }
+        } else if shown.isEmpty {
+            TruffloNotice(title: "Aucune balade pour ce filtre",
+                          message: "Aucune sortie enregistrée ne correspond au chien et à la période choisis.",
+                          actionTitle: "Tout afficher") { journalFilter = JournalFilter() }
         } else {
-            JournalTimelineView(walks: completed, rowDestination: { WalkRoute(id: $0) })
+            JournalTimelineView(walks: shown,
+                                filterSummary: journalFilter.isActive ? filterSummary(count: shown.count) : nil,
+                                rowDestination: { WalkRoute(id: $0) })
         }
+    }
+
+    /// "3 balades, Oslo, 30 derniers jours": says what the filtered list is.
+    private func filterSummary(count: Int) -> String {
+        var parts = [count == 1 ? "1 balade" : "\(count) balades"]
+        if let id = journalFilter.dogID, let dog = dogs.first(where: { $0.id == id }) { parts.append(dog.name) }
+        if journalFilter.period != .all { parts.append(journalFilter.period.label.lowercased()) }
+        return parts.joined(separator: ", ")
+    }
+
+    private var journalFilterMenu: some View {
+        Menu {
+            if dogs.count > 1 {
+                Picker("Chien", selection: $journalFilter.dogID) {
+                    Text("Tous les chiens").tag(UUID?.none)
+                    ForEach(dogs) { dog in Text(dog.name).tag(UUID?.some(dog.id)) }
+                }
+            }
+            Picker("Période", selection: $journalFilter.period) {
+                ForEach(JournalFilter.Period.allCases, id: \.self) { Text($0.label).tag($0) }
+            }
+            if journalFilter.isActive {
+                Button("Tout afficher", systemImage: "xmark.circle") { journalFilter = JournalFilter() }
+            }
+        } label: {
+            Label("Filtrer", systemImage: journalFilter.isActive
+                  ? "line.3.horizontal.decrease.circle.fill" : "line.3.horizontal.decrease.circle")
+        }
+        .accessibilityIdentifier("journal.filter")
     }
 
     // MARK: - Today

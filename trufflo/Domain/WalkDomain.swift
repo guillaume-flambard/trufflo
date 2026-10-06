@@ -91,6 +91,41 @@ public struct ManualWalkInput: Equatable, Sendable {
     }
 }
 
+/// A correction to a finished walk (PRD F05).
+///
+/// What can be corrected depends on how the walk was captured. A declared walk
+/// can change its duration and end, because both were typed by the person. A
+/// recorded walk cannot: its duration and route were measured, and editing them
+/// would turn a measurement into a declaration while still calling it GPS. For
+/// both, the dogs present and the note can be fixed.
+public struct WalkCorrection: Equatable, Sendable {
+    public let dogIDs: [UUID]
+    public let note: String
+    /// Nil for a recorded walk, whose measured duration and end are kept.
+    public let durationSeconds: TimeInterval?
+    public let endedAt: Date?
+
+    public init(dogIDs: [UUID], note: String, durationSeconds: TimeInterval? = nil,
+                endedAt: Date? = nil, now: Date = Date()) throws {
+        guard !dogIDs.isEmpty else { throw WalkError.missingDog }
+        if let durationSeconds {
+            guard durationSeconds.isFinite, durationSeconds > 0,
+                  durationSeconds <= 86_400 else { throw WalkError.invalidDuration }
+        }
+        // A walk cannot end in the future.
+        if let endedAt, endedAt > now { throw WalkError.invalidDuration }
+        let cleanNote = note.trimmingCharacters(in: .whitespacesAndNewlines)
+        guard cleanNote.count <= 500 else { throw WalkError.noteTooLong }
+        self.dogIDs = Array(Set(dogIDs)).sorted { $0.uuidString < $1.uuidString }
+        self.note = cleanNote
+        self.durationSeconds = durationSeconds
+        self.endedAt = endedAt
+    }
+
+    /// Whether this correction changes the measured part of a walk.
+    public var touchesTiming: Bool { durationSeconds != nil || endedAt != nil }
+}
+
 public struct LocationFix: Codable, Equatable, Sendable {
     public let latitude: Double
     public let longitude: Double

@@ -78,6 +78,10 @@ final class WalkRecord {
     var revision: Int
     var lastCheckpointAt: Date
     var note: String
+    /// Set when the person corrects a finished walk (PRD F05: corrections stay
+    /// identified). Nil for a walk as recorded or entered. Optional with a nil
+    /// default, so the V3 to V4 lightweight stage fills existing rows.
+    var correctedAt: Date? = nil
 
     init(id: UUID = UUID(),
          startedAt: Date,

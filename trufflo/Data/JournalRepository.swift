@@ -234,6 +234,46 @@ struct JournalRepository {
         }
     }
 
+    /// Applies a correction to a finished walk and marks it corrected (PRD F05).
+    ///
+    /// A recorded walk refuses a timing change: its duration and end are
+    /// measured. The participants are replaced, each new one taking the dog's
+    /// current name as its snapshot; a participant whose profile was deleted
+    /// keeps its historical name if it stays on the walk.
+    func correctWalk(_ id: UUID, with correction: WalkCorrection, at now: Date = Date()) throws {
+        guard let walk = requireWalk(id), walk.phase == .completed else {
+            throw JournalError.walkMissing
+        }
+        if walk.source != .manual && correction.touchesTiming { throw WalkError.invalidTransition }
+        let current = try links(walkID: id)
+        var snapshots: [UUID: String] = [:]
+        for link in current { snapshots[link.dogID] = link.dogNameSnapshot }
+        for dogID in correction.dogIDs where snapshots[dogID] == nil {
+            guard let dog = requireDog(dogID) else { throw JournalError.profileMissing }
+            snapshots[dogID] = dog.name
+        }
+        try commit {
+            for link in current where !correction.dogIDs.contains(link.dogID) {
+                context.delete(link)
+            }
+            let kept = Set(current.map(\.dogID))
+            for dogID in correction.dogIDs where !kept.contains(dogID) {
+                context.insert(WalkDogRecord(walkID: id, dogID: dogID, dogNameSnapshot: snapshots[dogID] ?? ""))
+            }
+            if walk.source == .manual {
+                let duration = correction.durationSeconds ?? walk.confirmedSeconds
+                let end = correction.endedAt ?? walk.endedAt ?? now
+                walk.confirmedSeconds = duration
+                walk.endedAt = end
+                walk.startedAt = end.addingTimeInterval(-duration)
+                walk.lastCheckpointAt = walk.startedAt
+            }
+            walk.note = correction.note
+            walk.correctedAt = now
+            walk.revision += 1
+        }
+    }
+
     /// Removes the walk, its participations and its recorded points in one
     /// transaction. Nothing is left behind pointing at a walk that no longer exists.
     func deleteWalk(_ id: UUID) throws {

@@ -5,6 +5,8 @@ import SwiftUI
 /// summed, no target is shown.
 struct JournalTimelineView: View {
     let walks: [WalkRecord]
+    /// Shown instead of the week sentence when the list is filtered.
+    var filterSummary: String? = nil
     let rowDestination: (UUID) -> WalkRoute
 
     @Environment(\.calendar) private var calendar
@@ -13,7 +15,7 @@ struct JournalTimelineView: View {
     var body: some View {
         ScrollView {
             LazyVStack(alignment: .leading, spacing: TruffloTheme.Spacing.medium) {
-                if let sentence = weekSentence {
+                if let sentence = filterSummary ?? weekSentence {
                     Text(sentence)
                         .font(.subheadline)
                         .foregroundStyle(Color.truffloSlate)

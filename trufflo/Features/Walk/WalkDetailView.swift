@@ -17,6 +17,7 @@ struct WalkDetailView: View {
 
     @State private var showDeleteConfirmation = false
     @State private var routeFile: SharedFile?
+    @State private var showCorrection = false
     @State private var storageError: String?
     /// A finished walk is framed once and never chases the camera afterwards.
     @State private var isFollowingTrack = false
@@ -116,6 +117,21 @@ struct WalkDetailView: View {
                             WalkFactRow("Fin de la balade",
                                         walk.endedAt.map(WalkFormatting.relativeDayAndTime) ?? "En cours")
                         }
+                        if let correctedAt = walk.correctedAt {
+                            WalkFactRow("Corrigée", WalkFormatting.relativeDayAndTime(correctedAt))
+                        }
+                    }
+
+                    if walk.phase == .completed {
+                        Button {
+                            showCorrection = true
+                        } label: {
+                            Label("Corriger la balade", systemImage: "pencil")
+                                .font(.subheadline.weight(.semibold))
+                                .foregroundStyle(Color.truffloForest)
+                                .frame(minHeight: 44, alignment: .leading)
+                        }
+                        .accessibilityIdentifier("walk.correct")
                     }
 
                     if walk.source != .manual && trackCoordinates.count >= 2 {
@@ -155,6 +171,10 @@ struct WalkDetailView: View {
         .ignoresSafeArea(edges: hasMap ? .top : [])
         .toolbarBackgroundVisibility(hasMap ? .hidden : .automatic, for: .navigationBar)
         .navigationTitle(hasMap ? "" : "Balade")
+        .sheet(isPresented: $showCorrection) {
+            WalkCorrectionView(walk: walk, participants: participants,
+                               existingDogIDs: Set(dogs.map(\.id)))
+        }
         .sheet(item: $routeFile) { file in
             ShareSheet(items: [file.url])
                 .presentationDetents([.medium, .large])

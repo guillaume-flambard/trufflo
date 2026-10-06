@@ -170,6 +170,42 @@ private func seedLegacyV2Store(at storeURL: URL) throws {
     #expect(try context.fetch(FetchDescriptor<TrackPointRecord>()).count == 1)
 }
 
+/// A store written by builds before walk corrections (V3, with the dog profile
+/// fields) must open, keep the profile and the walks, and read every walk as
+/// never corrected.
+@Test @MainActor func aV3StoreOpensWithEveryWalkUncorrected() throws {
+    let directory = try makeV1StoreDirectory()
+    defer { try? FileManager.default.removeItem(at: directory) }
+    let storeURL = directory.appending(path: "TruffloMigration.store")
+    do {
+        var writer: ModelContainer? = try PersistenceFactory.makeFixtureStore(
+            versioned: SchemaV3.self, at: storeURL)
+        let context = try #require(writer?.mainContext)
+        let dog = FrozenV3.DogRecord(name: "Oslo", breedKind: "mixed", ageDescription: "3 ans",
+                                     gender: "male", preferencesNote: "Tire en laisse",
+                                     photoData: Data([1, 2, 3]))
+        let walk = FrozenV1V2.WalkRecord.manual(endedAt: Date(timeIntervalSince1970: 7_000),
+                                                durationSeconds: 1200, note: "Parc")
+        context.insert(dog)
+        context.insert(walk)
+        context.insert(FrozenV1V2.WalkDogRecord(walkID: walk.id, dogID: dog.id, dogNameSnapshot: "Oslo"))
+        try context.save()
+        writer = nil
+    }
+
+    let container = try PersistenceFactory.makeMigrated(at: storeURL)
+    let context = ModelContext(container)
+    let dogs = try context.fetch(FetchDescriptor<DogRecord>())
+    #expect(dogs.count == 1)
+    #expect(dogs[0].ageDescription == "3 ans")
+    #expect(dogs[0].preferencesNote == "Tire en laisse")
+    #expect(dogs[0].photoData == Data([1, 2, 3]))
+    let walks = try context.fetch(FetchDescriptor<WalkRecord>())
+    #expect(walks.count == 1)
+    #expect(walks[0].confirmedSeconds == 1200)
+    #expect(walks[0].correctedAt == nil)
+}
+
 /// The tripwire for unversioned model edits (ADR-008). The live classes are
 /// the current schema; if anyone adds, removes or renames a persisted property
 /// without freezing the previous shape and adding a version, this dump changes
@@ -188,7 +224,7 @@ private func seedLegacyV2Store(at storeURL: URL) throws {
     let expected = "DogRecord{ageDescription,breedKind,breedLabel,createdAt,gender,id,name,photoData,preferencesNote}"
         + " | TrackPointRecord{horizontalAccuracy,id,latitude,longitude,segment,sequence,timestamp,walkID}"
         + " | WalkDogRecord{dogID,dogNameSnapshot,id,walkID}"
-        + " | WalkRecord{confirmedSeconds,endedAt,id,lastCheckpointAt,measuredEdgeCount,note,phaseRaw,qualityRaw,recordedPathMeters,revision,sourceRaw,startedAt,trackSegmentCount}"
+        + " | WalkRecord{confirmedSeconds,correctedAt,endedAt,id,lastCheckpointAt,measuredEdgeCount,note,phaseRaw,qualityRaw,recordedPathMeters,revision,sourceRaw,startedAt,trackSegmentCount}"
 
     #expect(dump == expected, "CurrentSchema changed. Freeze the previous shape in TruffloSchemas.swift, add a schema version and stage, then update this expectation. Actual dump: \(dump)")
 }

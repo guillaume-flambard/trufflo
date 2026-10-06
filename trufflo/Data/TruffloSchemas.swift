@@ -144,6 +144,38 @@ enum FrozenV1V2 {
     }
 }
 
+/// The V3 shape as builds up to the walk corrections wrote it: the dog with its
+/// profile fields, and a walk without `correctedAt`. Walk, link and point are
+/// unchanged from V2, so V3 reuses those frozen types.
+enum FrozenV3 {
+    @Model
+    final class DogRecord {
+        @Attribute(.unique) var id: UUID
+        var name: String
+        var breedKind: String
+        var breedLabel: String
+        var ageDescription: String = ""
+        var gender: String = "unspecified"
+        var preferencesNote: String = ""
+        @Attribute(.externalStorage) var photoData: Data?
+        var createdAt: Date
+
+        init(id: UUID = UUID(), name: String, breedKind: String, breedLabel: String = "",
+             ageDescription: String = "", gender: String = "unspecified",
+             preferencesNote: String = "", photoData: Data? = nil) {
+            self.id = id
+            self.name = name
+            self.breedKind = breedKind
+            self.breedLabel = breedLabel
+            self.ageDescription = ageDescription
+            self.gender = gender
+            self.preferencesNote = preferencesNote
+            self.photoData = photoData
+            self.createdAt = .now
+        }
+    }
+}
+
 /// V1 is the first frozen shape: the journal with session fields, no track table.
 enum SchemaV1: VersionedSchema {
     static let versionIdentifier = Schema.Version(1, 0, 0)
@@ -164,11 +196,21 @@ enum SchemaV2: VersionedSchema {
     }
 }
 
-/// V3 is the current version and references the live classes: it gains the dog
-/// profile fields. Until the next model change, stores written by any current
-/// build open as V3.
+/// V3 gains the dog profile fields. Frozen at the shape written by builds up to
+/// the walk corrections.
 enum SchemaV3: VersionedSchema {
     static let versionIdentifier = Schema.Version(3, 0, 0)
+    static var models: [any PersistentModel.Type] {
+        [FrozenV3.DogRecord.self, FrozenV1V2.WalkRecord.self,
+         FrozenV1V2.WalkDogRecord.self, FrozenV1V2.TrackPointRecord.self]
+    }
+}
+
+/// V4 is the current version and references the live classes: a walk gains
+/// `correctedAt`. Until the next model change, stores written by any current
+/// build open as V4.
+enum SchemaV4: VersionedSchema {
+    static let versionIdentifier = Schema.Version(4, 0, 0)
     static var models: [any PersistentModel.Type] {
         [DogRecord.self, WalkRecord.self, WalkDogRecord.self, TrackPointRecord.self]
     }
@@ -176,18 +218,19 @@ enum SchemaV3: VersionedSchema {
 
 enum TruffloMigrationPlan: SchemaMigrationPlan {
     static var schemas: [any VersionedSchema.Type] {
-        [SchemaV1.self, SchemaV2.self, SchemaV3.self]
+        [SchemaV1.self, SchemaV2.self, SchemaV3.self, SchemaV4.self]
     }
 
     static var stages: [MigrationStage] {
         [
             .lightweight(fromVersion: SchemaV1.self, toVersion: SchemaV2.self),
             .lightweight(fromVersion: SchemaV2.self, toVersion: SchemaV3.self),
+            .lightweight(fromVersion: SchemaV3.self, toVersion: SchemaV4.self),
         ]
     }
 }
 
 enum CurrentSchema {
-    static let versioned = SchemaV3.self
-    static var schema: Schema { Schema(versionedSchema: SchemaV3.self) }
+    static let versioned = SchemaV4.self
+    static var schema: Schema { Schema(versionedSchema: SchemaV4.self) }
 }

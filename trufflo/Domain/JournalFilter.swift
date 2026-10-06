@@ -1,0 +1,46 @@
+import Foundation
+
+/// The journal's filter by dog and by period (PRD F05). Pure, so the rule that
+/// decides what a filtered journal shows is tested without any screen.
+public struct JournalFilter: Equatable, Sendable {
+    public enum Period: String, CaseIterable, Sendable {
+        case all, lastSevenDays, lastThirtyDays, thisYear
+
+        public var label: String {
+            switch self {
+            case .all: "Tout"
+            case .lastSevenDays: "7 derniers jours"
+            case .lastThirtyDays: "30 derniers jours"
+            case .thisYear: "Cette année"
+            }
+        }
+    }
+
+    /// Nil means every dog.
+    public var dogID: UUID?
+    public var period: Period
+
+    public init(dogID: UUID? = nil, period: Period = .all) {
+        self.dogID = dogID
+        self.period = period
+    }
+
+    public var isActive: Bool { dogID != nil || period != .all }
+
+    /// Whether a walk that ended at `date`, with these dogs, belongs in the
+    /// filtered journal. A walk with several dogs matches each of them.
+    public func includes(date: Date, dogIDs: Set<UUID>, now: Date = Date(),
+                         calendar: Calendar = .current) -> Bool {
+        if let dogID, !dogIDs.contains(dogID) { return false }
+        switch period {
+        case .all:
+            return true
+        case .lastSevenDays:
+            return date >= now.addingTimeInterval(-7 * 24 * 3600)
+        case .lastThirtyDays:
+            return date >= now.addingTimeInterval(-30 * 24 * 3600)
+        case .thisYear:
+            return calendar.isDate(date, equalTo: now, toGranularity: .year)
+        }
+    }
+}
