@@ -297,6 +297,13 @@ final class StarterUITests: XCTestCase {
             qualityRow.waitForExistence(timeout: 5),
             "AC-013 : la fiche source doit afficher la qualité de mesure dans le détail"
         )
+        // The detail is a lazy List: with the map and the measures above it, the
+        // note sits under the fold and is not in the hierarchy until scrolled to.
+        var scrolls = 0
+        while !app.staticTexts["Balade au parc."].exists && scrolls < 4 {
+            app.swipeUp()
+            scrolls += 1
+        }
         XCTAssertTrue(
             app.staticTexts["Balade au parc."].waitForExistence(timeout: 5),
             "AC-022 : la note saisie au bilan doit être lisible dans le détail"
