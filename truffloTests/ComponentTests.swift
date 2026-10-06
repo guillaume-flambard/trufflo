@@ -19,6 +19,16 @@ struct ComponentTests {
         }
     }
 
+    @Test("The last onboarding button does what it says (A-AC-03, A-AC-04)")
+    func testOnboardingExit() {
+        // No dog: the button promises the form, and the root opens it.
+        #expect(OnboardingExit(hasDogs: false) == .addFirstDog)
+        #expect(OnboardingExit(hasDogs: false).buttonTitle == "Ajouter mon chien")
+        // Replayed with a dog already there: it only closes, and is named so.
+        #expect(OnboardingExit(hasDogs: true) == .close)
+        #expect(OnboardingExit(hasDogs: true).buttonTitle == "Terminer")
+    }
+
     @Test("Every badge style paints an opaque chip")
     func testBadgeStylesPaint() {
         for style in [TruffloBadge.Style.forest, .sage, .peach, .sky, .sand] {

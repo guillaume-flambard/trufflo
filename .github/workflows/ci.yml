@@ -46,12 +46,15 @@ jobs:
 
       - name: Unit tests
         run: |
+          # Without pipefail, tee's exit code hides xcodebuild's.
+          set -euo pipefail
           xcodebuild test-without-building \
             -scheme trufflo -testPlan TruffloFast \
             -destination "platform=iOS Simulator,name=${{ steps.device.outputs.device }}" \
             | tee unit.log
-          # xcodebuild exits 0 when it ran nothing, so read the summary line.
-          grep -qE "Test run with [0-9]+ tests.*passed" unit.log
+          # xcodebuild exits 0 when it ran nothing, so read the summary line,
+          # and require at least one test: "with 0 tests ... passed" is not a pass.
+          grep -qE "Test run with [1-9][0-9]* tests.*passed" unit.log
 
       - name: Upload unit log
         if: always()

@@ -42,6 +42,7 @@ struct StarterRootView: View {
     @State private var storageError = false
     @AppStorage("hasCompletedOnboarding") private var hasCompletedOnboarding = false
     @State private var showOnboardingSheet = false
+    @State private var openDogFormAfterOnboarding = false
     @State private var startBlock: LocationBlock?
     @State private var exportFile: SharedFile?
     @State private var showWhoIsWalking = false
@@ -208,9 +209,18 @@ struct StarterRootView: View {
                 ActiveWalkView(modelContainer: context.container, dogIDs: dogIDs)
             }
         }
-        .fullScreenCover(isPresented: $showOnboardingSheet) {
-            OnboardingView {
+        .fullScreenCover(isPresented: $showOnboardingSheet, onDismiss: {
+            // The form opens once the cover is gone: presenting a sheet while
+            // the cover is still on screen is dropped by SwiftUI.
+            if openDogFormAfterOnboarding {
+                openDogFormAfterOnboarding = false
+                showDogForm = true
+            }
+        }) {
+            let exit = OnboardingExit(hasDogs: !dogs.isEmpty)
+            OnboardingView(exit: exit) { tookFinalAction in
                 hasCompletedOnboarding = true
+                openDogFormAfterOnboarding = tookFinalAction && exit == .addFirstDog
                 showOnboardingSheet = false
             }
         }
@@ -219,6 +229,7 @@ struct StarterRootView: View {
                 showOnboardingSheet = true
             }
             #if DEBUG
+            if ProcessInfo.processInfo.arguments.contains("--show-onboarding") { showOnboardingSheet = true }
             if ProcessInfo.processInfo.arguments.contains("--open-household") { showHousehold = true }
             #endif
         }

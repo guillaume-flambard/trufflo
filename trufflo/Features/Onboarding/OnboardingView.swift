@@ -26,18 +26,41 @@ public struct OnboardingStep: Identifiable, Sendable {
     ]
 }
 
+/// What the last button of the introduction does. With no dog yet it leads
+/// straight to the form, so its label is a promise kept; replayed from the
+/// settings with a dog already there, it only closes, and says so.
+public enum OnboardingExit: Equatable, Sendable {
+    case addFirstDog
+    case close
+
+    public init(hasDogs: Bool) { self = hasDogs ? .close : .addFirstDog }
+
+    public var buttonTitle: String {
+        switch self {
+        case .addFirstDog: "Ajouter mon chien"
+        case .close: "Terminer"
+        }
+    }
+}
+
 /// Three pages, three compositions: the route on forest, the journal as an
 /// object, the device as the place the data lives. The last button leads
 /// straight to the next action rather than to a generic "Start".
 @MainActor
 public struct OnboardingView: View {
     private let steps: [OnboardingStep]
-    private let onComplete: () -> Void
+    private let exit: OnboardingExit
+    /// `true` when the person pressed the last button, `false` when they skipped:
+    /// skipping the introduction is not asking to add a dog.
+    private let onComplete: (_ tookFinalAction: Bool) -> Void
 
     @State private var currentStep = 0
 
-    public init(steps: [OnboardingStep] = OnboardingStep.defaultSteps, onComplete: @escaping () -> Void) {
+    public init(steps: [OnboardingStep] = OnboardingStep.defaultSteps,
+                exit: OnboardingExit = .addFirstDog,
+                onComplete: @escaping (_ tookFinalAction: Bool) -> Void) {
         self.steps = steps
+        self.exit = exit
         self.onComplete = onComplete
     }
 
@@ -59,7 +82,7 @@ public struct OnboardingView: View {
 
             HStack {
                 Spacer()
-                Button("Passer", action: onComplete)
+                Button("Passer") { onComplete(false) }
                     .font(.body.weight(.semibold))
                     .foregroundStyle(isFirst ? Color.truffloMint : Color.truffloForest)
                     .frame(minHeight: 44)
@@ -81,9 +104,9 @@ public struct OnboardingView: View {
                 .accessibilityLabel("Page \(currentStep + 1) sur \(steps.count)")
 
                 Button {
-                    if isLast { onComplete() } else { withAnimation { currentStep += 1 } }
+                    if isLast { onComplete(true) } else { withAnimation { currentStep += 1 } }
                 } label: {
-                    Text(isLast ? "Ajouter mon chien" : "Suivant")
+                    Text(isLast ? exit.buttonTitle : "Suivant")
                         .font(.headline)
                         .foregroundStyle(isFirst ? Color.truffloForest : Color.white)
                         .frame(maxWidth: .infinity, minHeight: 56)
