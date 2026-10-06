@@ -60,7 +60,32 @@ struct DogDetailView: View {
     private func content(for dog: DogRecord) -> some View {
         ScrollView {
             VStack(alignment: .leading, spacing: 0) {
-                TruffloDogHero(name: dog.name, photoData: dog.photoData)
+                if dog.photoData != nil {
+                    TruffloDogHero(name: dog.name, photoData: dog.photoData)
+                } else {
+                    // No photo, no giant initial standing in for one: the name
+                    // leads, and adding the photo is one tap away.
+                    VStack(alignment: .leading, spacing: TruffloTheme.Spacing.small) {
+                        Text(dog.name)
+                            .font(.system(.largeTitle, design: .rounded, weight: .heavy))
+                            .foregroundStyle(Color.truffloForest)
+                            .accessibilityAddTraits(.isHeader)
+                        Button {
+                            showEdit = true
+                        } label: {
+                            Label("Ajouter une photo", systemImage: "camera")
+                                .font(.subheadline.weight(.semibold))
+                                .padding(.horizontal, TruffloTheme.Spacing.medium)
+                                .frame(minHeight: 44)
+                                .background(Color.truffloMint.opacity(0.5), in: Capsule())
+                        }
+                        .buttonStyle(.plain)
+                        .foregroundStyle(Color.truffloForest)
+                        .accessibilityIdentifier("dog.addPhoto")
+                    }
+                    .padding(.horizontal, TruffloTheme.Spacing.large)
+                    .padding(.top, TruffloTheme.Spacing.medium)
+                }
 
                 VStack(alignment: .leading, spacing: TruffloTheme.Spacing.large) {
                     identity(of: dog)
@@ -108,7 +133,8 @@ struct DogDetailView: View {
                 .padding(.bottom, TruffloTheme.Spacing.xLarge)
             }
         }
-        .ignoresSafeArea(edges: .top)
+        // Edge to edge only under a photo; a page without one starts below the bar.
+        .ignoresSafeArea(edges: dog.photoData == nil ? [] : .top)
         .sheet(isPresented: $showEdit) { DogFormView(profile: dog) }
         .sheet(isPresented: $showRoutine) {
             RoutineFormView(dogID: dog.id, dogName: dog.name, current: routines.first?.routine)

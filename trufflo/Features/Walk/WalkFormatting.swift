@@ -42,16 +42,19 @@ enum WalkFormatting {
 
     private static let french = Locale(identifier: "fr_FR")
 
-    /// "Balade du matin", "Balade du soir": a name from the time of day, the way
-    /// an activity feed names an outing. Descriptive, never a judgement.
-    static func activityTitle(_ date: Date) -> String {
-        switch Calendar.current.component(.hour, from: date) {
-        case 5..<12: "Balade du matin"
-        case 12..<14: "Balade de midi"
-        case 14..<18: "Balade de l'après-midi"
-        case 18..<22: "Balade du soir"
-        default: "Balade de nuit"
-        }
+    /// "18:42". The journal's margin: the hour is where a walk sits in the
+    /// day, not a name invented for it ("Balade du soir" was removed on
+    /// 2026-10-06: repeated down a feed, it read as a template).
+    static func time(_ date: Date) -> String {
+        date.formatted(.dateTime.hour().minute().locale(french))
+    }
+
+    /// "aujourd'hui", "hier", then "mardi 6 oct.".
+    static func relativeDay(_ date: Date) -> String {
+        let calendar = Calendar.current
+        if calendar.isDateInToday(date) { return "aujourd'hui" }
+        if calendar.isDateInYesterday(date) { return "hier" }
+        return date.formatted(.dateTime.weekday(.wide).day().month().locale(french))
     }
 
     /// "42 min" under an hour, "1 h 08" above. Rounded to the minute, which is

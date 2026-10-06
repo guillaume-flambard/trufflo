@@ -69,35 +69,38 @@ struct WalkDetailView: View {
                 }
 
                 VStack(alignment: .leading, spacing: TruffloTheme.Spacing.large) {
-                    VStack(alignment: .leading, spacing: TruffloTheme.Spacing.small) {
-                        HStack(spacing: TruffloTheme.Spacing.small) {
-                            TruffloDogPortrait(name: names.first ?? "?", photoData: leadDog?.photoData, diameter: 40)
-                            VStack(alignment: .leading, spacing: 0) {
-                                if names.isEmpty {
-                                    Text("Aucun chien associé à cette balade.")
-                                        .font(.subheadline)
-                                        .foregroundStyle(Color.truffloSlate)
-                                } else {
-                                    Text(names.formatted(.list(type: .and).locale(Locale(identifier: "fr_FR"))))
-                                        .font(.subheadline.weight(.semibold))
-                                        .foregroundStyle(Color.truffloCharcoal)
-                                }
-                                Text(walk.source == .manual
-                                     ? "\(WalkFormatting.relativeDayAndTime(date)), saisie manuelle"
-                                     : WalkFormatting.relativeDayAndTime(date))
-                                    .font(.footnote)
+                    HStack(alignment: .top, spacing: TruffloTheme.Spacing.medium) {
+                        VStack(alignment: .leading, spacing: TruffloTheme.Spacing.xxSmall) {
+                            // The dogs are the title; the hour is a fact, not a name.
+                            Text(names.isEmpty ? "Balade" : names.formatted(.list(type: .and).locale(Locale(identifier: "fr_FR"))))
+                                .font(.system(.title, design: .rounded, weight: .heavy))
+                                .foregroundStyle(Color.truffloForest)
+                                .fixedSize(horizontal: false, vertical: true)
+                            Text(walk.source == .manual
+                                 ? "\(WalkFormatting.relativeDayAndTime(date).capitalizedFirst), saisie manuelle"
+                                 : WalkFormatting.relativeDayAndTime(date).capitalizedFirst)
+                                .font(.subheadline)
+                                .foregroundStyle(Color.truffloSlate)
+                            if names.isEmpty {
+                                Text("Aucun chien associé à cette balade.")
+                                    .font(.subheadline)
                                     .foregroundStyle(Color.truffloSlate)
                             }
                         }
-                        Text(WalkFormatting.activityTitle(date))
-                            .font(.system(.title, design: .rounded, weight: .heavy))
-                            .foregroundStyle(Color.truffloForest)
+                        Spacer(minLength: 0)
+                        // A face only when there is a photo: no initial on a disc.
+                        if let photo = leadDog?.photoData {
+                            TruffloDogPortrait(name: names.first ?? "", photoData: photo, diameter: 56)
+                        }
                     }
 
+                    // An absent distance is not a figure: it is said in the
+                    // facts below, never set in large type next to the duration.
                     TruffloStatRow {
                         TruffloStat("Durée", value: WalkFormatting.minutes(walk.confirmedSeconds))
-                        TruffloStat("Distance", value: WalkFormatting.distance(walk.recordedPathMeters),
-                                    dimmed: walk.recordedPathMeters == nil)
+                        if let meters = walk.recordedPathMeters {
+                            TruffloStat("Distance", value: WalkFormatting.distance(meters))
+                        }
                     }
 
                     if !walk.note.isEmpty {
@@ -111,6 +114,9 @@ struct WalkDetailView: View {
 
                     VStack(alignment: .leading, spacing: 0) {
                         WalkFactRow("Mesure", WalkFormatting.quality(walk.quality))
+                        if walk.recordedPathMeters == nil {
+                            WalkFactRow("Distance", "Non mesurée")
+                        }
                         if walk.source != .manual, let endedAt = walk.endedAt {
                             WalkFactRow("Départ et retour", WalkFormatting.timeRange(walk.startedAt, endedAt))
                         } else {

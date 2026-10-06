@@ -128,10 +128,13 @@ struct WalkCorrectionView: View {
             if isOn { selectedDogs.remove(id) } else { selectedDogs.insert(id) }
         } label: {
             HStack(spacing: TruffloTheme.Spacing.xSmall) {
-                TruffloDogPortrait(name: name, photoData: photo, diameter: 32)
+                // A face only when there is a photo: no initial on a disc.
+                if let face = photo {
+                    TruffloDogPortrait(name: name, photoData: face, diameter: 32)
+                }
                 Text(name).font(.subheadline.weight(.semibold))
             }
-            .padding(.leading, 6)
+            .padding(.leading, photo == nil ? 16 : 6)
             .padding(.trailing, 16)
             .frame(minHeight: 44)
             .foregroundStyle(isOn ? Color.white : Color.truffloCharcoal)

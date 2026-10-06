@@ -83,11 +83,11 @@ struct WalkSummaryView: View {
 
                 VStack(alignment: .leading, spacing: TruffloTheme.Spacing.large) {
                     VStack(alignment: .leading, spacing: TruffloTheme.Spacing.xxSmall) {
-                        Text(title)
+                        Text("Balade terminée")
                             .font(.subheadline.weight(.semibold))
-                            .foregroundStyle(Color.truffloCharcoal)
-                        Text(WalkFormatting.activityTitle(walk.endedAt ?? walk.startedAt))
-                            .font(.system(.title, design: .rounded, weight: .bold))
+                            .foregroundStyle(Color.truffloSage)
+                        Text(title)
+                            .font(.system(.title, design: .rounded, weight: .heavy))
                             .foregroundStyle(Color.truffloForest)
                         if let endedAt = walk.endedAt {
                             Text(WalkFormatting.dayAndTime(endedAt))
@@ -156,16 +156,19 @@ struct WalkSummaryView: View {
                             isFollowing: $isFollowingTrack)
                 .frame(height: 340)
                 .accessibilityIdentifier("walk.summary.map")
-        } else {
+        } else if let photo = leadDog?.photoData {
             let name = dogNames.first ?? "Balade"
-            TruffloDogHero(name: name, photoData: leadDog?.photoData, height: 340)
+            TruffloDogHero(name: name, photoData: photo, height: 340)
+        } else {
+            // No route and no photo: no stand-in. The page opens on the words.
+            Color.clear.frame(height: TruffloTheme.Spacing.large)
         }
     }
 
     private var title: String {
         dogNames.isEmpty
             ? "Balade"
-            : "Balade avec " + dogNames.formatted(.list(type: .and).locale(Locale(identifier: "fr_FR")))
+            : dogNames.formatted(.list(type: .and).locale(Locale(identifier: "fr_FR")))
     }
 
     /// The first participant still on the device. A deleted profile leaves its name

@@ -62,24 +62,39 @@ struct WhoIsWalkingSheet: View {
             if isOn { selected.remove(dog.id) } else { selected.insert(dog.id) }
         } label: {
             VStack(spacing: TruffloTheme.Spacing.xSmall) {
-                TruffloDogPortrait(name: dog.name, photoData: dog.photoData, diameter: 76)
-                    .overlay(Circle().strokeBorder(isOn ? Color.truffloForest : Color.clear, lineWidth: 3))
-                    .overlay(alignment: .bottomTrailing) {
-                        Image(systemName: isOn ? "checkmark.circle.fill" : "circle")
-                            .font(.title3)
-                            .foregroundStyle(isOn ? Color.truffloForest : Color.truffloSlate)
-                            .background(Circle().fill(Color.truffloSand))
-                    }
-                    .opacity(isOn ? 1 : 0.55)
-                Text(dog.name)
-                    .font(.subheadline.weight(.semibold))
-                    .foregroundStyle(isOn ? Color.truffloForest : Color.truffloSlate)
-                    .lineLimit(1)
+                if let photo = dog.photoData {
+                    TruffloDogPortrait(name: dog.name, photoData: photo, diameter: 76)
+                        .overlay(Circle().strokeBorder(isOn ? Color.truffloForest : Color.clear, lineWidth: 3))
+                        .overlay(alignment: .bottomTrailing) { check(isOn) }
+                        .opacity(isOn ? 1 : 0.55)
+                    Text(dog.name)
+                        .font(.subheadline.weight(.semibold))
+                        .foregroundStyle(isOn ? Color.truffloForest : Color.truffloSlate)
+                        .lineLimit(1)
+                } else {
+                    // No photo: the name is the button, no initial on a disc.
+                    Text(dog.name)
+                        .font(.system(.title3, design: .rounded, weight: .heavy))
+                        .lineLimit(1)
+                        .minimumScaleFactor(0.7)
+                        .foregroundStyle(isOn ? Color.white : Color.truffloForest)
+                        .frame(width: 90, height: 76)
+                        .background(isOn ? Color.truffloForest : Color.truffloForest.opacity(0.08),
+                                    in: RoundedRectangle(cornerRadius: 22, style: .continuous))
+                        .overlay(alignment: .topTrailing) { check(isOn).offset(x: 6, y: -6) }
+                }
             }
             .frame(width: 90)
         }
         .buttonStyle(.plain)
         .accessibilityLabel(dog.name)
         .accessibilityAddTraits(isOn ? [.isButton, .isSelected] : .isButton)
+    }
+
+    private func check(_ isOn: Bool) -> some View {
+        Image(systemName: isOn ? "checkmark.circle.fill" : "circle")
+            .font(.title3)
+            .foregroundStyle(isOn ? Color.truffloForest : Color.truffloSlate)
+            .background(Circle().fill(Color.truffloSand))
     }
 }

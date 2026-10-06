@@ -3,9 +3,9 @@ import SwiftUI
 
 struct SharedWalkRoute: Hashable { let id: UUID }
 
-/// A walk recorded by another member, as a journal card. Same reading order
-/// as the person's own cards, with who recorded it said first. No silhouette
-/// and no note: neither ever reaches this iPhone.
+/// A walk recorded by another member, as a line of the timeline. Who
+/// recorded it is said in the meta line. No route and no note: neither ever
+/// reaches this iPhone.
 struct SharedWalkCard: View {
     let walk: SharedWalkRecord
     let authorName: String
@@ -16,52 +16,28 @@ struct SharedWalkCard: View {
         walk.dogNames.formatted(.list(type: .and).locale(Locale(identifier: "fr_FR")))
     }
     private var isGPS: Bool { walk.source != .manual }
+    private var figures: [String] {
+        var parts = [WalkFormatting.minutes(walk.confirmedSeconds)]
+        if isGPS, let meters = walk.recordedPathMeters { parts.append(WalkFormatting.distance(meters)) }
+        return parts
+    }
 
     var body: some View {
-        VStack(alignment: .leading, spacing: TruffloTheme.Spacing.small) {
-            HStack(spacing: TruffloTheme.Spacing.small) {
-                TruffloDogPortrait(name: names.isEmpty ? "?" : names, photoData: nil, diameter: 40)
-                VStack(alignment: .leading, spacing: 0) {
-                    Text(names.isEmpty ? "Balade" : names)
-                        .font(.subheadline.weight(.semibold))
-                        .foregroundStyle(Color.truffloCharcoal)
-                    Text("\(date.formatted(.dateTime.hour().minute().locale(Locale(identifier: "fr_FR")))), par \(authorName)")
-                        .font(.footnote)
-                        .foregroundStyle(Color.truffloSlate)
-                }
-            }
-            Text(WalkFormatting.activityTitle(date))
-                .font(.system(.title3, design: .rounded, weight: .bold))
-                .foregroundStyle(Color.truffloForest)
-            TruffloStatRow {
-                TruffloStat("Durée", value: WalkFormatting.minutes(walk.confirmedSeconds), style: .title2)
-                if isGPS, let meters = walk.recordedPathMeters {
-                    TruffloStat("Distance", value: WalkFormatting.distance(meters), style: .title2)
-                }
-            }
-            if possibleDuplicate {
-                Label("Peut-être la même sortie qu'une des vôtres", systemImage: "square.on.square")
-                    .font(.footnote)
-                    .foregroundStyle(Color.truffloSlate)
-            }
-        }
-        .padding(TruffloTheme.Spacing.medium)
-        .frame(maxWidth: .infinity, alignment: .leading)
-        .background(Color.white, in: RoundedRectangle(cornerRadius: TruffloTheme.Radius.card, style: .continuous))
-        .overlay(RoundedRectangle(cornerRadius: TruffloTheme.Radius.card, style: .continuous)
-            .strokeBorder(Color.truffloForest.opacity(0.08), lineWidth: 1))
-        .accessibilityElement(children: .ignore)
-        .accessibilityLabel(spokenLabel)
-        .accessibilityAddTraits(.isButton)
-        .accessibilityIdentifier("shared.row.\(walk.id.uuidString)")
+        TimelineRow(time: WalkFormatting.time(date),
+                    title: names.isEmpty ? "Balade" : names,
+                    meta: "Par \(authorName)",
+                    figures: figures,
+                    flag: possibleDuplicate ? "Peut-être la même sortie qu'une des vôtres" : nil)
+            .accessibilityElement(children: .ignore)
+            .accessibilityLabel(spokenLabel)
+            .accessibilityAddTraits(.isButton)
+            .accessibilityIdentifier("shared.row.\(walk.id.uuidString)")
     }
 
     private var spokenLabel: String {
-        var parts = [WalkFormatting.activityTitle(date), "enregistrée par \(authorName)"]
-        if !names.isEmpty { parts.append("avec \(names)") }
+        var parts = [names.isEmpty ? "Balade" : "Balade avec \(names)", "enregistrée par \(authorName)"]
         parts.append(WalkFormatting.dayAndTime(date))
-        parts.append(WalkFormatting.minutes(walk.confirmedSeconds))
-        if isGPS, let meters = walk.recordedPathMeters { parts.append(WalkFormatting.distance(meters)) }
+        parts.append(contentsOf: figures)
         if possibleDuplicate { parts.append("peut-être la même sortie qu'une des vôtres") }
         return parts.joined(separator: ", ")
     }
@@ -85,10 +61,11 @@ struct SharedWalkDetailView: View {
                 let author = members.first { $0.userID == walk.authorID }?.displayName ?? "un membre du foyer"
                 VStack(alignment: .leading, spacing: TruffloTheme.Spacing.large) {
                     VStack(alignment: .leading, spacing: TruffloTheme.Spacing.xxSmall) {
-                        Text(WalkFormatting.activityTitle(walk.endedAt))
-                            .font(.system(.title, design: .rounded, weight: .bold))
+                        Text(walk.dogNames.formatted(.list(type: .and).locale(Locale(identifier: "fr_FR"))))
+                            .font(.system(.title, design: .rounded, weight: .heavy))
                             .foregroundStyle(Color.truffloForest)
-                        Text("Enregistrée par \(author)").truffloSecondaryText()
+                        Text("\(WalkFormatting.relativeDayAndTime(walk.endedAt).capitalizedFirst), par \(author)")
+                            .truffloSecondaryText()
                     }
                     TruffloStatRow {
                         TruffloStat("Durée", value: WalkFormatting.minutes(walk.confirmedSeconds), style: .title)
@@ -97,10 +74,9 @@ struct SharedWalkDetailView: View {
                         }
                     }
                     VStack(alignment: .leading, spacing: 0) {
-                        WalkFactRow("Chiens", walk.dogNames.formatted(.list(type: .and).locale(Locale(identifier: "fr_FR"))))
                         WalkFactRow("Départ et retour", WalkFormatting.timeRange(walk.startedAt, walk.endedAt))
                         WalkFactRow("Mesure", WalkFormatting.quality(walk.quality))
-                        if walk.source != .manual && walk.recordedPathMeters == nil {
+                        if walk.recordedPathMeters == nil || walk.source == .manual {
                             WalkFactRow("Distance", "Non mesurée")
                         }
                         if let corrected = walk.correctedAt {

@@ -117,8 +117,9 @@ struct StarterRootView: View {
                             dogCard(dog)
                                 .background(NavigationLink(value: DogRoute(id: dog.id)) { EmptyView() }.opacity(0))
                             .listRowBackground(Color.clear)
-                            .listRowSeparator(.hidden)
-                            .listRowInsets(EdgeInsets(top: 6, leading: 16, bottom: 6, trailing: 16))
+                            .listRowSeparatorTint(Color.truffloForest.opacity(0.12))
+                            .listSectionSeparator(.hidden, edges: .top)
+                            .listRowInsets(EdgeInsets(top: 12, leading: 24, bottom: 12, trailing: 24))
                         }
                     }
                 }
@@ -372,17 +373,20 @@ struct StarterRootView: View {
 
     private var completedWalks: [WalkRecord] { walks.filter { $0.phase == .completed } }
 
-    /// A dog is a real object, so it is a card: face, name, declared facts, and
-    /// the number of walks shared with it. No ranking between dogs.
+    /// One dog per line: its face when there is a photo (no initial on a disc
+    /// otherwise), name, declared facts, and the number of walks shared with
+    /// it. No ranking between dogs.
     private func dogCard(_ dog: DogRecord) -> some View {
         let facts = [dog.breedKind != "unknown" ? dog.breedDescription : "", dog.ageDescription]
             .filter { !$0.isEmpty }.joined(separator: ", ")
         let count = walkCount(for: dog)
         return HStack(spacing: TruffloTheme.Spacing.medium) {
-            TruffloDogPortrait(name: dog.name, photoData: dog.photoData, diameter: 64)
+            if let photo = dog.photoData {
+                TruffloDogPortrait(name: dog.name, photoData: photo, diameter: 56)
+            }
             VStack(alignment: .leading, spacing: 2) {
                 Text(dog.name)
-                    .font(.system(.title3, design: .rounded, weight: .heavy))
+                    .font(.system(.title2, design: .rounded, weight: .heavy))
                     .foregroundStyle(Color.truffloForest)
                 if !facts.isEmpty {
                     Text(facts).font(.subheadline).foregroundStyle(Color.truffloSlate)
@@ -394,10 +398,7 @@ struct StarterRootView: View {
                 Text(count == 1 ? "balade" : "balades").font(.footnote).foregroundStyle(Color.truffloSlate)
             }
         }
-        .padding(14)
-        .background(Color.white, in: RoundedRectangle(cornerRadius: TruffloTheme.Radius.card, style: .continuous))
-        .overlay(RoundedRectangle(cornerRadius: TruffloTheme.Radius.card, style: .continuous)
-            .strokeBorder(Color.truffloForest.opacity(0.07), lineWidth: 1))
+        .contentShape(Rectangle())
         .accessibilityElement(children: .combine)
         .accessibilityIdentifier("dog.row.\(dog.id.uuidString)")
     }
@@ -445,16 +446,31 @@ struct StarterRootView: View {
                     .accessibilityIdentifier("today.routine")
             }
         }
-        if typeSize.isAccessibilitySize {
-            VStack(alignment: .leading, spacing: TruffloTheme.Spacing.small) {
-                TruffloDogPortrait(name: lead.name, photoData: lead.photoData, diameter: 88)
-                identity
+        if let photo = lead.photoData {
+            if typeSize.isAccessibilitySize {
+                VStack(alignment: .leading, spacing: TruffloTheme.Spacing.small) {
+                    TruffloDogPortrait(name: lead.name, photoData: photo, diameter: 88)
+                    identity
+                }
+            } else {
+                HStack(alignment: .center, spacing: TruffloTheme.Spacing.medium) {
+                    identity
+                    Spacer(minLength: 0)
+                    TruffloDogPortrait(name: lead.name, photoData: photo, diameter: 104)
+                }
             }
         } else {
-            HStack(alignment: .center, spacing: TruffloTheme.Spacing.medium) {
+            // No photo, no stand-in: the name carries the header, and the one
+            // thing that would change it is offered quietly.
+            VStack(alignment: .leading, spacing: TruffloTheme.Spacing.xSmall) {
                 identity
-                Spacer(minLength: 0)
-                TruffloDogPortrait(name: lead.name, photoData: lead.photoData, diameter: 104)
+                NavigationLink(value: DogRoute(id: lead.id)) {
+                    Label("Ajouter une photo de \(lead.name)", systemImage: "camera")
+                        .font(.subheadline.weight(.semibold))
+                        .foregroundStyle(Color.truffloForest)
+                }
+                .buttonStyle(.plain)
+                .accessibilityIdentifier("today.addPhoto")
             }
         }
     }

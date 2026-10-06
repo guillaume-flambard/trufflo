@@ -103,7 +103,9 @@ struct HouseholdView: View {
     @State private var joinLinks: [UUID: UUID?] = [:]
 
     private var dogFaces: [HouseholdBand.Face] {
-        dogs.prefix(3).map { .dog(name: $0.name, photo: $0.photoData) }
+        // Real faces only: a dog without a photo, or a person not yet known,
+        // gets no stand-in disc.
+        dogs.filter { $0.photoData != nil }.prefix(3).map { .dog(name: $0.name, photo: $0.photoData) }
     }
 
     // MARK: - Bottom action, one per state
@@ -221,7 +223,7 @@ struct HouseholdView: View {
         VStack(alignment: .leading, spacing: 0) {
             HouseholdBand(title: "Un journal, plusieurs promeneurs.",
                           subtitle: "Celles et ceux qui sortent vos chiens voient leurs balades, et vous les leurs.",
-                          faces: dogFaces + [.person("?"), .person("?")])
+                          faces: dogFaces)
             SharingTerms()
                 .padding(.horizontal, TruffloTheme.Spacing.large)
                 .padding(.top, TruffloTheme.Spacing.large)
@@ -234,7 +236,7 @@ struct HouseholdView: View {
         VStack(alignment: .leading, spacing: 0) {
             HouseholdBand(title: "Créer ou rejoindre.",
                           subtitle: "Un foyer à la fois. Vous pourrez le quitter quand vous voudrez.",
-                          faces: dogFaces + [.person("?")])
+                          faces: dogFaces)
             VStack(alignment: .leading, spacing: TruffloTheme.Spacing.medium) {
                 if let resumable {
                     ChoiceCard(icon: "arrow.uturn.backward.circle", title: "Reprendre « \(resumable.name) »",
@@ -297,7 +299,7 @@ struct HouseholdView: View {
         VStack(alignment: .leading, spacing: 0) {
             HouseholdBand(title: "Le code reçu.",
                           subtitle: "Valable sept jours, une seule fois.",
-                          faces: dogFaces + [.person("?")])
+                          faces: dogFaces)
             VStack(alignment: .leading, spacing: TruffloTheme.Spacing.large) {
                 FieldBlock(label: "Code d'invitation") {
                     TextField("Collez le code", text: $code)
@@ -336,12 +338,14 @@ struct HouseholdView: View {
                             MemberRow(name: member.displayName, role: member.role,
                                       isMe: member.userID == household.myUserID, tintIndex: index)
                             if index < members.count - 1 {
-                                Divider().padding(.leading, 64)
+                                Rectangle().fill(Color.truffloForest.opacity(0.1)).frame(height: 1)
+                                    .padding(.leading, 52)
                             }
                         }
                     }
-                    .padding(.vertical, TruffloTheme.Spacing.xxSmall)
-                    .background(Color.white, in: RoundedRectangle(cornerRadius: 20, style: .continuous))
+                    .overlay(alignment: .top) {
+                        Rectangle().fill(Color.truffloForest.opacity(0.1)).frame(height: 1)
+                    }
                 }
 
                 if household.myRole == .owner { inviteSection(household) }
@@ -419,9 +423,11 @@ struct HouseholdBand: View {
 
     var body: some View {
         VStack(alignment: .leading, spacing: TruffloTheme.Spacing.medium) {
-            faceRow
-                .padding(.top, TruffloTheme.Spacing.xSmall)
-                .accessibilityHidden(true)
+            if !faces.isEmpty || !(others ?? []).isEmpty {
+                faceRow
+                    .padding(.top, TruffloTheme.Spacing.xSmall)
+                    .accessibilityHidden(true)
+            }
             VStack(alignment: .leading, spacing: TruffloTheme.Spacing.xSmall) {
                 if let badge {
                     Text(badge)
@@ -522,8 +528,6 @@ private struct SharingTerms: View {
             column(icon: "lock.fill", tint: Color.truffloForest, title: "Reste sur cet iPhone",
                    items: ["Les tracés et les lieux", "Les notes de balade", "Les photos, le sexe et les préférences des chiens"])
         }
-        .padding(TruffloTheme.Spacing.medium)
-        .background(Color.white, in: RoundedRectangle(cornerRadius: 20, style: .continuous))
     }
 
     private func column(icon: String, tint: Color, title: String, items: [String]) -> some View {
@@ -578,11 +582,11 @@ private struct ChoiceCard: View {
                     .foregroundStyle(Color.truffloForest.opacity(0.4))
                     .padding(.top, 14)
             }
-            .padding(TruffloTheme.Spacing.medium)
-            .background(Color.white, in: RoundedRectangle(cornerRadius: 20, style: .continuous))
-            .overlay(RoundedRectangle(cornerRadius: 20, style: .continuous)
-                .strokeBorder(emphasized ? Color.truffloForest : Color.truffloForest.opacity(0.08),
-                              lineWidth: emphasized ? 2 : 1))
+            .padding(.vertical, TruffloTheme.Spacing.small)
+            .contentShape(Rectangle())
+            .overlay(alignment: .bottom) {
+                Rectangle().fill(Color.truffloForest.opacity(0.1)).frame(height: 1)
+            }
         }
         .buttonStyle(.plain)
         .accessibilityElement(children: .combine)
@@ -622,7 +626,6 @@ private struct MemberRow: View {
             TruffloBadge(role.label, style: role == .owner ? .forest : .sage)
                 .fixedSize()
         }
-        .padding(.horizontal, TruffloTheme.Spacing.medium)
         .padding(.vertical, TruffloTheme.Spacing.small)
         .accessibilityElement(children: .combine)
     }
@@ -764,19 +767,20 @@ private struct JoinDogsStep: View {
         VStack(alignment: .leading, spacing: 0) {
             HouseholdBand(title: "Qui est qui ?",
                           subtitle: subtitle,
-                          faces: localDogs.prefix(3).map { .dog(name: $0.name, photo: $0.photoData) },
-                          others: householdDogs.prefix(3).map { .dog(name: $0.name, photo: nil) })
+                          faces: localDogs.filter { $0.photoData != nil }.prefix(3).map { .dog(name: $0.name, photo: $0.photoData) })
             VStack(alignment: .leading, spacing: TruffloTheme.Spacing.medium) {
                 ForEach(localDogs) { dog in
                     VStack(alignment: .leading, spacing: TruffloTheme.Spacing.small) {
                         HStack(spacing: TruffloTheme.Spacing.small) {
-                            TruffloDogPortrait(name: dog.name, photoData: dog.photoData, diameter: 44)
+                            if let photo = dog.photoData {
+                                TruffloDogPortrait(name: dog.name, photoData: photo, diameter: 44)
+                            }
                             Text(dog.name)
                                 .font(.system(.title3, design: .rounded, weight: .bold))
                                 .foregroundStyle(Color.truffloForest)
                         }
-                        ScrollView(.horizontal, showsIndicators: false) {
-                            HStack(spacing: TruffloTheme.Spacing.xSmall) {
+                        WrappingRow(spacing: TruffloTheme.Spacing.xSmall) {
+                            Group {
                                 chip("Nouveau dans le foyer", isOn: (links[dog.id] ?? nil) == nil) {
                                     links[dog.id] = UUID?.none
                                 }
@@ -789,8 +793,10 @@ private struct JoinDogsStep: View {
                         }
                         .accessibilityIdentifier("household.link.\(dog.name)")
                     }
-                    .padding(TruffloTheme.Spacing.medium)
-                    .background(Color.white, in: RoundedRectangle(cornerRadius: 20, style: .continuous))
+                    .padding(.vertical, TruffloTheme.Spacing.small)
+                    .overlay(alignment: .bottom) {
+                        Rectangle().fill(Color.truffloForest.opacity(0.1)).frame(height: 1)
+                    }
                 }
                 if localDogs.isEmpty {
                     Text("Vous verrez les chiens du foyer dans le journal.")
@@ -823,6 +829,32 @@ private struct JoinDogsStep: View {
     }
 }
 
-private extension String {
-    var capitalizedFirst: String { prefix(1).uppercased() + dropFirst() }
+/// Lays its children out left to right and wraps to a new line when the
+/// next one does not fit, so a choice is never cut at the edge of the screen.
+struct WrappingRow: Layout {
+    var spacing: CGFloat = 8
+
+    func sizeThatFits(proposal: ProposedViewSize, subviews: Subviews, cache: inout ()) -> CGSize {
+        let width = proposal.width ?? .infinity
+        var x: CGFloat = 0, y: CGFloat = 0, line: CGFloat = 0, widest: CGFloat = 0
+        for view in subviews {
+            let size = view.sizeThatFits(.unspecified)
+            if x > 0, x + size.width > width { x = 0; y += line + spacing; line = 0 }
+            x += size.width + spacing
+            line = max(line, size.height)
+            widest = max(widest, x - spacing)
+        }
+        return CGSize(width: proposal.width ?? widest, height: y + line)
+    }
+
+    func placeSubviews(in bounds: CGRect, proposal: ProposedViewSize, subviews: Subviews, cache: inout ()) {
+        var x = bounds.minX, y = bounds.minY, line: CGFloat = 0
+        for view in subviews {
+            let size = view.sizeThatFits(.unspecified)
+            if x > bounds.minX, x + size.width > bounds.maxX { x = bounds.minX; y += line + spacing; line = 0 }
+            view.place(at: CGPoint(x: x, y: y), proposal: ProposedViewSize(size))
+            x += size.width + spacing
+            line = max(line, size.height)
+        }
+    }
 }

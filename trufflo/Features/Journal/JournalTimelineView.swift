@@ -1,7 +1,8 @@
 import SwiftUI
 
-/// The journal as an activity feed: one card per walk, newest first, grouped
-/// under a light day heading. A descriptive count opens the page; nothing is
+/// The journal as a timeline: one line per walk, newest first, grouped under
+/// a day heading. No card per walk: the day holds the lines, a hairline
+/// separates them. A descriptive count opens the page; nothing is
 /// summed, no target is shown.
 struct JournalTimelineView: View {
     let walks: [WalkRecord]
@@ -23,29 +24,36 @@ struct JournalTimelineView: View {
                         .foregroundStyle(Color.truffloSlate)
                 }
                 ForEach(days, id: \.start) { day in
-                    Text(heading(for: day.start))
-                        .font(.system(.headline, design: .rounded, weight: .bold))
-                        .foregroundStyle(Color.truffloForest)
-                        .padding(.top, TruffloTheme.Spacing.xSmall)
-                        .accessibilityAddTraits(.isHeader)
-                    ForEach(day.items) { item in
-                        switch item {
-                        case .own(let walk):
-                            NavigationLink(value: rowDestination(walk.id)) {
-                                WalkActivityCard(walk: walk, showsDay: false)
+                    VStack(alignment: .leading, spacing: 0) {
+                        Text(heading(for: day.start))
+                            .font(.system(.title3, design: .rounded, weight: .bold))
+                            .foregroundStyle(Color.truffloForest)
+                            .padding(.top, TruffloTheme.Spacing.small)
+                            .padding(.bottom, TruffloTheme.Spacing.xxSmall)
+                            .accessibilityAddTraits(.isHeader)
+                        ForEach(Array(day.items.enumerated()), id: \.element.id) { index, item in
+                            if index > 0 {
+                                Rectangle().fill(Color.truffloForest.opacity(0.1)).frame(height: 1)
+                                    .padding(.leading, 62)
                             }
-                            .buttonStyle(.plain)
-                        case .shared(let entry):
-                            NavigationLink(value: SharedWalkRoute(id: entry.walk.id)) {
-                                SharedWalkCard(walk: entry.walk, authorName: entry.authorName,
-                                               possibleDuplicate: entry.possibleDuplicate)
+                            switch item {
+                            case .own(let walk):
+                                NavigationLink(value: rowDestination(walk.id)) {
+                                    WalkActivityCard(walk: walk, showsDay: false)
+                                }
+                                .buttonStyle(.plain)
+                            case .shared(let entry):
+                                NavigationLink(value: SharedWalkRoute(id: entry.walk.id)) {
+                                    SharedWalkCard(walk: entry.walk, authorName: entry.authorName,
+                                                   possibleDuplicate: entry.possibleDuplicate)
+                                }
+                                .buttonStyle(.plain)
                             }
-                            .buttonStyle(.plain)
                         }
                     }
                 }
             }
-            .padding(.horizontal, TruffloTheme.Spacing.medium)
+            .padding(.horizontal, TruffloTheme.Spacing.large)
             .padding(.vertical, TruffloTheme.Spacing.small)
         }
     }

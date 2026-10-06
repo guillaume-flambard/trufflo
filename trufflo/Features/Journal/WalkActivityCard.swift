@@ -1,17 +1,17 @@
 import SwiftUI
 import SwiftData
 
-/// One walk as an activity card, the only card in the app because a walk is a
-/// real object: who and when, a name from the time of day, the figures, the
-/// route silhouette when there is one, the start of the note.
+/// One walk as a line of the journal's timeline: the hour in its own column,
+/// then who walked, how it was captured, and the figures. Rows sit on the
+/// page, separated by a hairline, not boxed in a card: the day is the
+/// container, the walk is a line in it.
 ///
-/// The card reads its own points and dogs, so a list renders only the cards on
-/// screen. A declared walk has no silhouette and no distance: it shows neither,
-/// rather than an empty field that looks like a route that failed to load.
+/// No face is drawn when there is no photo, and no title is invented from the
+/// hour: the dogs' names are the title, the hour is in the margin.
 struct WalkActivityCard: View {
     let walk: WalkRecord
-    /// The journal groups cards under a day heading, so its cards show the time
-    /// alone; elsewhere the card says which day.
+    /// The journal groups rows under a day heading, so its rows show the
+    /// hour alone; elsewhere the row also says which day.
     var showsDay = true
 
     @Query private var participants: [WalkDogRecord]
@@ -28,87 +28,125 @@ struct WalkActivityCard: View {
     }
 
     private var isGPS: Bool { walk.source != .manual }
-    private var whenText: String {
-        showsDay ? WalkFormatting.relativeDayAndTime(date)
-                 : date.formatted(.dateTime.hour().minute().locale(Locale(identifier: "fr_FR")))
-    }
     private var date: Date { walk.endedAt ?? walk.startedAt }
     private var names: String {
         participants.map(\.dogNameSnapshot).sorted()
             .formatted(.list(type: .and).locale(Locale(identifier: "fr_FR")))
     }
-    private var leadDog: DogRecord? {
+    private var leadPhoto: Data? {
         let ids = Set(participants.map(\.dogID))
-        return dogs.first { ids.contains($0.id) }
+        return dogs.first { ids.contains($0.id) && $0.photoData != nil }?.photoData
     }
     private var coordinates: [TrackCoordinate] {
-        // A silhouette needs a few hundred points at most.
-        let stride = max(points.count / 300, 1)
+        // A thumbnail needs a hundred points at most.
+        let stride = max(points.count / 100, 1)
         return points.enumerated().compactMap { index, point in
             index % stride == 0 || index == points.count - 1
                 ? TrackCoordinate(segment: point.segment, latitude: point.latitude, longitude: point.longitude)
                 : nil
         }
     }
+    private var origin: String {
+        let how = isGPS ? "suivi GPS" : "saisie manuelle"
+        return showsDay ? "\(WalkFormatting.relativeDay(date)), \(how)" : how.capitalizedFirst
+    }
 
     var body: some View {
-        VStack(alignment: .leading, spacing: TruffloTheme.Spacing.small) {
-            HStack(spacing: TruffloTheme.Spacing.small) {
-                TruffloDogPortrait(name: names.isEmpty ? "?" : names,
-                                   photoData: leadDog?.photoData, diameter: 40)
-                VStack(alignment: .leading, spacing: 0) {
-                    Text(names.isEmpty ? "Balade" : names)
-                        .font(.subheadline.weight(.semibold))
-                        .foregroundStyle(Color.truffloCharcoal)
-                    Text(isGPS ? whenText : "\(whenText), saisie manuelle")
-                        .font(.footnote)
-                        .foregroundStyle(Color.truffloSlate)
-                }
-            }
-
-            Text(WalkFormatting.activityTitle(date))
-                .font(.system(.title3, design: .rounded, weight: .bold))
-                .foregroundStyle(Color.truffloForest)
-
-            TruffloStatRow {
-                TruffloStat("Durée", value: WalkFormatting.minutes(walk.confirmedSeconds), style: .title2)
-                if isGPS, let meters = walk.recordedPathMeters {
-                    TruffloStat("Distance", value: WalkFormatting.distance(meters), style: .title2)
-                }
-            }
-
-            if isGPS, coordinates.count >= 2 {
-                TruffloRouteSilhouette(points: coordinates)
-                    .frame(height: 150)
-                    .clipShape(RoundedRectangle(cornerRadius: TruffloTheme.Radius.medium, style: .continuous))
-            }
-
-            if !walk.note.isEmpty {
-                Text(walk.note)
-                    .font(.subheadline)
-                    .foregroundStyle(Color.truffloCharcoal)
-                    .lineLimit(3)
-            }
-        }
-        .padding(TruffloTheme.Spacing.medium)
-        .frame(maxWidth: .infinity, alignment: .leading)
-        .background(Color.white, in: RoundedRectangle(cornerRadius: TruffloTheme.Radius.card, style: .continuous))
-        .overlay(RoundedRectangle(cornerRadius: TruffloTheme.Radius.card, style: .continuous)
-            .strokeBorder(Color.truffloForest.opacity(0.08), lineWidth: 1))
+        TimelineRow(
+            time: WalkFormatting.time(date),
+            title: names.isEmpty ? "Balade" : names,
+            meta: origin,
+            figures: figures,
+            note: walk.note.isEmpty ? nil : walk.note,
+            photo: leadPhoto,
+            route: isGPS && coordinates.count >= 2 ? coordinates : nil)
         .accessibilityElement(children: .ignore)
         .accessibilityLabel(spokenLabel)
         .accessibilityAddTraits(.isButton)
         .accessibilityIdentifier("walk.row.\(walk.id.uuidString)")
     }
 
-    /// The origin is spoken in words because the card shows it only in passing.
-    private var spokenLabel: String {
-        var parts = [WalkFormatting.activityTitle(date), isGPS ? "Suivi GPS" : "Saisie manuelle"]
-        if !names.isEmpty { parts.append("avec \(names)") }
-        parts.append(WalkFormatting.dayAndTime(date))
-        parts.append(WalkFormatting.minutes(walk.confirmedSeconds))
+    private var figures: [String] {
+        var parts = [WalkFormatting.minutes(walk.confirmedSeconds)]
         if isGPS, let meters = walk.recordedPathMeters { parts.append(WalkFormatting.distance(meters)) }
+        return parts
+    }
+
+    /// The origin is spoken in words because the row shows it only in passing.
+    private var spokenLabel: String {
+        var parts = [names.isEmpty ? "Balade" : "Balade avec \(names)", isGPS ? "Suivi GPS" : "Saisie manuelle"]
+        parts.append(WalkFormatting.dayAndTime(date))
+        parts.append(contentsOf: figures)
         if !walk.note.isEmpty { parts.append(walk.note) }
         return parts.joined(separator: ", ")
     }
+}
+
+/// The shared layout of a timeline line, own walk or a member's.
+struct TimelineRow: View {
+    let time: String
+    let title: String
+    let meta: String
+    let figures: [String]
+    var note: String? = nil
+    var photo: Data? = nil
+    var route: [TrackCoordinate]? = nil
+    var flag: String? = nil
+
+    @Environment(\.dynamicTypeSize) private var typeSize
+
+    var body: some View {
+        HStack(alignment: .firstTextBaseline, spacing: TruffloTheme.Spacing.medium) {
+            if !typeSize.isAccessibilitySize {
+                Text(time)
+                    .font(.system(.subheadline, design: .rounded, weight: .semibold))
+                    .monospacedDigit()
+                    .foregroundStyle(Color.truffloSlate)
+                    .frame(width: 46, alignment: .leading)
+            }
+            VStack(alignment: .leading, spacing: 4) {
+                HStack(alignment: .top, spacing: TruffloTheme.Spacing.small) {
+                    VStack(alignment: .leading, spacing: 2) {
+                        Text(title)
+                            .font(.system(.headline, design: .rounded, weight: .bold))
+                            .foregroundStyle(Color.truffloForest)
+                        Text(typeSize.isAccessibilitySize ? "\(time), \(meta.lowercasedFirst)" : meta)
+                            .font(.footnote)
+                            .foregroundStyle(Color.truffloSlate)
+                    }
+                    Spacer(minLength: 0)
+                    if let route {
+                        TruffloRouteSilhouette(points: route)
+                            .frame(width: 64, height: 64)
+                            .clipShape(RoundedRectangle(cornerRadius: 10, style: .continuous))
+                    } else if let photo {
+                        TruffloDogPortrait(name: title, photoData: photo, diameter: 44)
+                    }
+                }
+                Text(figures.joined(separator: ", "))
+                    .font(.system(.title3, design: .rounded, weight: .bold))
+                    .monospacedDigit()
+                    .foregroundStyle(Color.truffloCharcoal)
+                if let note {
+                    Text(note)
+                        .font(.subheadline)
+                        .foregroundStyle(Color.truffloCharcoal)
+                        .lineLimit(2)
+                }
+                if let flag {
+                    Label(flag, systemImage: "square.on.square")
+                        .font(.footnote)
+                        .foregroundStyle(Color.truffloSlate)
+                }
+            }
+        }
+        .padding(.vertical, TruffloTheme.Spacing.small)
+        .frame(maxWidth: .infinity, alignment: .leading)
+        .contentShape(Rectangle())
+    }
+}
+
+extension String {
+    var capitalizedFirst: String { prefix(1).uppercased() + dropFirst() }
+    var lowercasedFirst: String { prefix(1).lowercased() + dropFirst() }
 }

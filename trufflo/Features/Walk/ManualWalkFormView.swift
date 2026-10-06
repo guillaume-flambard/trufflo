@@ -106,10 +106,13 @@ struct ManualWalkFormView: View {
             if isOn { selectedDogs.remove(dog.id) } else { selectedDogs.insert(dog.id) }
         } label: {
             HStack(spacing: TruffloTheme.Spacing.xSmall) {
-                TruffloDogPortrait(name: dog.name, photoData: dog.photoData, diameter: 32)
+                // A face only when there is a photo: no initial on a disc.
+                if let face = dog.photoData {
+                    TruffloDogPortrait(name: dog.name, photoData: face, diameter: 32)
+                }
                 Text(dog.name).font(.subheadline.weight(.semibold))
             }
-            .padding(.leading, 6)
+            .padding(.leading, dog.photoData == nil ? 16 : 6)
             .padding(.trailing, 16)
             .frame(minHeight: 44)
             .foregroundStyle(isOn ? Color.white : Color.truffloCharcoal)
