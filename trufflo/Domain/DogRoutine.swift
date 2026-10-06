@@ -1,0 +1,81 @@
+import Foundation
+
+/// The routine a person chooses for their dog (PRD F04): their own reference
+/// points, never a prescription. Nothing here is suggested by the app, derived
+/// from the breed, or raised automatically.
+///
+/// Wording rule (DESIGN-SYSTEM): "Routine choisie", never "Objectif". The app
+/// states what was recorded next to what was chosen; it never says what is
+/// missing, never asks to catch up, never notifies.
+public struct DogRoutine: Equatable, Sendable {
+    public enum Slot: String, CaseIterable, Sendable, Comparable {
+        case morning, midday, afternoon, evening
+
+        public var label: String {
+            switch self {
+            case .morning: "matin"
+            case .midday: "midi"
+            case .afternoon: "après-midi"
+            case .evening: "soir"
+            }
+        }
+
+        public static func < (lhs: Slot, rhs: Slot) -> Bool {
+            allCases.firstIndex(of: lhs)! < allCases.firstIndex(of: rhs)!
+        }
+    }
+
+    public enum Invalid: Error, Equatable {
+        /// A routine with no reference point at all says nothing; there is
+        /// simply no routine.
+        case empty
+        case outOfRange
+    }
+
+    /// Nil when the person did not choose a number of outings.
+    public let outingsPerDay: Int?
+    /// Nil when the person did not choose a duration.
+    public let minutesPerOuting: Int?
+    public let slots: Set<Slot>
+
+    public init(outingsPerDay: Int?, minutesPerOuting: Int?, slots: Set<Slot>) throws {
+        guard outingsPerDay != nil || minutesPerOuting != nil || !slots.isEmpty else {
+            throw Invalid.empty
+        }
+        // Input sanity limits, not recommendations.
+        if let outingsPerDay, !(1...8).contains(outingsPerDay) { throw Invalid.outOfRange }
+        if let minutesPerOuting, !(5...240).contains(minutesPerOuting) { throw Invalid.outOfRange }
+        self.outingsPerDay = outingsPerDay
+        self.minutesPerOuting = minutesPerOuting
+        self.slots = slots
+    }
+
+    /// "2 sorties par jour, environ 30 min, matin et soir".
+    public var summary: String {
+        var parts: [String] = []
+        if let outingsPerDay {
+            parts.append(outingsPerDay == 1 ? "1 sortie par jour" : "\(outingsPerDay) sorties par jour")
+        }
+        if let minutesPerOuting { parts.append("environ \(minutesPerOuting) min") }
+        if !slots.isEmpty {
+            let names = slots.sorted().map(\.label)
+            parts.append(names.formatted(.list(type: .and).locale(Locale(identifier: "fr_FR"))))
+        }
+        let text = parts.joined(separator: ", ")
+        return text.prefix(1).uppercased() + text.dropFirst()
+    }
+
+    /// What was recorded today, said next to the chosen routine. A fact, never a
+    /// shortfall: "Aujourd'hui, 1 enregistrée" and not "il en manque 1". With no
+    /// chosen number there is nothing to set the count against, so it says only
+    /// how many were recorded.
+    public func today(recordedOutings: Int) -> String {
+        let recorded: String
+        switch recordedOutings {
+        case 0: recorded = "aucune sortie enregistrée pour l'instant"
+        case 1: recorded = "1 sortie enregistrée"
+        default: recorded = "\(recordedOutings) sorties enregistrées"
+        }
+        return "Aujourd'hui, \(recorded)."
+    }
+}

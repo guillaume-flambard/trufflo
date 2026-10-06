@@ -206,9 +206,9 @@ enum SchemaV3: VersionedSchema {
     }
 }
 
-/// V4 is the current version and references the live classes: a walk gains
-/// `correctedAt`. Until the next model change, stores written by any current
-/// build open as V4.
+/// V4: a walk gains `correctedAt`. Its four entities are still the live classes,
+/// unchanged since; V5 only adds a table, so V4's identity does not move. The
+/// day one of these four classes changes, freeze it here first.
 enum SchemaV4: VersionedSchema {
     static let versionIdentifier = Schema.Version(4, 0, 0)
     static var models: [any PersistentModel.Type] {
@@ -216,9 +216,18 @@ enum SchemaV4: VersionedSchema {
     }
 }
 
+/// V5 is the current version: it adds the chosen routine, one per dog. Existing
+/// stores gain an empty table.
+enum SchemaV5: VersionedSchema {
+    static let versionIdentifier = Schema.Version(5, 0, 0)
+    static var models: [any PersistentModel.Type] {
+        [DogRecord.self, WalkRecord.self, WalkDogRecord.self, TrackPointRecord.self, RoutineRecord.self]
+    }
+}
+
 enum TruffloMigrationPlan: SchemaMigrationPlan {
     static var schemas: [any VersionedSchema.Type] {
-        [SchemaV1.self, SchemaV2.self, SchemaV3.self, SchemaV4.self]
+        [SchemaV1.self, SchemaV2.self, SchemaV3.self, SchemaV4.self, SchemaV5.self]
     }
 
     static var stages: [MigrationStage] {
@@ -226,11 +235,12 @@ enum TruffloMigrationPlan: SchemaMigrationPlan {
             .lightweight(fromVersion: SchemaV1.self, toVersion: SchemaV2.self),
             .lightweight(fromVersion: SchemaV2.self, toVersion: SchemaV3.self),
             .lightweight(fromVersion: SchemaV3.self, toVersion: SchemaV4.self),
+            .lightweight(fromVersion: SchemaV4.self, toVersion: SchemaV5.self),
         ]
     }
 }
 
 enum CurrentSchema {
-    static let versioned = SchemaV4.self
-    static var schema: Schema { Schema(versionedSchema: SchemaV4.self) }
+    static let versioned = SchemaV5.self
+    static var schema: Schema { Schema(versionedSchema: SchemaV5.self) }
 }

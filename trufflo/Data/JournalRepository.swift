@@ -84,8 +84,41 @@ struct JournalRepository {
     func deleteDog(_ id: UUID) throws {
         try commit {
             guard let dog = requireDog(id) else { throw JournalError.profileMissing }
+            // The routine belongs to the profile and goes with it; walk links
+            // keep their historical name.
+            for routine in try routines(dogID: id) { context.delete(routine) }
             context.delete(dog)
         }
+    }
+
+    // MARK: - Routine
+
+    func routine(for dogID: UUID) throws -> RoutineRecord? {
+        try routines(dogID: dogID).first
+    }
+
+    /// Creates or replaces the dog's chosen routine. Its paused state is kept.
+    func saveRoutine(_ routine: DogRoutine, for dogID: UUID, at date: Date = .now) throws {
+        guard requireDog(dogID) != nil else { throw JournalError.profileMissing }
+        let existing = try routines(dogID: dogID).first
+        try commit {
+            if let existing { existing.apply(routine, at: date) }
+            else { context.insert(RoutineRecord(dogID: dogID, routine: routine, at: date)) }
+        }
+    }
+
+    /// Pausing hides the routine without forgetting it, and touches nothing else.
+    func setRoutinePaused(_ paused: Bool, for dogID: UUID, at date: Date = .now) throws {
+        guard let existing = try routines(dogID: dogID).first else { return }
+        try commit {
+            existing.isPaused = paused
+            existing.updatedAt = date
+        }
+    }
+
+    func deleteRoutine(for dogID: UUID) throws {
+        let existing = try routines(dogID: dogID)
+        try commit { for routine in existing { context.delete(routine) } }
     }
 
     // MARK: - Walks
@@ -295,6 +328,7 @@ struct JournalRepository {
             for link in try all(WalkDogRecord.self) { context.delete(link) }
             for walk in try all(WalkRecord.self) { context.delete(walk) }
             for dog in try all(DogRecord.self) { context.delete(dog) }
+            for routine in try all(RoutineRecord.self) { context.delete(routine) }
         }
     }
 
@@ -352,6 +386,10 @@ struct JournalRepository {
     private func points(walkID: UUID) throws -> [TrackPointRecord] {
         try context.fetch(FetchDescriptor<TrackPointRecord>(
             predicate: #Predicate { $0.walkID == walkID }))
+    }
+
+    private func routines(dogID: UUID) throws -> [RoutineRecord] {
+        try context.fetch(FetchDescriptor<RoutineRecord>(predicate: #Predicate { $0.dogID == dogID }))
     }
 
     private func all<T: PersistentModel>(_ type: T.Type) throws -> [T] {

@@ -13,14 +13,17 @@ struct DogDetailView: View {
 
     @Query private var matches: [DogRecord]
     @Query private var participations: [WalkDogRecord]
+    @Query private var routines: [RoutineRecord]
     @Query(filter: #Predicate<WalkRecord> { $0.phaseRaw == "completed" }) private var finishedWalks: [WalkRecord]
 
     @State private var showEdit = false
+    @State private var showRoutine = false
     @State private var showDeleteConfirmation = false
     @State private var storageError: String?
 
     init(dogID: UUID) {
         _matches = Query(filter: #Predicate<DogRecord> { $0.id == dogID })
+        _routines = Query(filter: #Predicate<RoutineRecord> { $0.dogID == dogID })
     }
 
     var body: some View {
@@ -69,6 +72,8 @@ struct DogDetailView: View {
                         }
                     }
 
+                    routineSection(for: dog)
+
                     if !dog.preferencesNote.isEmpty {
                         VStack(alignment: .leading, spacing: TruffloTheme.Spacing.xSmall) {
                             WalkSectionTitle("Préférences de sortie")
@@ -105,6 +110,9 @@ struct DogDetailView: View {
         }
         .ignoresSafeArea(edges: .top)
         .sheet(isPresented: $showEdit) { DogFormView(profile: dog) }
+        .sheet(isPresented: $showRoutine) {
+            RoutineFormView(dogID: dog.id, dogName: dog.name, current: routines.first?.routine)
+        }
         .confirmationDialog("Supprimer ce profil ?", isPresented: $showDeleteConfirmation,
                             titleVisibility: .visible) {
             Button("Supprimer \(dog.name)", role: .destructive) { delete(dogID: dog.id) }
@@ -128,6 +136,45 @@ struct DogDetailView: View {
                 Text(facts.joined(separator: ", "))
                     .font(.title3)
                     .foregroundStyle(Color.truffloCharcoal)
+            }
+        }
+    }
+
+    /// The chosen routine, or an invitation that makes clear the journal works
+    /// without one. Paused, it stays visible and greyed, never deleted.
+    @ViewBuilder
+    private func routineSection(for dog: DogRecord) -> some View {
+        VStack(alignment: .leading, spacing: TruffloTheme.Spacing.xSmall) {
+            WalkSectionTitle("Routine choisie")
+            if let record = routines.first, let routine = record.routine {
+                Text(routine.summary)
+                    .font(.body)
+                    .foregroundStyle(record.isPaused ? Color.truffloSlate : Color.truffloCharcoal)
+                if record.isPaused {
+                    Text("En pause : rien ne s'affiche sur Aujourd'hui.")
+                        .font(.footnote)
+                        .foregroundStyle(Color.truffloSlate)
+                }
+                HStack(spacing: TruffloTheme.Spacing.large) {
+                    Button("Modifier") { showRoutine = true }
+                        .accessibilityIdentifier("routine.edit")
+                    Button(record.isPaused ? "Reprendre" : "Mettre en pause") {
+                        try? JournalRepository(context: context).setRoutinePaused(!record.isPaused, for: dog.id)
+                    }
+                    .accessibilityIdentifier("routine.pause")
+                }
+                .font(.subheadline.weight(.semibold))
+                .foregroundStyle(Color.truffloForest)
+                .frame(minHeight: 44)
+            } else {
+                Text("Aucune. Le journal fonctionne sans routine.")
+                    .font(.body)
+                    .foregroundStyle(Color.truffloSlate)
+                Button("Choisir des repères") { showRoutine = true }
+                    .font(.subheadline.weight(.semibold))
+                    .foregroundStyle(Color.truffloForest)
+                    .frame(minHeight: 44)
+                    .accessibilityIdentifier("routine.create")
             }
         }
     }

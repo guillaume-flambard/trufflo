@@ -192,3 +192,41 @@ final class TrackPointRecord {
         self.timestamp = timestamp
     }
 }
+
+/// The routine a person chose for one dog (PRD F04). At most one per dog.
+/// Stored apart from the dog so pausing or deleting it never touches the
+/// profile or the history. Optional numbers are stored as 0 for "not chosen"
+/// to keep the columns simple; the domain type is the reading of record.
+@Model
+final class RoutineRecord {
+    @Attribute(.unique) var dogID: UUID
+    var outingsPerDay: Int
+    var minutesPerOuting: Int
+    /// Comma-separated `DogRoutine.Slot` raw values, empty for none.
+    var slotsRaw: String
+    var isPaused: Bool
+    var updatedAt: Date
+
+    init(dogID: UUID, routine: DogRoutine, isPaused: Bool = false, at date: Date = .now) {
+        self.dogID = dogID
+        self.outingsPerDay = routine.outingsPerDay ?? 0
+        self.minutesPerOuting = routine.minutesPerOuting ?? 0
+        self.slotsRaw = routine.slots.sorted().map(\.rawValue).joined(separator: ",")
+        self.isPaused = isPaused
+        self.updatedAt = date
+    }
+
+    func apply(_ routine: DogRoutine, at date: Date = .now) {
+        outingsPerDay = routine.outingsPerDay ?? 0
+        minutesPerOuting = routine.minutesPerOuting ?? 0
+        slotsRaw = routine.slots.sorted().map(\.rawValue).joined(separator: ",")
+        updatedAt = date
+    }
+
+    var routine: DogRoutine? {
+        let slots = Set(slotsRaw.split(separator: ",").compactMap { DogRoutine.Slot(rawValue: String($0)) })
+        return try? DogRoutine(outingsPerDay: outingsPerDay > 0 ? outingsPerDay : nil,
+                               minutesPerOuting: minutesPerOuting > 0 ? minutesPerOuting : nil,
+                               slots: slots)
+    }
+}

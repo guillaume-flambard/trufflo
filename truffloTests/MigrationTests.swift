@@ -206,6 +206,33 @@ private func seedLegacyV2Store(at storeURL: URL) throws {
     #expect(walks[0].correctedAt == nil)
 }
 
+/// A store written before routines (V4) opens with its journal and corrections
+/// intact and an empty routine table.
+@Test @MainActor func aV4StoreOpensWithNoRoutine() throws {
+    let directory = try makeV1StoreDirectory()
+    defer { try? FileManager.default.removeItem(at: directory) }
+    let storeURL = directory.appending(path: "TruffloMigration.store")
+    let corrected = Date(timeIntervalSince1970: 8_000)
+    do {
+        var writer: ModelContainer? = try PersistenceFactory.makeFixtureStore(
+            versioned: SchemaV4.self, at: storeURL)
+        let context = try #require(writer?.mainContext)
+        let dog = DogRecord(name: "Oslo", breedKind: "unknown")
+        let walk = WalkRecord.manual(endedAt: Date(timeIntervalSince1970: 7_000), durationSeconds: 900)
+        walk.correctedAt = corrected
+        context.insert(dog)
+        context.insert(walk)
+        try context.save()
+        writer = nil
+    }
+    let context = ModelContext(try PersistenceFactory.makeMigrated(at: storeURL))
+    #expect(try context.fetch(FetchDescriptor<DogRecord>()).count == 1)
+    let walks = try context.fetch(FetchDescriptor<WalkRecord>())
+    #expect(walks.count == 1)
+    #expect(walks[0].correctedAt == corrected)
+    #expect(try context.fetch(FetchDescriptor<RoutineRecord>()).isEmpty)
+}
+
 /// The tripwire for unversioned model edits (ADR-008). The live classes are
 /// the current schema; if anyone adds, removes or renames a persisted property
 /// without freezing the previous shape and adding a version, this dump changes
@@ -222,6 +249,7 @@ private func seedLegacyV2Store(at storeURL: URL) throws {
         .joined(separator: " | ")
 
     let expected = "DogRecord{ageDescription,breedKind,breedLabel,createdAt,gender,id,name,photoData,preferencesNote}"
+        + " | RoutineRecord{dogID,isPaused,minutesPerOuting,outingsPerDay,slotsRaw,updatedAt}"
         + " | TrackPointRecord{horizontalAccuracy,id,latitude,longitude,segment,sequence,timestamp,walkID}"
         + " | WalkDogRecord{dogID,dogNameSnapshot,id,walkID}"
         + " | WalkRecord{confirmedSeconds,correctedAt,endedAt,id,lastCheckpointAt,measuredEdgeCount,note,phaseRaw,qualityRaw,recordedPathMeters,revision,sourceRaw,startedAt,trackSegmentCount}"

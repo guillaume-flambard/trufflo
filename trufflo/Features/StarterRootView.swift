@@ -28,6 +28,7 @@ struct StarterRootView: View {
     @Query(sort: \DogRecord.createdAt) private var dogs: [DogRecord]
     @Query(sort: \WalkRecord.startedAt, order: .reverse) private var walks: [WalkRecord]
     @Query private var links: [WalkDogRecord]
+    @Query private var routines: [RoutineRecord]
     @State private var showDogForm = false
     @State private var showWalkForm = false
     @State private var activeWalkCover: ActiveWalkCover?
@@ -373,6 +374,13 @@ struct StarterRootView: View {
             Text(dogSubtitle(lead))
                 .font(.subheadline)
                 .foregroundStyle(Color.truffloSlate)
+            if let line = routineLine(for: lead) {
+                Text(line)
+                    .font(.subheadline)
+                    .foregroundStyle(Color.truffloForest)
+                    .padding(.top, TruffloTheme.Spacing.xxSmall)
+                    .accessibilityIdentifier("today.routine")
+            }
         }
         if typeSize.isAccessibilitySize {
             VStack(alignment: .leading, spacing: TruffloTheme.Spacing.small) {
@@ -386,6 +394,19 @@ struct StarterRootView: View {
                 TruffloDogPortrait(name: lead.name, photoData: lead.photoData, diameter: 104)
             }
         }
+    }
+
+    /// One dog with an active routine: the chosen routine and today's count, side
+    /// by side, as two facts. Several dogs, or a paused routine: nothing.
+    private func routineLine(for dog: DogRecord) -> String? {
+        guard dogs.count == 1,
+              let record = routines.first(where: { $0.dogID == dog.id }), !record.isPaused,
+              let routine = record.routine else { return nil }
+        let today = completedWalks.filter { walk in
+            Calendar.current.isDateInToday(walk.endedAt ?? walk.startedAt)
+                && links.contains { $0.walkID == walk.id && $0.dogID == dog.id }
+        }.count
+        return "Routine choisie : \(routine.summary.prefix(1).lowercased() + routine.summary.dropFirst()). \(routine.today(recordedOutings: today))"
     }
 
     private func dogSubtitle(_ lead: DogRecord) -> String {
