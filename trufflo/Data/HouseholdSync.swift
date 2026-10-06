@@ -124,6 +124,32 @@ struct HouseholdSync {
         try purge()
     }
 
+    /// Owners only: another member's role. Refreshes the member list so the
+    /// screen shows what the server now holds.
+    func setRole(_ role: HouseholdRole, of userID: UUID) async throws {
+        guard let household = household() else { return }
+        try await remote.setRole(role, userID: userID, householdID: household.id)
+        try await refreshMembers(household)
+        try context.save()
+    }
+
+    /// Owners only: removes another member. Their iPhone forgets the household
+    /// at its next contact with the server (PRD F08).
+    func remove(memberID userID: UUID) async throws {
+        guard let household = household(), userID != household.myUserID else { return }
+        try await remote.leave(householdID: household.id, userID: userID)
+        try await refreshMembers(household)
+        try context.save()
+    }
+
+    /// Owners only: deletes the household on the server, then forgets it here.
+    /// The way out for the last owner, who cannot leave (PRD F08).
+    func deleteHousehold() async throws {
+        guard let household = household() else { return }
+        try await remote.deleteHousehold(id: household.id)
+        try purge()
+    }
+
     /// Forgets the household on this iPhone: received walks, members, links,
     /// ledger. The person's own dogs and walks are untouched (spec S10).
     func purge() throws {

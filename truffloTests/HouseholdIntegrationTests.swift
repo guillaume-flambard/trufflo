@@ -169,3 +169,54 @@ func aMemberHearsAWalkChangeAndAnOutsiderDoesNot() async throws {
     #expect(brunoHeard.rang, "un membre est prévenu d'un changement de balade du foyer")
     #expect(!drissHeard.rang, "un étranger abonné au même filtre n'entend rien")
 }
+
+/// B-AC-08, B-AC-09 and the removal, against the real row level security and
+/// the keep-an-owner trigger rather than the fake's copy of them.
+@MainActor
+@Test(.enabled(if: Local.enabled, "needs a local Supabase, see tools/backend/household-integration.sh"))
+func ownersManageMembersOverRealHTTP() async throws {
+    let config = BackendConfig(baseURL: try #require(Local.url), anonKey: try #require(Local.anonKey))
+    let anneRemote = try await account(config)
+    let brunoRemote = try await account(config)
+    let anneStore = try PersistenceFactory.make(inMemory: true)
+    let anneSync = HouseholdSync(context: anneStore.mainContext, remote: anneRemote)
+    let brunoStore = try PersistenceFactory.make(inMemory: true)
+    let bruno = JournalRepository(context: brunoStore.mainContext)
+    let brunoSync = HouseholdSync(context: brunoStore.mainContext, remote: brunoRemote)
+
+    try await anneSync.createHousehold(name: "Maison", displayName: "Anne")
+    let household = try #require(anneSync.household()?.id)
+    let anneID = try await anneRemote.currentUserID()
+    let brunoID = try await brunoRemote.currentUserID()
+    let (joined, _) = try await brunoSync.acceptInvite(token: try await anneSync.createInvite(role: .contributor))
+    try await brunoSync.completeJoin(joined, displayName: "Bruno", links: [:])
+
+    // A contributor cannot change roles: the server refuses or ignores it.
+    try? await brunoRemote.setRole(.owner, userID: brunoID, householdID: household)
+    #expect(try await anneRemote.members(householdID: household).first { $0.userID == brunoID }?.role == .contributor)
+
+    // The only owner can be neither demoted nor removed (trigger keep_an_owner).
+    await #expect(throws: (any Error).self) { try await anneRemote.setRole(.reader, userID: anneID, householdID: household) }
+    await #expect(throws: (any Error).self) { try await anneRemote.leave(householdID: household, userID: anneID) }
+
+    // Demoted to reader, Bruno's walks are refused by the server.
+    try await anneSync.setRole(.reader, of: brunoID)
+    try await brunoSync.sync()
+    #expect(brunoSync.household()?.myRole == .reader)
+    let pixel = try bruno.addDog(try DogInput(name: "Pixel", breedKind: "unknown"))
+    let walk = try bruno.addManualWalk(try ManualWalkInput(dogIDs: [pixel.id], durationSeconds: 1200, note: ""),
+                                       endedAt: Date().addingTimeInterval(-600))
+    let summary = WalkSummaryDTO(id: walk.id, householdID: household, source: "manual", quality: "declared",
+                                 startedAt: walk.startedAt, endedAt: try #require(walk.endedAt),
+                                 confirmedSeconds: 1200, recordedPathMeters: nil, correctedAt: nil)
+    await #expect(throws: (any Error).self) { try await brunoRemote.upsertWalk(summary) }
+
+    // Removed, Bruno's next sync finds nothing and forgets the household.
+    try await anneSync.remove(memberID: brunoID)
+    #expect(try await brunoSync.sync().revoked)
+    #expect(brunoSync.household() == nil)
+
+    // Alone, Anne deletes the household; the server no longer has it.
+    try await anneSync.deleteHousehold()
+    #expect(try await anneRemote.household(id: household) == nil)
+}

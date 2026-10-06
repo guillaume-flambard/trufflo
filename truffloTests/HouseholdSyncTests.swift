@@ -336,3 +336,90 @@ private let bruno = UUID(uuidString: "00000000-0000-0000-0000-00000000000B")!
     await #expect(throws: RemoteError.self) { try await phone.sync.createHousehold(name: "Autre", displayName: "Anne") }
     #expect(try await phone.sync.householdToResume() == nil)
 }
+
+// MARK: - Managing members (B-REQ-05)
+
+@Test("Leaving: an ordinary member leaves, the only owner must name another first, alone it is a deletion")
+func membershipExitFollowsTheOwnerRule() {
+    #expect(MembershipExit(myRole: .contributor, roles: [.owner, .contributor]) == .leave)
+    #expect(MembershipExit(myRole: .owner, roles: [.owner, .owner, .reader]) == .leave)
+    #expect(MembershipExit(myRole: .owner, roles: [.owner, .contributor]) == .nameAnotherOwnerFirst)
+    #expect(MembershipExit(myRole: .owner, roles: [.owner]) == .deleteHousehold)
+}
+
+@MainActor
+private func anneAndBruno(_ server: FakeHouseholdServer) async throws -> (anne: Phone, bruno: Phone, household: UUID) {
+    let anneHome = try Phone(server: server, user: anne)
+    try await anneHome.sync.createHousehold(name: "Maison", displayName: "Anne")
+    let token = try await anneHome.sync.createInvite(role: .contributor)
+    let brunoHome = try Phone(server: server, user: bruno)
+    let (joined, _) = try await brunoHome.sync.acceptInvite(token: token)
+    try await brunoHome.sync.completeJoin(joined, displayName: "Bruno", links: [:])
+    try await anneHome.sync.sync()
+    return (anneHome, brunoHome, joined.id)
+}
+
+@MainActor
+@Test("B-AC-08: an owner turns a contributor into a reader, who then writes nothing")
+func anOwnerDemotesAContributorWhoStopsWriting() async throws {
+    let server = FakeHouseholdServer()
+    let (anneHome, brunoHome, household) = try await anneAndBruno(server)
+
+    try await anneHome.sync.setRole(.reader, of: bruno)
+
+    #expect(server.members[household]?[bruno] == .reader)
+    let roles = try anneHome.context.fetch(FetchDescriptor<HouseholdMemberRecord>())
+    #expect(roles.first { $0.userID == bruno }?.role == .reader, "l'écran d'Anne montre le nouveau rôle")
+
+    let pixel = try brunoHome.repository.addDog(try DogInput(name: "Pixel", breedKind: "unknown"))
+    try brunoHome.manualWalk([pixel.id], minutes: 20)
+    server.resetCalls()
+    try await brunoHome.sync.sync()
+    #expect(brunoHome.sync.household()?.myRole == .reader)
+    #expect(!server.calls.contains("upsertWalk"), "un lecteur n'envoie rien : \(server.calls)")
+}
+
+@MainActor
+@Test("B-AC-09: the only owner can be neither demoted nor removed")
+func theOnlyOwnerStaysOwner() async throws {
+    let server = FakeHouseholdServer()
+    let (_, brunoHome, household) = try await anneAndBruno(server)
+    let anneClient = server.client(anne)
+
+    await #expect(throws: RemoteError.self) { try await anneClient.setRole(.contributor, userID: anne, householdID: household) }
+    await #expect(throws: RemoteError.self) { try await anneClient.leave(householdID: household, userID: anne) }
+    // A contributor cannot touch roles at all.
+    await #expect(throws: RemoteError.self) { try await brunoHome.sync.setRole(.owner, of: bruno) }
+    #expect(server.members[household]?[anne] == .owner)
+}
+
+@MainActor
+@Test("An owner removes a member, whose iPhone forgets the household at its next sync")
+func anOwnerRemovesAMember() async throws {
+    let server = FakeHouseholdServer()
+    let (anneHome, brunoHome, household) = try await anneAndBruno(server)
+
+    try await anneHome.sync.remove(memberID: bruno)
+
+    #expect(server.members[household]?[bruno] == nil)
+    #expect(try anneHome.context.fetch(FetchDescriptor<HouseholdMemberRecord>()).map(\.userID) == [anne])
+    #expect(try await brunoHome.sync.sync().revoked)
+    #expect(brunoHome.sync.household() == nil)
+}
+
+@MainActor
+@Test("Alone, the owner deletes the household; their own journal stays")
+func aLoneOwnerDeletesTheHousehold() async throws {
+    let server = FakeHouseholdServer()
+    let anneHome = try Phone(server: server, user: anne)
+    let oslo = try anneHome.repository.addDog(try DogInput(name: "Oslo", breedKind: "unknown"))
+    let walk = try anneHome.manualWalk([oslo.id], minutes: 30, note: "Parc")
+    try await anneHome.sync.createHousehold(name: "Maison", displayName: "Anne")
+    let household = try #require(anneHome.sync.household()?.id)
+
+    try await anneHome.sync.deleteHousehold()
+
+    #expect(server.households[household] == nil)
+    #expect(anneHome.sync.household() == nil)
+    #expect(anneHome.repository.walk(id: walk.id)?.note == "Parc")
+}

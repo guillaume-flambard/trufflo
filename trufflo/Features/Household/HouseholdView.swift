@@ -25,6 +25,8 @@ struct HouseholdView: View {
     @State private var inviteRole = HouseholdRole.contributor.rawValue
     @State private var invite: String?
     @State private var confirmLeave = false
+    @State private var confirmDelete = false
+    @State private var memberToRemove: HouseholdMemberRecord?
     @State private var resumable: HouseholdDTO?
 
     private enum Choice { case create, join }
@@ -83,6 +85,9 @@ struct HouseholdView: View {
     private var content: some View {
         if let household {
             memberContent(household)
+        } else if model.lostHousehold != nil {
+            LostHouseholdNotice()
+                .padding(TruffloTheme.Spacing.large)
         } else if !model.isAvailable {
             HouseholdBand(title: "Foyer partagé", subtitle: "Indisponible dans ce mode de test.", faces: dogFaces)
         } else if let joining {
@@ -335,8 +340,29 @@ struct HouseholdView: View {
                     WalkSectionTitle("Membres")
                     VStack(spacing: 0) {
                         ForEach(Array(members.enumerated()), id: \.element.userID) { index, member in
-                            MemberRow(name: member.displayName, role: member.role,
-                                      isMe: member.userID == household.myUserID, tintIndex: index)
+                            let isMe = member.userID == household.myUserID
+                            let row = MemberRow(name: member.displayName, role: member.role,
+                                                isMe: isMe, tintIndex: index,
+                                                isManageable: household.myRole == .owner && !isMe)
+                            if household.myRole == .owner && !isMe {
+                                // The owner manages the others from their row.
+                                Menu {
+                                    ForEach(HouseholdRole.allCases.filter { $0 != member.role }, id: \.self) { role in
+                                        Button("Passer \(role.label.lowercased())") {
+                                            Task { await model.setRole(role, of: member.userID) }
+                                        }
+                                    }
+                                    Divider()
+                                    Button("Retirer du foyer", role: .destructive) { memberToRemove = member }
+                                } label: {
+                                    row.contentShape(Rectangle())
+                                }
+                                .buttonStyle(.plain)
+                                .accessibilityHint("Changer son rôle ou le retirer du foyer")
+                                .accessibilityIdentifier("household.member.\(member.userID.uuidString)")
+                            } else {
+                                row
+                            }
                             if index < members.count - 1 {
                                 Rectangle().fill(Color.truffloForest.opacity(0.1)).frame(height: 1)
                                     .padding(.leading, 52)
@@ -350,19 +376,26 @@ struct HouseholdView: View {
 
                 if household.myRole == .owner { inviteSection(household) }
 
-                VStack(alignment: .leading, spacing: TruffloTheme.Spacing.xxSmall) {
-                    Button("Quitter le foyer", role: .destructive) { confirmLeave = true }
-                        .font(.subheadline.weight(.semibold))
-                        .frame(minHeight: 44)
-                        .accessibilityIdentifier("household.leave")
-                    Text("Votre journal reste sur cet iPhone. Ce que vous avez partagé reste visible du foyer.")
-                        .font(.footnote)
-                        .foregroundStyle(Color.truffloSlate)
-                }
+                exitSection(household)
                 .confirmationDialog("Quitter « \(household.name) » ?", isPresented: $confirmLeave, titleVisibility: .visible) {
                     Button("Quitter le foyer", role: .destructive) { Task { await model.leave() } }
                 } message: {
                     Text("Les balades reçues des autres membres disparaissent de cet iPhone. Votre journal reste intact.")
+                }
+                .confirmationDialog("Supprimer « \(household.name) » ?", isPresented: $confirmDelete, titleVisibility: .visible) {
+                    Button("Supprimer le foyer", role: .destructive) { Task { await model.deleteHousehold() } }
+                } message: {
+                    Text("Le foyer et ce qui y a été partagé sont effacés du serveur. Votre journal reste sur cet iPhone.")
+                }
+                .confirmationDialog("Retirer \(memberToRemove?.displayName ?? "ce membre") du foyer ?",
+                                    isPresented: Binding(get: { memberToRemove != nil },
+                                                         set: { if !$0 { memberToRemove = nil } }),
+                                    titleVisibility: .visible) {
+                    Button("Retirer du foyer", role: .destructive) {
+                        if let member = memberToRemove { Task { await model.remove(memberID: member.userID) } }
+                    }
+                } message: {
+                    Text("Ses nouvelles balades ne vous parviendront plus, et son iPhone oubliera le foyer à sa prochaine connexion. Ce qu'il a déjà vu reste vu.")
                 }
             }
             .padding(.horizontal, TruffloTheme.Spacing.large)
@@ -606,11 +639,50 @@ private struct FieldBlock<Content: View>: View {
     }
 }
 
+extension HouseholdView {
+    /// The way out, as the server allows it: leave, name another owner first,
+    /// or, alone, delete the household (B-REQ-05).
+    @ViewBuilder
+    fileprivate func exitSection(_ household: HouseholdRecord) -> some View {
+        let exit = MembershipExit(myRole: household.myRole, roles: members.map(\.role))
+        VStack(alignment: .leading, spacing: TruffloTheme.Spacing.xxSmall) {
+            switch exit {
+            case .leave:
+                Button("Quitter le foyer", role: .destructive) { confirmLeave = true }
+                    .font(.subheadline.weight(.semibold))
+                    .frame(minHeight: 44)
+                    .accessibilityIdentifier("household.leave")
+                Text("Votre journal reste sur cet iPhone. Ce que vous avez partagé reste visible du foyer.")
+                    .font(.footnote)
+                    .foregroundStyle(Color.truffloSlate)
+            case .nameAnotherOwnerFirst:
+                Text("Vous êtes le seul responsable")
+                    .font(.subheadline.weight(.semibold))
+                    .foregroundStyle(Color.truffloCharcoal)
+                Text("Pour quitter le foyer, nommez d'abord un autre responsable : touchez un membre et choisissez « Passer responsable ».")
+                    .font(.footnote)
+                    .foregroundStyle(Color.truffloSlate)
+                    .accessibilityIdentifier("household.leave.blocked")
+            case .deleteHousehold:
+                Button("Supprimer le foyer", role: .destructive) { confirmDelete = true }
+                    .font(.subheadline.weight(.semibold))
+                    .frame(minHeight: 44)
+                    .accessibilityIdentifier("household.delete")
+                Text("Vous êtes seul dans ce foyer. Le supprimer efface ce qui a été partagé sur le serveur ; votre journal reste sur cet iPhone.")
+                    .font(.footnote)
+                    .foregroundStyle(Color.truffloSlate)
+            }
+        }
+    }
+}
+
 private struct MemberRow: View {
     let name: String
     let role: HouseholdRole
     let isMe: Bool
     let tintIndex: Int
+    /// The owner can act on this row: say so, the row is a menu.
+    var isManageable = false
 
     var body: some View {
         HStack(spacing: TruffloTheme.Spacing.small) {
@@ -625,6 +697,12 @@ private struct MemberRow: View {
             Spacer(minLength: TruffloTheme.Spacing.xSmall)
             TruffloBadge(role.label, style: role == .owner ? .forest : .sage)
                 .fixedSize()
+            if isManageable {
+                Image(systemName: "ellipsis.circle")
+                    .font(.title3)
+                    .foregroundStyle(Color.truffloForest)
+                    .accessibilityHidden(true)
+            }
         }
         .padding(.vertical, TruffloTheme.Spacing.small)
         .accessibilityElement(children: .combine)

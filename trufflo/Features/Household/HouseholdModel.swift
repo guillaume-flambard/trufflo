@@ -14,6 +14,9 @@ final class HouseholdModel {
     /// The name Apple gave on the first sign-in, offered as the display name.
     private(set) var suggestedName = ""
     var errorMessage: String?
+    /// Set when a sync finds this person is no longer a member: the name of
+    /// the household that was forgotten, so the screens can say so once.
+    var lostHousehold: String?
 
     /// False in UI tests: no network, no keychain, the screen says so.
     let isAvailable: Bool
@@ -170,10 +173,28 @@ final class HouseholdModel {
         if sync.household() == nil { await stopLiveUpdates() }
     }
 
+    func setRole(_ role: HouseholdRole, of userID: UUID) async {
+        guard let sync else { return }
+        await run { try await sync.setRole(role, of: userID) }
+    }
+
+    func remove(memberID: UUID) async {
+        guard let sync else { return }
+        await run { try await sync.remove(memberID: memberID) }
+    }
+
+    func deleteHousehold() async {
+        guard let sync else { return }
+        await run { try await sync.deleteHousehold() }
+        if sync.household() == nil { await stopLiveUpdates() }
+    }
+
     /// Quiet when there is nothing to do: no household, no session, already busy.
     func syncNow() async {
-        guard let sync, sync.household() != nil, isSignedIn, !isBusy else { return }
-        await run { try await sync.sync() }
+        guard let sync, let name = sync.household()?.name, isSignedIn, !isBusy else { return }
+        await run {
+            if try await sync.sync().revoked { lostHousehold = name }
+        }
         // Revoked during this sync: nothing left to listen to.
         if sync.household() == nil { await stopLiveUpdates() }
     }

@@ -263,6 +263,9 @@ struct StarterRootView: View {
         let sharedShown = sharedEntries(own: completed)
         if completed.isEmpty && sharedWalks.isEmpty {
             List {
+                LostHouseholdNotice()
+                    .listRowBackground(Color.clear)
+                    .listRowSeparator(.hidden)
                 TruffloEmptyStateView(
                     imageName: "EmptyWalk",
                     title: "Aucune balade enregistrée",

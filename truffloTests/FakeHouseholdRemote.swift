@@ -75,6 +75,18 @@ final class FakeHouseholdServer: @unchecked Sendable {
         members[household]?[user] = nil
         names[household]?[user] = nil
     }
+    fileprivate func changeRole(_ user: UUID, to newRole: HouseholdRole, _ household: UUID) throws {
+        guard members[household]?[user] != nil else { return }
+        let owners = members[household]?.filter { $0.value == .owner }.map(\.key) ?? []
+        if owners == [user] && newRole != .owner { throw RemoteError.rejected("a household keeps at least one owner") }
+        members[household]?[user] = newRole
+    }
+    fileprivate func removeHousehold(_ household: UUID) {
+        households[household] = nil
+        members[household] = nil
+        names[household] = nil
+        invites = invites.filter { $0.value.household != household }
+    }
     fileprivate func putDog(_ dto: DogDTO) { dogs[dto.id] = (dto, dogs[dto.id]?.deletedAt) }
     fileprivate func deleteDog(_ id: UUID, _ date: Date) { dogs[id]?.deletedAt = date }
     fileprivate func putWalk(_ dto: WalkSummaryDTO, by user: UUID) throws {
@@ -171,6 +183,20 @@ struct FakeHouseholdRemote: HouseholdRemote {
         try server.run("leave") {
             guard userID == user || server.role(user, in: householdID) == .owner else { throw RemoteError.forbidden("rls") }
             try server.removeMember(userID, householdID)
+        }
+    }
+
+    func setRole(_ role: HouseholdRole, userID: UUID, householdID: UUID) async throws {
+        try server.run("setRole") {
+            guard server.role(user, in: householdID) == .owner else { throw RemoteError.forbidden("rls") }
+            try server.changeRole(userID, to: role, householdID)
+        }
+    }
+
+    func deleteHousehold(id: UUID) async throws {
+        try server.run("deleteHousehold") {
+            guard server.role(user, in: id) == .owner else { throw RemoteError.forbidden("rls") }
+            server.removeHousehold(id)
         }
     }
 

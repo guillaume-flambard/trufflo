@@ -16,7 +16,7 @@ cd "$(dirname "$0")/../.."
 
 DESTINATION="${TRUFFLO_DESTINATION:-platform=iOS Simulator,name=iPhone 17e}"
 LOG="${TRUFFLO_LOG_DIR:-/tmp}/trufflo-household-integration.log"
-TESTS=("-only-testing:truffloTests/twoPeopleShareAHouseholdOverRealHTTP()" "-only-testing:truffloTests/aMemberHearsAWalkChangeAndAnOutsiderDoesNot()")
+TESTS=("-only-testing:truffloTests/twoPeopleShareAHouseholdOverRealHTTP()" "-only-testing:truffloTests/aMemberHearsAWalkChangeAndAnOutsiderDoesNot()" "-only-testing:truffloTests/ownersManageMembersOverRealHTTP()")
 
 (cd backend && supabase start >/dev/null) || { echo "supabase start a echoue"; exit 1; }
 (cd backend && supabase db reset --local >/dev/null 2>&1) || { echo "supabase db reset a echoue"; exit 1; }
@@ -44,7 +44,8 @@ done
 kill "$pid" 2>/dev/null
 
 grep -E "✘|recorded an issue|skipped|Test run with" "$LOG"
-if grep -q "Test run with 2 tests.*passed" "$LOG" && ! grep -q "skipped" "$LOG"; then
+# Exactly the number of tests listed above: fewer means one was not selected.
+if grep -q "Test run with ${#TESTS[@]} tests.*passed" "$LOG" && ! grep -q "skipped" "$LOG"; then
   echo "VERT : parcours du foyer a deux comptes, temps reel"
   exit 0
 fi

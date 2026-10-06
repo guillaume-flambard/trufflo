@@ -18,6 +18,7 @@ struct JournalTimelineView: View {
     var body: some View {
         ScrollView {
             LazyVStack(alignment: .leading, spacing: TruffloTheme.Spacing.large) {
+                LostHouseholdNotice()
                 if let sentence = filterSummary ?? weekSentence {
                     Text(sentence)
                         .font(.subheadline)

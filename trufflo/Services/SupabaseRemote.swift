@@ -110,6 +110,19 @@ struct SupabaseRemote: HouseholdRemote {
         }
     }
 
+    func setRole(_ role: HouseholdRole, userID: UUID, householdID: UUID) async throws {
+        try await mapped {
+            try await client.from("household_members").update(["role": role.rawValue], returning: .minimal)
+                .eq("household_id", value: householdID).eq("user_id", value: userID).execute()
+        }
+    }
+
+    func deleteHousehold(id: UUID) async throws {
+        try await mapped {
+            try await client.from("households").delete(returning: .minimal).eq("id", value: id).execute()
+        }
+    }
+
     func dogs(householdID: UUID) async throws -> [RemoteDogDTO] {
         try await mapped {
             try await client.from("dogs").select("id,name,breed_kind,breed_label,deleted_at")

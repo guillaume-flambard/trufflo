@@ -18,7 +18,14 @@ public protocol HouseholdRemote: Sendable {
     func createInvite(householdID: UUID, role: HouseholdRole) async throws -> String
     /// Returns the household joined.
     func acceptInvite(token: String) async throws -> UUID
+    /// Removes a membership: the person's own (leaving), or another member's
+    /// when the caller is an owner. The server keeps at least one owner.
     func leave(householdID: UUID, userID: UUID) async throws
+    /// Owners only. The server refuses to demote the last owner.
+    func setRole(_ role: HouseholdRole, userID: UUID, householdID: UUID) async throws
+    /// Owners only. Everything of the household goes with it on the server;
+    /// each member's own journal stays on their iPhone.
+    func deleteHousehold(id: UUID) async throws
 
     func dogs(householdID: UUID) async throws -> [RemoteDogDTO]
     func upsertDog(_ dog: DogDTO) async throws
