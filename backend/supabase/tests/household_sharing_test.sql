@@ -3,7 +3,7 @@
 -- Every check runs as that person, under RLS, through the same grants the app
 -- uses. Nothing here uses the service role.
 begin;
-select plan(25);
+select plan(26);
 
 -- Users -----------------------------------------------------------------------
 insert into auth.users (id, email) values
@@ -25,6 +25,13 @@ insert into public.households (id, name) values ('11111111-1111-1111-1111-111111
 select is(
     (select role from public.household_members where user_id = '00000000-0000-0000-0000-00000000000a'),
     'owner', 'the creator becomes owner');
+-- The owner row is written by an AFTER trigger, so RETURNING is filtered before
+-- it exists. The app creates a household with its own UUID and no read-back
+-- (PostgREST "return=minimal"), then reads it. Pinned so nobody "fixes" the
+-- client by asking for the row back.
+select throws_ok(
+    $$ insert into public.households (name) values ('Autre maison') returning id $$,
+    '42501', null, 'creating a household cannot read it back in the same statement');
 insert into public.household_invites (household_id, role, token) values
     ('11111111-1111-1111-1111-111111111111', 'contributor', 'token-bruno'),
     ('11111111-1111-1111-1111-111111111111', 'reader', 'token-chloe');
