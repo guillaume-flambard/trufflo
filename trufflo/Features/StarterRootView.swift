@@ -4,7 +4,7 @@ import SwiftData
 /// Distinct wrappers so a dog UUID and a walk UUID can never resolve to the
 /// wrong detail screen from the same navigation value.
 private struct DogRoute: Hashable { let id: UUID }
-private struct WalkRoute: Hashable { let id: UUID }
+struct WalkRoute: Hashable { let id: UUID }
 
 private enum ActiveWalkCover: Identifiable {
     case resume(UUID)
@@ -65,18 +65,7 @@ struct StarterRootView: View {
             .tabItem { Label("Aujourd'hui", systemImage: "sun.max") }
 
             NavigationStack {
-                List {
-                    if walks.isEmpty {
-                        TruffloEmptyStateView(
-                            imageName: "EmptyWalk",
-                            title: "Aucune balade enregistrée",
-                            description: "Les sorties ajoutées à votre journal apparaîtront ici."
-                        )
-                    }
-                    ForEach(walks.filter { $0.phase == .completed }) { walk in
-                        NavigationLink(value: WalkRoute(id: walk.id)) { row(for: walk) }
-                    }
-                }
+                journalContent
                 .navigationTitle("Journal")
                 .truffloScreen()
                 .navigationDestination(for: WalkRoute.self) { WalkDetailView(walkID: $0.id) }
@@ -157,6 +146,29 @@ struct StarterRootView: View {
             Button("Fermer", role: .cancel) {}
         } message: {
             Text("La modification n'a pas été enregistrée. Les données précédentes ont été conservées.")
+        }
+    }
+
+    // MARK: - Journal
+
+    @ViewBuilder
+    private var journalContent: some View {
+        let completed = walks.filter { $0.phase == .completed }
+        if completed.isEmpty {
+            List {
+                TruffloEmptyStateView(
+                    imageName: "EmptyWalk",
+                    title: "Aucune balade enregistrée",
+                    description: "Les sorties ajoutées à votre journal apparaîtront ici."
+                )
+            }
+        } else {
+            JournalTimelineView(walks: completed,
+                                dogNames: { walkID in
+                                    links.filter { $0.walkID == walkID }
+                                        .map(\.dogNameSnapshot).sorted().joined(separator: ", ")
+                                },
+                                rowDestination: { WalkRoute(id: $0) })
         }
     }
 
@@ -248,7 +260,11 @@ struct StarterRootView: View {
         let formatter = RelativeDateTimeFormatter()
         formatter.locale = Locale(identifier: "fr_FR")
         formatter.unitsStyle = .short
-        var lines = ["Dernière sortie \(formatter.localizedString(for: endedAt, relativeTo: Date()))"]
+        // Under a minute, "il y a 9 s" reads like a stopwatch; say it plainly.
+        let ago = Date().timeIntervalSince(endedAt) < 60
+            ? "à l'instant"
+            : formatter.localizedString(for: endedAt, relativeTo: Date())
+        var lines = ["Dernière sortie \(ago)"]
         let weekAgo = Date().addingTimeInterval(-7 * 24 * 3600)
         let count = completed.filter { ($0.endedAt ?? $0.startedAt) >= weekAgo }.count
         if count > 0 {
@@ -331,8 +347,8 @@ struct StarterRootView: View {
                     .font(.system(.title2, design: .rounded, weight: .semibold))
                     .foregroundStyle(Color.truffloForest)
                 if let endedAt = walk.endedAt {
-                    Text(endedAt, format: .dateTime.weekday(.wide).day().month().hour().minute()
-                        .locale(Locale(identifier: "fr_FR")))
+                    Text(endedAt.formatted(.dateTime.weekday(.wide).day().month().hour().minute()
+                        .locale(Locale(identifier: "fr_FR"))))
                         .font(.subheadline)
                         .foregroundStyle(Color.truffloSlate)
                 }
