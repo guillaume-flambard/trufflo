@@ -23,6 +23,11 @@ enum HouseholdDemo {
         let bruno = UUID()
         let repository = JournalRepository(context: context)
         let oslo = try repository.addDog(try DogInput(name: "Oslo", breedKind: "mixed"))
+        // `TRUFFLO_DEMO_PHOTO=/path/to.jpg`: a stand-in picture to judge the photo layouts.
+        if let path = ProcessInfo.processInfo.environment["TRUFFLO_DEMO_PHOTO"],
+           let data = FileManager.default.contents(atPath: path) {
+            oslo.photoData = data
+        }
         let now = Date()
         try repository.addManualWalk(try ManualWalkInput(dogIDs: [oslo.id], durationSeconds: 35 * 60, note: "Tour du parc"),
                                      endedAt: now.addingTimeInterval(-26 * 3600))

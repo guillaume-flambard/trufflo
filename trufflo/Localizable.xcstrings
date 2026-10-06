@@ -88,6 +88,28 @@
           }
         }
       }
+    },
+    "Vous avez enregistré %lld balades cette semaine": {
+      "localizations": {
+        "fr": {
+          "variations": {
+            "plural": {
+              "one": {
+                "stringUnit": {
+                  "state": "translated",
+                  "value": "Vous avez enregistré %lld balade cette semaine"
+                }
+              },
+              "other": {
+                "stringUnit": {
+                  "state": "translated",
+                  "value": "Vous avez enregistré %lld balades cette semaine"
+                }
+              }
+            }
+          }
+        }
+      }
     }
   },
   "version": "1.1"
