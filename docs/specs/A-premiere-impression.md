@@ -45,11 +45,18 @@ catalogue (source : décision D1). La recherche tolère accents, casse et alias 
 « BA », « malinois » trouvent la bonne entrée). Trois choix restent toujours visibles sans
 chercher : « Croisé », « Je ne sais pas », « Autre race » (qui ouvre le champ libre actuel).
 
-**A-REQ-04, données de race.** Une entrée du catalogue a un identifiant stable, un nom français, des
-alias et la version du catalogue. Le profil garde l'identifiant **et** le libellé affiché au moment
-du choix. Les races déjà saisies en texte libre ne sont pas converties automatiquement : elles
-restent « Autre race » avec leur texte, et la personne peut choisir une entrée du catalogue.
-Changement de schéma SwiftData : migration légère, testée sur un store existant.
+**A-REQ-04, données de race.** Une entrée du catalogue a un identifiant stable, un nom français et
+des alias ; le catalogue vit dans le code (`BreedCatalog`). Le profil enregistre une race choisie
+comme aujourd'hui : `breedKind = "known"` et le nom affiché dans `breedLabel`. Aucune colonne
+ajoutée.
+
+Révisé le 2026-10-06 avant implémentation : la première version demandait de stocker l'identifiant
+et la version du catalogue. Cela exigeait une migration SwiftData (V7) et une migration serveur
+(`breed_kind`, `breed_label` partent déjà au foyer), pour une donnée qu'aucune fonction n'utilise,
+puisque A-REQ-05 interdit d'en déduire quoi que ce soit. Conséquence acceptée : si une entrée du
+catalogue est renommée plus tard, les profils gardent l'ancien nom, affiché comme une race saisie.
+Les races déjà saisies en texte libre ne sont pas converties : elles restent telles quelles, et la
+personne peut choisir une entrée du catalogue.
 
 **A-REQ-05, rien n'est déduit de la race.** Aucun texte, aucune routine, aucune suggestion ne
 dépend de la race choisie (PRD F01 et ART-DIRECTION §2.3).
@@ -84,7 +91,7 @@ strictement positif, et le code de sortie de `xcodebuild` traverse les tubes.
 | A-AC-06 | REQ-03 | le formulaire chien | on tape « berge » sans accent ni majuscule | les bergers sont proposés | unitaire |
 | A-AC-07 | REQ-03 | le formulaire chien | on ne cherche rien | « Croisé », « Je ne sais pas », « Autre race » sont visibles | capture |
 | A-AC-08 | REQ-04 | un chien avec une race du catalogue | on relance l'app | la même race est affichée | unitaire (persistance) |
-| A-AC-09 | REQ-04 | un store écrit avant ce lot avec une race en texte libre | on ouvre la nouvelle version | le texte est intact, affiché comme « Autre race » | test de migration + ouverture réelle sur simulateur |
+| A-AC-09 | REQ-04 | un profil existant avec une race en texte libre | on ouvre son formulaire | le texte est intact et affiché tel quel ; le schéma SwiftData n'a pas changé | test de schéma doré existant + capture |
 | A-AC-10 | REQ-05 | deux chiens de races différentes | on compare tous les écrans | aucun texte ne diffère sauf le nom de race | relecture du code (recherche de `breed`) |
 | A-AC-11 | REQ-06 | aucun chien, puis un chien sans photo ni balade | on parcourt les trois onglets | aucun écran vide, une seule action principale par écran | captures |
 | A-AC-12 | REQ-07 | le build du lot | on lance les parcours UI | `gps-journeys.sh all` : OK | parcours UI |

@@ -22,6 +22,9 @@ struct DogFormView: View {
     @State private var photoData: Data?
     @State private var selectedPhotoItem: PhotosPickerItem?
     @State private var errorMessage: String?
+    @State private var showBreedPicker = false
+
+    private var breedChoice: BreedChoice { BreedChoice(kind: breedKind, label: breedLabel) }
 
     init(profile: DogRecord? = nil) {
         self.dogID = profile?.id
@@ -51,13 +54,23 @@ struct DogFormView: View {
                     }
 
                     field("Race") {
-                        TruffloChoice(options: [("known", "Connue"), ("mixed", "Croisé"), ("unknown", "Inconnue")],
-                                      selection: $breedKind)
-                        if breedKind == "known" {
-                            TextField("Nom de la race", text: $breedLabel)
-                                .accessibilityIdentifier("dog.breedLabel")
-                                .modifier(FormFieldStyle())
+                        Button { showBreedPicker = true } label: {
+                            HStack {
+                                Text(breedChoice.summary)
+                                    .foregroundStyle(breedChoice.kind == "unknown" ? Color.truffloSlate : Color.truffloCharcoal)
+                                Spacer()
+                                Image(systemName: "chevron.right")
+                                    .font(.footnote.weight(.semibold))
+                                    .foregroundStyle(Color.truffloSlate)
+                                    .accessibilityHidden(true)
+                            }
+                            .contentShape(Rectangle())
+                            .modifier(FormFieldStyle())
                         }
+                        .buttonStyle(.plain)
+                        .accessibilityLabel("Race : \(breedChoice.summary)")
+                        .accessibilityHint("Ouvre la recherche de race")
+                        .accessibilityIdentifier("dog.breed")
                     }
 
                     ViewThatFits(in: .horizontal) {
@@ -116,6 +129,12 @@ struct DogFormView: View {
                             await MainActor.run { self.photoData = prepared }
                         }
                     }
+                }
+            }
+            .sheet(isPresented: $showBreedPicker) {
+                BreedPickerView(current: breedChoice) { choice in
+                    breedKind = choice.kind
+                    breedLabel = choice.label
                 }
             }
             .navigationTitle(isEditing ? "Modifier le chien" : "Nouveau chien")

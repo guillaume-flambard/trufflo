@@ -16,12 +16,12 @@ public struct OnboardingStep: Identifiable, Sendable {
         OnboardingStep(
             id: 1,
             title: "Un carnet, pas un score.",
-            description: "Chaque sortie rejoint son journal. Aucun objectif, aucun classement : ce que vous avez vécu ensemble."
+            description: "Chaque sortie rejoint son journal. Aucun classement, et une routine seulement si vous la choisissez."
         ),
         OnboardingStep(
             id: 2,
-            title: "Tout reste sur cet iPhone.",
-            description: "Pas de compte, rien de publié. La position ne sert que pendant une balade que vous avez lancée."
+            title: "Votre carnet reste sur cet iPhone.",
+            description: "Si vous créez ou rejoignez un foyer, seuls les résumés de balade sont partagés. La position ne sert que pendant une balade que vous avez lancée."
         )
     ]
 }
