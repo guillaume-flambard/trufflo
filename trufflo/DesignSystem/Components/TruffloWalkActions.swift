@@ -34,18 +34,18 @@ public struct TruffloPrimaryAction: View {
             }
             .foregroundStyle(.white)
             .frame(maxWidth: .infinity)
-            .frame(height: 56)
-            .background(Color.truffloForest, in: RoundedRectangle(
-                cornerRadius: TruffloTheme.Radius.medium, style: .continuous))
+            .frame(minHeight: 56)
         }
-        .buttonStyle(.plain)
+        .buttonStyle(.glassProminent)
+        .buttonBorderShape(.roundedRectangle(radius: TruffloTheme.Radius.medium))
+        .tint(Color.truffloForest)
         .accessibilityLabel(accessibilityLabel)
         .accessibilityIdentifier(identifier)
     }
 }
 
-/// A quiet secondary action: white label on a light rim, no fill of its own, so
-/// it reads as the smaller of two choices beside a forest primary.
+/// A quiet secondary action: a plain glass button beside the forest primary, so
+/// it reads as the smaller of the two choices.
 ///
 /// Used for ending a walk. The intent is terminal rather than destructive, since
 /// the walk is saved, so it carries no red: the confirmation sheet that follows
@@ -77,15 +77,12 @@ public struct TruffloQuietAction: View {
                 Text(title)
                     .font(.system(size: 16, weight: .semibold, design: .rounded))
             }
-            .foregroundStyle(.white.opacity(0.92))
-            .padding(.horizontal, TruffloTheme.Spacing.medium)
-            .frame(height: 56)
-            .background(.white.opacity(0.10), in: RoundedRectangle(
-                cornerRadius: TruffloTheme.Radius.medium, style: .continuous))
-            .overlay {
-                RoundedRectangle(cornerRadius: TruffloTheme.Radius.medium, style: .continuous)
-                    .strokeBorder(.white.opacity(0.34), lineWidth: 1)
-            }
+            .foregroundStyle(.white)
+            .padding(.horizontal, TruffloTheme.Spacing.small)
+            // 70, not 56: the glass-prominent primary beside it adds its own
+            // padding around a 56 pt label, and the two must share a height.
+            .frame(minHeight: 70)
+            .truffloGlassControl(strength: .strong, interactive: true)
         }
         .buttonStyle(.plain)
         .accessibilityLabel(accessibilityLabel)
@@ -120,8 +117,7 @@ public struct TruffloRoundAction: View {
                 .font(.system(size: 16, weight: .semibold))
                 .foregroundStyle(tint)
                 .frame(width: 44, height: 44)
-                .truffloGlassCircle(strength: .strong)
-                .clipShape(Circle())
+                .truffloGlassCircle(strength: .strong, interactive: true)
         }
         .buttonStyle(.plain)
         .accessibilityLabel(label)

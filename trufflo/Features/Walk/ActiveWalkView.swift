@@ -158,6 +158,7 @@ public struct ActiveWalkView: View {
                 .ignoresSafeArea()
                 .accessibilityIdentifier("walk.map")
 
+            GlassEffectContainer(spacing: TruffloTheme.Spacing.small) {
             VStack(spacing: 0) {
                 HStack(alignment: .top) {
                     TruffloRoundAction(systemImage: "chevron.down",
@@ -188,6 +189,7 @@ public struct ActiveWalkView: View {
             .padding(.horizontal, TruffloTheme.Spacing.small)
             .padding(.top, TruffloTheme.Spacing.xSmall)
             .padding(.bottom, TruffloTheme.Spacing.xSmall)
+            }
         }
     }
 
@@ -223,7 +225,6 @@ public struct ActiveWalkView: View {
         }
         .padding(TruffloTheme.Spacing.medium)
         .truffloGlass(strength: .strong)
-        .clipShape(RoundedRectangle(cornerRadius: TruffloTheme.Radius.card, style: .continuous))
     }
 
     /// One primary per state, always the last row. Finish is never shown while
@@ -303,7 +304,6 @@ public struct ActiveWalkView: View {
             .padding(.horizontal, TruffloTheme.Spacing.medium)
             .padding(.vertical, 10)
             .truffloGlassControl(strength: .strong)
-            .clipShape(RoundedRectangle(cornerRadius: TruffloTheme.Radius.medium, style: .continuous))
             .accessibilityLabel(text)
             .accessibilityIdentifier("walk.notice")
             .transition(reduceMotion ? .opacity : .move(edge: .top).combined(with: .opacity))

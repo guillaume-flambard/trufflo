@@ -2,54 +2,51 @@ import SwiftUI
 
 /// How strongly a glass surface is tinted forest. The surfaces that carry numbers
 /// need the stronger tint to stay readable over bright streets and pale parkland.
+/// Native glass tints more transparently than a flat fill, hence the higher values.
 public enum TruffloGlassStrength {
     case soft
     case strong
 
     var tintOpacity: Double {
         switch self {
-        case .soft: return 0.20
-        case .strong: return 0.34
+        case .soft: return 0.45
+        case .strong: return 0.70
         }
     }
 }
 
-/// The glass language of the walk screens: a blurred, forest-tinted surface with a
-/// light rim, never used for content.
+/// The glass language of the walk screens: Apple's Liquid Glass, tinted forest,
+/// never used for content.
 ///
 /// Content in this app stays on warm opaque surfaces. Glass marks controls and
 /// measurements that float over the map, which is the only thing behind them.
 ///
-/// Under Reduce Transparency the material is replaced by an opaque forest. A
-/// blurred surface is not legible against map tiles, so falling back to a
-/// translucent tint would make the measurements unreadable for exactly the people
-/// who asked for the setting.
+/// The material is the system one (`glassEffect`), so it refracts, adapts to the
+/// content behind it and reacts like every other iOS 27 control. The forest tint
+/// is what keeps white figures readable over bright streets and pale parkland.
 ///
-/// The rim has to be stroked on a concrete shape, because an opaque `some Shape`
-/// exposes no `stroke` of its own. Hence one helper per shape rather than a shape
-/// parameter.
+/// Under Reduce Transparency the surface is an opaque forest instead. The system
+/// already tones glass down for that setting; an explicit opaque fallback is kept
+/// because a blurred surface over map tiles is the case where measurements stop
+/// being legible for exactly the people who asked for the setting.
 struct TruffloGlass<S: InsettableShape>: ViewModifier {
     var strength: TruffloGlassStrength = .soft
+    var interactive = false
     let shape: S
 
     @Environment(\.accessibilityReduceTransparency) private var reduceTransparency
-
-    /// Weaker under Reduce Transparency: the surface is opaque there, so a bright
-    /// highlight would only read as leftover decoration.
-    private var rimOpacity: Double { reduceTransparency ? 0.18 : 0.38 }
 
     @ViewBuilder
     func body(content: Content) -> some View {
         if reduceTransparency {
             content
                 .background(TruffloTheme.Colors.forestDeep, in: shape)
-                .overlay(shape.strokeBorder(Color.white.opacity(rimOpacity), lineWidth: 1))
+                .overlay(shape.strokeBorder(Color.white.opacity(0.18), lineWidth: 1))
         } else {
             content
-                .background(.ultraThinMaterial, in: shape)
-                .background(Color.truffloForestDeep.opacity(strength.tintOpacity), in: shape)
-                .overlay(shape.strokeBorder(Color.white.opacity(rimOpacity), lineWidth: 1))
-                .shadow(color: Color.truffloForestDeep.opacity(0.16), radius: 20, y: 6)
+                .glassEffect(.regular.tint(Color.truffloForestDeep.opacity(strength.tintOpacity))
+                                .interactive(interactive),
+                             in: shape)
         }
     }
 }
@@ -68,13 +65,15 @@ extension View {
     }
 
     /// Glass on a circle, for the round controls.
-    func truffloGlassCircle(strength: TruffloGlassStrength = .soft) -> some View {
-        modifier(TruffloGlass(strength: strength, shape: Circle()))
+    func truffloGlassCircle(strength: TruffloGlassStrength = .soft,
+                            interactive: Bool = false) -> some View {
+        modifier(TruffloGlass(strength: strength, interactive: interactive, shape: Circle()))
     }
 
     /// Glass on a control-shaped surface, for buttons that sit beside each other.
-    func truffloGlassControl(strength: TruffloGlassStrength = .soft) -> some View {
-        modifier(TruffloGlass(strength: strength,
+    func truffloGlassControl(strength: TruffloGlassStrength = .soft,
+                             interactive: Bool = false) -> some View {
+        modifier(TruffloGlass(strength: strength, interactive: interactive,
                               shape: RoundedRectangle(cornerRadius: TruffloTheme.Radius.medium,
                                                       style: .continuous)))
     }
