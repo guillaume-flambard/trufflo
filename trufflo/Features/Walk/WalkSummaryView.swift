@@ -14,6 +14,7 @@ struct WalkSummaryView: View {
     @Query private var matches: [WalkRecord]
     @Query private var participants: [WalkDogRecord]
     @Query private var points: [TrackPointRecord]
+    @Query private var dogs: [DogRecord]
 
     @State private var note = ""
     @State private var hasLoadedNote = false
@@ -47,8 +48,9 @@ struct WalkSummaryView: View {
                 }
             }
             .background(Color.truffloSand.ignoresSafeArea())
-            .navigationTitle("Bilan de la balade")
             .navigationBarTitleDisplayMode(.inline)
+            // The media runs under the bar; the button floats over it in glass.
+            .toolbarBackgroundVisibility(.hidden, for: .navigationBar)
             .toolbar {
                 ToolbarItem(placement: .confirmationAction) {
                     Button("Terminé", action: saveAndClose)
@@ -70,72 +72,68 @@ struct WalkSummaryView: View {
 
     // MARK: - Content
 
+    /// A recorded outing opens on its route. One without a usable route (a GPS walk
+    /// that kept fewer than two points) never shows a map that pretends to be one:
+    /// the dog stands in the same place instead, at the same height, so the layout
+    /// does not jump between the two.
     private func content(for walk: WalkRecord) -> some View {
         ScrollView {
-            VStack(alignment: .leading, spacing: TruffloTheme.Spacing.medium) {
-                if trackCoordinates.count >= 2 {
-                    TruffloTrackMap(points: trackCoordinates,
-                                    isLive: false,
-                                    showsMarkers: false,
-                                    isFollowing: $isFollowingTrack)
-                        .frame(height: 220)
-                        .clipShape(RoundedRectangle(cornerRadius: TruffloTheme.Radius.card,
-                                                    style: .continuous))
-                        .accessibilityIdentifier("walk.summary.map")
-                }
+            VStack(alignment: .leading, spacing: 0) {
+                hero(for: walk)
 
-                TruffloCard {
-                    HStack(alignment: .firstTextBaseline, spacing: TruffloTheme.Spacing.medium) {
-                        measurement(value: WalkFormatting.clock(walk.confirmedSeconds), caption: "Durée")
-                        Rectangle()
-                            .fill(Color.truffloForest.opacity(0.14))
-                            .frame(width: 1, height: 36)
-                            .accessibilityHidden(true)
-                        measurement(value: WalkFormatting.distance(walk.recordedPathMeters),
-                                    caption: "Distance",
-                                    dimmed: walk.recordedPathMeters == nil)
-                    }
-                    .padding(.vertical, TruffloTheme.Spacing.xxSmall)
-                }
-
-                TruffloCard {
-                    VStack(alignment: .leading, spacing: TruffloTheme.Spacing.small) {
-                        LabeledContent("Qualité") {
-                            Text(WalkFormatting.quality(walk.quality))
-                                .font(.truffloSubheadline)
-                                .foregroundStyle(Color.truffloForest)
+                VStack(alignment: .leading, spacing: TruffloTheme.Spacing.large) {
+                    VStack(alignment: .leading, spacing: 2) {
+                        Text(title)
+                            .font(.system(.title2, design: .rounded, weight: .semibold))
+                            .foregroundStyle(Color.truffloForest)
+                        if let endedAt = walk.endedAt {
+                            Text(endedAt.formatted(.dateTime.weekday(.wide).day().month()
+                                .hour().minute().locale(Locale(identifier: "fr_FR"))))
+                                .font(.subheadline)
+                                .foregroundStyle(Color.truffloSlate)
                         }
-                        .font(.truffloBody)
+                    }
+
+                    HStack(alignment: .firstTextBaseline, spacing: TruffloTheme.Spacing.xLarge) {
+                        measurement(value: WalkFormatting.clock(walk.confirmedSeconds), caption: "durée")
+                        if let meters = walk.recordedPathMeters {
+                            measurement(value: WalkFormatting.distance(meters), caption: "distance")
+                        }
+                    }
+
+                    VStack(alignment: .leading, spacing: TruffloTheme.Spacing.xSmall) {
+                        Text("Note")
+                            .font(.system(.title3, design: .rounded, weight: .semibold))
+                            .foregroundStyle(Color.truffloForest)
+                        TextField("Comment s'est passée la balade ?", text: $note, axis: .vertical)
+                            .font(.body)
+                            .lineLimit(3...8)
+                            .accessibilityIdentifier("walk.summary.note")
+                    }
+                    .padding(.top, TruffloTheme.Spacing.medium)
+                    .overlay(alignment: .top) {
+                        Rectangle().fill(Color.truffloForest.opacity(0.12)).frame(height: 1)
+                    }
+
+                    // Quiet: one line of what the measure is, and a gap named as a gap.
+                    VStack(alignment: .leading, spacing: 2) {
+                        Text(WalkFormatting.quality(walk.quality))
+                            .font(.footnote)
+                            .foregroundStyle(Color.truffloSlate)
                         if let hint = qualityHint(for: walk.quality) {
                             Text(hint)
-                                .font(.truffloCaption)
+                                .font(.footnote)
                                 .foregroundStyle(Color.truffloSlate)
                                 .fixedSize(horizontal: false, vertical: true)
                         }
-                        if !dogNames.isEmpty {
-                            HStack(spacing: TruffloTheme.Spacing.xSmall) {
-                                ForEach(dogNames, id: \.self) { name in
-                                    TruffloBadge(name, icon: "pawprint.fill", style: .sage)
-                                }
-                            }
-                        }
                     }
                 }
-
-                TruffloCard {
-                    VStack(alignment: .leading, spacing: TruffloTheme.Spacing.xSmall) {
-                        Text("Note")
-                            .font(.truffloHeadline)
-                            .foregroundStyle(Color.truffloForest)
-                        TextField("Comment s'est passée la balade ?", text: $note, axis: .vertical)
-                            .font(.truffloBody)
-                            .lineLimit(3...6)
-                            .accessibilityIdentifier("walk.summary.note")
-                    }
-                }
+                .padding(.horizontal, TruffloTheme.Spacing.large)
+                .padding(.top, TruffloTheme.Spacing.large)
+                .padding(.bottom, TruffloTheme.Spacing.xLarge)
             }
-            .padding(TruffloTheme.Spacing.medium)
         }
+        .ignoresSafeArea(edges: .top)
         .scrollDismissesKeyboard(.interactively)
         .onAppear {
             // Read once: a resumed summary must not overwrite what is being typed.
@@ -145,20 +143,47 @@ struct WalkSummaryView: View {
         }
     }
 
-    private func measurement(value: String, caption: String, dimmed: Bool = false) -> some View {
+    @ViewBuilder
+    private func hero(for walk: WalkRecord) -> some View {
+        if trackCoordinates.count >= 2 {
+            TruffloTrackMap(points: trackCoordinates,
+                            isLive: false,
+                            showsMarkers: false,
+                            isFollowing: $isFollowingTrack)
+                .frame(height: 340)
+                .accessibilityIdentifier("walk.summary.map")
+        } else {
+            let name = dogNames.first ?? "Balade"
+            TruffloDogHero(name: name, photoData: leadDog?.photoData, height: 340)
+        }
+    }
+
+    private var title: String {
+        dogNames.isEmpty
+            ? "Balade"
+            : "Balade avec " + dogNames.formatted(.list(type: .and).locale(Locale(identifier: "fr_FR")))
+    }
+
+    /// The first participant still on the device. A deleted profile leaves its name
+    /// in the walk and nothing else, so the hero then falls back to the initial.
+    private var leadDog: DogRecord? {
+        let ids = participants.map(\.dogID)
+        return dogs.first { ids.contains($0.id) }
+    }
+
+    private func measurement(value: String, caption: String) -> some View {
         VStack(alignment: .leading, spacing: 2) {
             Text(value)
-                .font(.system(.title, design: .rounded, weight: .bold))
+                .font(.system(.largeTitle, design: .rounded, weight: .bold))
                 .monospacedDigit()
-                .foregroundStyle(dimmed ? Color.truffloCharcoal.opacity(0.55) : Color.truffloForest)
+                .foregroundStyle(Color.truffloForest)
                 .lineLimit(1)
                 .minimumScaleFactor(0.6)
             Text(caption)
-                .font(.system(.caption2, design: .rounded, weight: .semibold))
-                .textCase(.uppercase)
+                .font(.subheadline)
                 .foregroundStyle(Color.truffloSlate)
+                .accessibilityHidden(true)
         }
-        .frame(maxWidth: .infinity, alignment: .leading)
         .accessibilityElement(children: .combine)
     }
 
