@@ -46,6 +46,13 @@ public protocol HouseholdRemote: Sendable {
     /// tombstones included.
     func walks(householdID: UUID, changedSince since: Date?) async throws -> [RemoteWalkDTO]
 
+    /// Writes my live position (one row per member, overwritten).
+    func shareLivePosition(_ position: LivePositionDTO) async throws
+    /// Deletes my live position.
+    func stopLivePosition(householdID: UUID, userID: UUID) async throws
+    /// The household's live positions not expired, mine included.
+    func livePositions(householdID: UUID) async throws -> [RemoteLivePositionDTO]
+
     func upsertPlannedWalk(_ plan: PlannedWalkDTO) async throws
     func tombstonePlannedWalk(id: UUID, at date: Date) async throws
     /// The household's planned balades still to come, none deleted.

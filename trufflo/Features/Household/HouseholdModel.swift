@@ -185,6 +185,42 @@ final class HouseholdModel {
         return token
     }
 
+    // MARK: - Nearby dogs of the foyer (on agreement, 2026-10-08)
+
+    static let sharesLivePositionKey = "foyer.sharesLivePosition"
+
+    /// Off by default. When on, my position goes to my household during my
+    /// balades only (`ActiveWalkView`), rounded and short-lived on the server.
+    var sharesLivePosition: Bool {
+        get {
+            access(keyPath: \.sharesLivePosition)
+            return UserDefaults.standard.bool(forKey: Self.sharesLivePositionKey)
+        }
+        set {
+            withMutation(keyPath: \.sharesLivePosition) {
+                UserDefaults.standard.set(newValue, forKey: Self.sharesLivePositionKey)
+            }
+            if !newValue { Task { await stopLivePosition() } }
+        }
+    }
+
+    /// Whether a balade should share and read positions now.
+    var canShareLivePosition: Bool { sharesLivePosition && isSignedIn && sync?.household() != nil }
+
+    /// Sends my position and returns the other members' who share theirs.
+    /// Failures are quiet: the balade never depends on the network.
+    func exchangeLivePosition(latitude: Double, longitude: Double) async -> [NearbyDog] {
+        guard canShareLivePosition, let sync else { return [] }
+        try? await sync.shareLivePosition(latitude: latitude, longitude: longitude)
+        let others = (try? await sync.othersLivePositions()) ?? []
+        return others.map { NearbyDog(id: $0.userID, latitude: $0.latitude, longitude: $0.longitude) }
+    }
+
+    func stopLivePosition() async {
+        guard let sync, isSignedIn else { return }
+        try? await sync.stopLivePosition()
+    }
+
     /// The owner's invites still open; empty on any failure (the list is a
     /// convenience, the error shows on the next action).
     func pendingInvites() async -> [PendingInviteDTO] {

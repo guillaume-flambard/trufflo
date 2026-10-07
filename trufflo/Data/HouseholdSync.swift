@@ -117,6 +117,25 @@ struct HouseholdSync {
         return try await remote.createInvite(householdID: household.id, role: role)
     }
 
+    /// My position during a balade, when I agreed to share it with the foyer.
+    func shareLivePosition(latitude: Double, longitude: Double) async throws {
+        guard let household = household() else { return }
+        try await remote.shareLivePosition(LivePositionDTO(householdID: household.id,
+                                                           latitude: latitude, longitude: longitude))
+    }
+
+    func stopLivePosition() async throws {
+        guard let household = household() else { return }
+        try await remote.stopLivePosition(householdID: household.id, userID: household.myUserID)
+    }
+
+    /// The other members' live positions, never mine.
+    func othersLivePositions() async throws -> [RemoteLivePositionDTO] {
+        guard let household = household() else { return [] }
+        return try await remote.livePositions(householdID: household.id)
+            .filter { $0.userID != household.myUserID }
+    }
+
     func pendingInvites() async throws -> [PendingInviteDTO] {
         guard let household = household(), household.myRole == .owner else { return [] }
         return try await remote.pendingInvites(householdID: household.id, now: now())

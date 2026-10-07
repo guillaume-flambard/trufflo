@@ -74,6 +74,23 @@ func twoPeopleShareAHouseholdOverRealHTTP() async throws {
     let names = try anneStore.mainContext.fetch(FetchDescriptor<HouseholdMemberRecord>()).map(\.displayName)
     #expect(Set(names) == ["Anne", "Bruno"])
 
+    // Over real HTTP: the shared details, a planned walk, live positions.
+    try anne.updateWalkDetails(anneWalk.id, title: "Tour du parc", mood: .calm, note: "privée")
+    _ = try anne.planWalk(at: Date().addingTimeInterval(3600), placeName: "Parc", latitude: 48.88, longitude: 2.38)
+    try await anneSync.sync()
+    try await brunoSync.sync()
+    let detailed = try brunoStore.mainContext.fetch(FetchDescriptor<SharedWalkRecord>())
+    #expect(detailed.first?.title == "Tour du parc")
+    #expect(detailed.first?.mood == .calm)
+    #expect(try brunoStore.mainContext.fetch(FetchDescriptor<SharedPlannedWalkRecord>()).map(\.placeName) == ["Parc"])
+    try await anneSync.shareLivePosition(latitude: 48.8812345, longitude: 2.3812345)
+    try await anneSync.shareLivePosition(latitude: 48.8812345, longitude: 2.3812345)
+    let seen = try await brunoSync.othersLivePositions()
+    #expect(seen.count == 1, "une ligne par membre, réécrite")
+    #expect(seen.first?.latitude == 48.8812, "arrondi par le serveur")
+    try await anneSync.stopLivePosition()
+    #expect(try await brunoSync.othersLivePositions().isEmpty)
+
     // A correction and a deletion travel; nothing comes back to life.
     try anne.correctWalk(anneWalk.id, with: try WalkCorrection(dogIDs: [osloA.id], note: "", durationSeconds: 2700))
     try await anneSync.sync()

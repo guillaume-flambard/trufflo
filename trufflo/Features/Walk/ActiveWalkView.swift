@@ -26,6 +26,7 @@ public struct ActiveWalkView: View {
     @Environment(\.accessibilityReduceMotion) private var reduceMotion
     @StateObject private var viewModel: ActiveWalkViewModel
     @Query private var dogs: [DogRecord]
+    @Environment(HouseholdModel.self) private var household
     @State private var showFinishConfirmation = false
     @State private var showManualEntry = false
     /// Presentation mirror of `viewModel.startBlock`. The model stays the source
@@ -56,9 +57,8 @@ public struct ActiveWalkView: View {
     @State private var guideStep = 0
     @State private var showsGuide = true
     @State private var askedRoute = false
-    /// Dogs of the foyer that share their position during their own balade.
-    /// Empty in production until the foyer live position is built and decided;
-    /// filled only by `--demo-proximity` for the board capture.
+    /// Members of the foyer who share their position during their own balade,
+    /// read while I share mine (both on agreement, Foyer settings).
     @State private var nearbyDogs: [NearbyDog] = []
     @State private var acknowledgedDogs: Set<UUID> = []
     /// "Voir sur la carte": the card goes, the paw stays on the map a minute.
@@ -211,10 +211,21 @@ public struct ActiveWalkView: View {
                     statsBar
                 }
                 HStack(alignment: .top) {
-                    TruffloGPSIndicator(viewModel.signalState)
-                        .padding(.horizontal, 10)
-                        .frame(height: 28)
-                        .background(Color.white.opacity(0.9), in: Capsule())
+                    VStack(alignment: .leading, spacing: 6) {
+                        TruffloGPSIndicator(viewModel.signalState)
+                            .padding(.horizontal, 10)
+                            .frame(height: 28)
+                            .background(Color.white.opacity(0.9), in: Capsule())
+                        if household.canShareLivePosition, viewModel.phase == .recording {
+                            Label("Visible du foyer", systemImage: "person.2.wave.2")
+                                .font(.system(size: 12, weight: .medium))
+                                .foregroundStyle(Color.truffloForest)
+                                .padding(.horizontal, 10)
+                                .frame(height: 28)
+                                .background(Color.white.opacity(0.9), in: Capsule())
+                                .accessibilityIdentifier("walk.sharing")
+                        }
+                    }
                     Spacer(minLength: 0)
                     VStack(spacing: 12) {
                         mapButton("chevron.down", label: "Réduire la balade", identifier: "walk.minimize") { dismiss() }
@@ -249,6 +260,27 @@ public struct ActiveWalkView: View {
         .onChange(of: viewModel.distanceMeters) { _, meters in announceIfNeeded(meters) }
         .onChange(of: viewModel.trackPoints.count) { _, _ in followGuide() }
         .task { seedProximityDemo() }
+        // While recording, and only if I agreed: my rounded position goes to
+        // the foyer every 15 s and theirs comes back. Paused or ended, it stops.
+        .task(id: viewModel.phase == .recording) {
+            guard viewModel.phase == .recording, household.canShareLivePosition else { return }
+            while !Task.isCancelled {
+                if let last = viewModel.trackPoints.last {
+                    nearbyDogs = await household.exchangeLivePosition(latitude: last.latitude,
+                                                                      longitude: last.longitude)
+                }
+                try? await Task.sleep(for: .seconds(15))
+            }
+        }
+        .onChange(of: viewModel.phase) { _, phase in
+            if phase != .recording, household.canShareLivePosition {
+                nearbyDogs = []
+                Task { await household.stopLivePosition() }
+            }
+        }
+        .onDisappear {
+            Task { await household.stopLivePosition() }
+        }
     }
 
     // MARK: - Guidance and proximity

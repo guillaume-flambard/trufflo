@@ -361,6 +361,7 @@ struct HouseholdView: View {
                 sereneCard(household)
                 recentActivity(household)
                 if household.myRole == .owner { inviteSection(household) }
+                nearbySetting
 
                 exitSection(household)
                 .confirmationDialog("Quitter « \(household.name) » ?", isPresented: $confirmLeave, titleVisibility: .visible) {
@@ -632,6 +633,26 @@ struct HouseholdView: View {
                 TruffloDogThumbnail(name: "", photoData: photo.data, side: 46, bordered: false)
             }
         }
+    }
+
+    /// "Chiens du foyer à proximité", on agreement: off until the member turns
+    /// it on, and it says exactly what leaves the iPhone.
+    private var nearbySetting: some View {
+        @Bindable var model = model
+        return VStack(alignment: .leading, spacing: 6) {
+            Toggle(isOn: $model.sharesLivePosition) {
+                Label("Chiens du foyer à proximité", systemImage: "person.2.wave.2")
+                    .font(.system(size: 15, weight: .semibold))
+                    .foregroundStyle(Color.truffloCharcoal)
+            }
+            .tint(Color.truffloForest)
+            .accessibilityIdentifier("household.nearby")
+            Text("Pendant vos balades seulement, votre position, arrondie à une dizaine de mètres, est visible des membres de ce foyer et de personne d'autre. Vous êtes prévenu quand l'un d'eux, qui l'a activé aussi, passe à moins de 50 m. Elle est effacée à la fin de la balade, et le serveur l'oublie deux minutes après le dernier envoi.")
+                .font(.footnote)
+                .foregroundStyle(Color.truffloSlate)
+                .fixedSize(horizontal: false, vertical: true)
+        }
+        .truffloBoardCard()
     }
 
     private func inviteSection(_ household: HouseholdRecord) -> some View {

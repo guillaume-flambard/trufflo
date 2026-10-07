@@ -202,6 +202,29 @@ struct SupabaseRemote: HouseholdRemote {
         }
     }
 
+    func shareLivePosition(_ position: LivePositionDTO) async throws {
+        try await mapped {
+            try await client.from("live_positions")
+                .upsert(position, onConflict: "household_id,user_id", returning: .minimal).execute()
+        }
+    }
+
+    func stopLivePosition(householdID: UUID, userID: UUID) async throws {
+        try await mapped {
+            try await client.from("live_positions").delete(returning: .minimal)
+                .eq("household_id", value: householdID).eq("user_id", value: userID).execute()
+        }
+    }
+
+    func livePositions(householdID: UUID) async throws -> [RemoteLivePositionDTO] {
+        try await mapped {
+            try await client.from("live_positions").select("user_id,latitude,longitude")
+                .eq("household_id", value: householdID)
+                .gt("expires_at", value: HouseholdCoding.format(Date()))
+                .execute().value
+        }
+    }
+
     func upsertPlannedWalk(_ plan: PlannedWalkDTO) async throws {
         try await mapped { try await client.from("planned_walks").upsert(plan, returning: .minimal).execute() }
     }

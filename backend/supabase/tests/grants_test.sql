@@ -17,6 +17,7 @@ select is(
            group by g.table_name::text) t),
     ('daily_tips:SELECT | dogs:INSERT,SELECT,UPDATE | household_invites:INSERT,SELECT,UPDATE'
      || ' | household_members:DELETE,SELECT,UPDATE | households:DELETE,INSERT,SELECT,UPDATE'
+     || ' | live_positions:DELETE,INSERT,SELECT,UPDATE'
      || ' | member_profiles:INSERT,SELECT,UPDATE | planned_walks:INSERT,SELECT,UPDATE'
      || ' | walk_dogs:DELETE,INSERT,SELECT | walks:INSERT,SELECT,UPDATE') collate "C",
     'authenticated holds exactly the privileges the policies expect');

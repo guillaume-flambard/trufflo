@@ -283,6 +283,44 @@ public struct PendingInviteDTO: Decodable, Equatable, Sendable, Identifiable {
     }
 }
 
+/// Where a member is during their balade, shared with their household only
+/// when they turned it on. The server rounds it to about 10 m and forgets it
+/// two minutes after the last write (20261008100000_live_positions).
+public struct LivePositionDTO: Encodable, Equatable, Sendable {
+    public var householdID: UUID
+    public var latitude: Double
+    public var longitude: Double
+
+    public init(householdID: UUID, latitude: Double, longitude: Double) {
+        self.householdID = householdID
+        self.latitude = latitude
+        self.longitude = longitude
+    }
+
+    enum CodingKeys: String, CodingKey {
+        case householdID = "household_id"
+        case latitude, longitude
+    }
+}
+
+/// Another member's live position, as read back.
+public struct RemoteLivePositionDTO: Decodable, Equatable, Sendable {
+    public var userID: UUID
+    public var latitude: Double
+    public var longitude: Double
+
+    public init(userID: UUID, latitude: Double, longitude: Double) {
+        self.userID = userID
+        self.latitude = latitude
+        self.longitude = longitude
+    }
+
+    enum CodingKeys: String, CodingKey {
+        case userID = "user_id"
+        case latitude, longitude
+    }
+}
+
 public struct HouseholdDTO: Decodable, Equatable, Sendable {
     public var id: UUID
     public var name: String

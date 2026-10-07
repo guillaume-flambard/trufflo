@@ -482,3 +482,35 @@ func aLoneOwnerDeletesTheHousehold() async throws {
         _ = try await brunoHome.sync.acceptInvite(token: token)
     }
 }
+
+@MainActor
+@Test func livePositionsStayInTheFoyerAndNeverShowMine() async throws {
+    let server = FakeHouseholdServer()
+    let anneHome = try Phone(server: server, user: anne)
+    try await anneHome.sync.createHousehold(name: "Maison", displayName: "Anne")
+    let token = try await anneHome.sync.createInvite(role: .reader)
+    let brunoHome = try Phone(server: server, user: bruno)
+    let (joined, _) = try await brunoHome.sync.acceptInvite(token: token)
+    try await brunoHome.sync.completeJoin(joined, displayName: "Bruno", links: [:])
+
+    try await anneHome.sync.shareLivePosition(latitude: 48.8812345, longitude: 2.3812345)
+    try await brunoHome.sync.shareLivePosition(latitude: 48.8815, longitude: 2.3812)
+
+    let seenByBruno = try await brunoHome.sync.othersLivePositions()
+    #expect(seenByBruno.map(\.userID) == [anne], "Bruno voit Anne, pas lui-même")
+    #expect(seenByBruno.first?.latitude == 48.8812, "arrondi à une dizaine de mètres")
+
+    // A stranger's phone, in no household, reads nothing.
+    let stranger = try Phone(server: server, user: UUID())
+    #expect(try await stranger.sync.othersLivePositions().isEmpty)
+
+    try await anneHome.sync.stopLivePosition()
+    #expect(try await brunoHome.sync.othersLivePositions().isEmpty, "Anne a arrêté : sa position disparaît")
+}
+
+@Test func aLivePositionCarriesOnlyTheFoyerAndThePoint() throws {
+    let json = String(decoding: try HouseholdCoding.encoder().encode(
+        LivePositionDTO(householdID: UUID(), latitude: 48.88, longitude: 2.38)), as: UTF8.self)
+    let object = try #require(try JSONSerialization.jsonObject(with: Data(json.utf8)) as? [String: Any])
+    #expect(Set(object.keys) == ["household_id", "latitude", "longitude"])
+}

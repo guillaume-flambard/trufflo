@@ -24,6 +24,13 @@ final class FakeHouseholdServer: @unchecked Sendable {
     private(set) var dogs: [UUID: (dto: DogDTO, deletedAt: Date?)] = [:]
     private(set) var walks: [UUID: Walk] = [:]
     private(set) var plans: [UUID: (dto: PlannedWalkDTO, authorID: UUID, deletedAt: Date?)] = [:]
+    private(set) var positions: [UUID: [UUID: (Double, Double)]] = [:]
+    fileprivate func putPosition(_ p: LivePositionDTO, by user: UUID) {
+        // Rounded as the server does.
+        positions[p.householdID, default: [:]][user] = ((p.latitude * 10_000).rounded() / 10_000,
+                                                         (p.longitude * 10_000).rounded() / 10_000)
+    }
+    fileprivate func dropPosition(_ household: UUID, _ user: UUID) { positions[household]?[user] = nil }
     /// Every call, in order, for assertions such as "nothing was sent".
     private(set) var calls: [String] = []
     var clock = Date(timeIntervalSince1970: 1_000_000)
@@ -261,6 +268,29 @@ struct FakeHouseholdRemote: HouseholdRemote {
 
     func replaceParticipants(walkID: UUID, with dogs: [WalkDogDTO]) async throws {
         try server.run("replaceParticipants") { try server.setParticipants(walkID, dogs) }
+    }
+
+    func shareLivePosition(_ position: LivePositionDTO) async throws {
+        try server.run("shareLivePosition") {
+            guard server.role(user, in: position.householdID) != nil else { throw RemoteError.forbidden("rls") }
+            server.putPosition(position, by: user)
+        }
+    }
+
+    func stopLivePosition(householdID: UUID, userID: UUID) async throws {
+        try server.run("stopLivePosition") {
+            guard userID == user else { return }
+            server.dropPosition(householdID, userID)
+        }
+    }
+
+    func livePositions(householdID: UUID) async throws -> [RemoteLivePositionDTO] {
+        try server.run("livePositions") {
+            guard server.role(user, in: householdID) != nil else { return [] }
+            return (server.positions[householdID] ?? [:]).map {
+                RemoteLivePositionDTO(userID: $0.key, latitude: $0.value.0, longitude: $0.value.1)
+            }
+        }
     }
 
     func upsertPlannedWalk(_ plan: PlannedWalkDTO) async throws {
