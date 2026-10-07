@@ -308,14 +308,15 @@ enum SchemaV6: VersionedSchema {
 
 /// V7 is the current version (chantier 8, the 2026-10-07 mock-ups): a dog gains
 /// size, weight and traits; a walk gains a title, a mood, a place and the
-/// weather; walk photos get their own table. Every new column has a default, so
+/// weather; walk photos and the planned balade get their own tables. V7 has not
+/// shipped, so its shape may still change before the next release. Every new column has a default, so
 /// existing rows fill in a lightweight stage.
 enum SchemaV7: VersionedSchema {
     static let versionIdentifier = Schema.Version(7, 0, 0)
     static var models: [any PersistentModel.Type] {
         [DogRecord.self, WalkRecord.self, WalkDogRecord.self, TrackPointRecord.self, RoutineRecord.self,
          HouseholdRecord.self, DogLinkRecord.self, SyncLedgerRecord.self,
-         SharedWalkRecord.self, HouseholdMemberRecord.self, WalkPhotoRecord.self]
+         SharedWalkRecord.self, HouseholdMemberRecord.self, WalkPhotoRecord.self, PlannedWalkRecord.self]
     }
 }
 

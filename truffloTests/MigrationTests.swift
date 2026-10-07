@@ -314,6 +314,7 @@ private func seedLegacyV2Store(at storeURL: URL) throws {
         + " | DogRecord{ageDescription,breedKind,breedLabel,createdAt,gender,id,name,photoData,preferencesNote,sizeRaw,traitsRaw,weightKg}"
         + " | HouseholdMemberRecord{displayName,roleRaw,userID}"
         + " | HouseholdRecord{id,joinedAt,lastError,lastPulledAt,lastSyncAt,myDisplayName,myRoleRaw,myUserID,name}"
+        + " | PlannedWalkRecord{date,id,latitude,longitude,placeName,remind}"
         + " | RoutineRecord{dogID,isPaused,minutesPerOuting,outingsPerDay,slotsRaw,updatedAt}"
         + " | SharedWalkRecord{authorID,confirmedSeconds,correctedAt,dogIDsRaw,dogNamesRaw,endedAt,id,qualityRaw,recordedPathMeters,revision,sourceRaw,startedAt,updatedAt}"
         + " | SyncLedgerRecord{key,kindRaw,lastError,localID,pushedFingerprint,stateRaw,updatedAt}"

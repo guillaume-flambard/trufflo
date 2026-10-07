@@ -80,4 +80,15 @@ struct MockupDataTests {
         #expect(CalorieEstimate.kcal(weightKg: nil, meters: 2000, size: .medium) == nil)
         #expect(CalorieEstimate.kcal(weightKg: 18, meters: nil, size: .medium) == nil)
     }
+
+    @Test func aNewPlanReplacesThePreviousOneAndErasureTakesIt() throws {
+        let (repo, context) = try repository()
+        try repo.planWalk(at: .now.addingTimeInterval(3600), placeName: "Parc", latitude: 48.88, longitude: 2.38)
+        try repo.planWalk(at: .now.addingTimeInterval(7200), placeName: " Buttes-Chaumont ", latitude: nil, longitude: nil)
+        let plans = try context.fetch(FetchDescriptor<PlannedWalkRecord>())
+        #expect(plans.count == 1)
+        #expect(plans[0].placeName == "Buttes-Chaumont")
+        try repo.eraseAll()
+        #expect(try context.fetch(FetchDescriptor<PlannedWalkRecord>()).isEmpty)
+    }
 }

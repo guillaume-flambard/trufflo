@@ -9,6 +9,11 @@ import SwiftData
 /// duration, distance and quality are the stored values.
 @MainActor
 struct WalkSummaryView: View {
+    /// The celebration when the person ends the walk; the plain résumé of the
+    /// board's "Fin automatique" when it ended on its own (interrupted, then
+    /// finished with what was recorded).
+    enum Style { case celebration, saved }
+
     @Environment(\.modelContext) private var context
 
     @Query private var matches: [WalkRecord]
@@ -19,16 +24,21 @@ struct WalkSummaryView: View {
     @State private var note = ""
     @State private var title = ""
     @State private var mood: WalkMood?
+    @State private var showEditor = false
+    @State private var celebrate = false
+    @Environment(\.accessibilityReduceMotion) private var reduceMotion
     @State private var hasLoadedNote = false
     @State private var saveError: String?
     /// A finished walk is framed once and never chases the camera afterwards.
     @State private var isFollowingTrack = false
 
     private let walkID: UUID
+    private let style: Style
     private let onDone: () -> Void
 
-    init(walkID: UUID, onDone: @escaping () -> Void) {
+    init(walkID: UUID, style: Style = .celebration, onDone: @escaping () -> Void) {
         self.walkID = walkID
+        self.style = style
         self.onDone = onDone
         _matches = Query(filter: #Predicate<WalkRecord> { $0.id == walkID })
         _participants = Query(filter: #Predicate<WalkDogRecord> { $0.walkID == walkID })
@@ -40,27 +50,24 @@ struct WalkSummaryView: View {
         NavigationStack {
             Group {
                 if let walk = matches.first {
-                    content(for: walk)
+                    switch style {
+                    case .celebration: content(for: walk)
+                    case .saved: savedContent(for: walk)
+                    }
                 } else {
-                    TruffloEmptyStateView(
-                        imageName: "EmptyWalk",
-                        title: "Cette balade n'existe plus",
-                        description: "Elle a été retirée de cet appareil."
-                    )
+                    TruffloNotice(title: "Cette balade n'existe plus",
+                                  message: "Elle a été retirée de cet appareil.",
+                                  actionTitle: "Fermer") { onDone() }
                 }
             }
             .background(Color.truffloSand.ignoresSafeArea())
             .navigationBarTitleDisplayMode(.inline)
             // The media runs under the bar; the button floats over it in glass.
             .toolbarBackgroundVisibility(.hidden, for: .navigationBar)
-            .toolbar {
-                ToolbarItem(placement: .confirmationAction) {
-                    Button("Terminé", action: saveAndClose)
-                        .fontWeight(.semibold)
-                        .truffloTap()
-                        .accessibilityIdentifier("walk.summary.done")
-                }
+            .sheet(isPresented: $showEditor) {
+                if let walk = matches.first { WalkDetailsEditor(walk: walk) }
             }
+            .navigationDestination(for: WalkRoute.self) { WalkDetailView(walkID: $0.id) }
             .tint(Color.truffloForest)
             .alert("Note non enregistrée", isPresented: Binding(
                 get: { saveError != nil },
@@ -75,116 +82,240 @@ struct WalkSummaryView: View {
 
     // MARK: - Content
 
-    /// A recorded outing opens on its route. One without a usable route (a GPS walk
-    /// that kept fewer than two points) never shows a map that pretends to be one:
-    /// the dog stands in the same place instead, at the same height, so the layout
-    /// does not jump between the two.
+    /// The end of a balade, as the 2026-10-07 board draws it: a burst of
+    /// confetti, the dog, the mood (or "Super balade !"), the two figures, the
+    /// note as a quote to write, then Enregistrer, Modifier, Partager.
     private func content(for walk: WalkRecord) -> some View {
-        ScrollView {
-            VStack(alignment: .leading, spacing: 0) {
-                hero(for: walk)
-
-                VStack(alignment: .leading, spacing: TruffloTheme.Spacing.large) {
-                    VStack(alignment: .leading, spacing: TruffloTheme.Spacing.xxSmall) {
-                        // Laid out like the walk's own page (WalkDetailView): the dogs
-                        // as the title, then when. Closing the summary lands on that page's
-                        // twin in the journal, so the two must not look like two apps.
-                        Text(presentation(of: walk).title)
-                            .font(.system(.title, design: .rounded, weight: .heavy))
+        let shown = presentation(of: walk)
+        return ScrollView {
+            VStack(spacing: 18) {
+                ZStack {
+                    TruffloConfetti(isOn: celebrate && !reduceMotion)
+                        .frame(height: 220)
+                        .allowsHitTesting(false)
+                    if let photo = shown.leadPhoto {
+                        TruffloDogPortrait(name: shown.leadName ?? "", photoData: photo, diameter: 132, aimsAtAnimal: true)
+                            .overlay(Circle().strokeBorder(Color.white, lineWidth: 4))
+                            .shadow(color: .black.opacity(0.12), radius: 10, y: 4)
+                            .scaleEffect(celebrate || reduceMotion ? 1 : 0.6)
+                    } else {
+                        Image(systemName: "pawprint.fill")
+                            .font(.system(size: 50))
                             .foregroundStyle(Color.truffloForest)
-                        if let endedAt = walk.endedAt {
-                            Text("Balade terminée \(WalkFormatting.relativeDayAndTime(endedAt))")
-                                .font(.subheadline)
-                                .foregroundStyle(Color.truffloSlate)
-                        }
-                    }
-
-                    TruffloStatRow {
-                        // Minutes, as on the walk page and in the journal: the
-                        // second-accurate clock belongs to the walk still running.
-                        TruffloStat("Durée", value: WalkFormatting.minutes(walk.confirmedSeconds))
-                        if let meters = walk.recordedPathMeters {
-                            TruffloStat("Distance", value: WalkFormatting.distance(meters))
-                        }
-                    }
-
-                    VStack(alignment: .leading, spacing: TruffloTheme.Spacing.xSmall) {
-                        WalkSectionTitle("Titre")
-                        TextField("Ex. Balade dans le quartier", text: $title)
-                            .accessibilityIdentifier("walk.summary.title")
-                            .modifier(FormFieldStyle())
-                        WalkSectionTitle("Humeur")
-                            .padding(.top, TruffloTheme.Spacing.xSmall)
-                        MoodChips(selection: $mood)
-                        WalkSectionTitle("Note")
-                            .padding(.top, TruffloTheme.Spacing.xSmall)
-                        TextField("Comment s'est passée la balade ?", text: $note, axis: .vertical)
-                            .font(.body)
-                            .lineLimit(3...8)
-                            .padding(TruffloTheme.Spacing.small)
-                            .background(Color.white, in: RoundedRectangle(cornerRadius: TruffloTheme.Radius.card, style: .continuous))
-                            .overlay(RoundedRectangle(cornerRadius: TruffloTheme.Radius.card, style: .continuous)
-                                .strokeBorder(Color.truffloForest.opacity(0.1), lineWidth: 1))
-                            .accessibilityIdentifier("walk.summary.note")
-                    }
-                    .padding(.top, TruffloTheme.Spacing.medium)
-                    .overlay(alignment: .top) {
-                        Rectangle().fill(Color.truffloForest.opacity(0.12)).frame(height: 1)
-                    }
-
-                    // Quiet: one line of what the measure is, and a gap named as a gap.
-                    VStack(alignment: .leading, spacing: 2) {
-                        Text(WalkFormatting.quality(walk.quality))
-                            .font(.footnote)
-                            .foregroundStyle(Color.truffloSlate)
-                        if let hint = qualityHint(for: walk.quality) {
-                            Text(hint)
-                                .font(.footnote)
-                                .foregroundStyle(Color.truffloSlate)
-                                .fixedSize(horizontal: false, vertical: true)
-                        }
+                            .frame(width: 132, height: 132)
+                            .background(Color(red: 0.86, green: 0.93, blue: 0.89), in: Circle())
                     }
                 }
-                .padding(.horizontal, TruffloTheme.Spacing.screen)
-                .padding(.top, TruffloTheme.Spacing.large)
-                .padding(.bottom, TruffloTheme.Spacing.xLarge)
+                .padding(.top, 40)
+
+                VStack(spacing: 6) {
+                    Text("\((mood ?? .great).label) !")
+                        .font(.system(size: 28, weight: .heavy, design: .rounded))
+                        .foregroundStyle(Color.truffloForest)
+                    Text("\(shown.title), \(walk.endedAt.map(WalkFormatting.relativeDayAndTime) ?? "")")
+                        .font(.system(size: 14))
+                        .foregroundStyle(Color.truffloSlate)
+                }
+
+                HStack(spacing: 0) {
+                    figure(WalkFormatting.minutes(walk.confirmedSeconds), "Durée")
+                    if let meters = walk.recordedPathMeters {
+                        Rectangle().fill(Color.truffloForest.opacity(0.12)).frame(width: 1, height: 44)
+                        figure(WalkFormatting.distance(meters), "Distance")
+                    }
+                }
+                .padding(.vertical, 12)
+                .background(Color.white.opacity(0.9), in: RoundedRectangle(cornerRadius: 22, style: .continuous))
+
+                MoodChips(selection: $mood)
+                    .frame(maxWidth: .infinity, alignment: .center)
+
+                TextField("“ Un mot sur la balade… ”", text: $note, axis: .vertical)
+                    .font(.system(size: 15).italic())
+                    .multilineTextAlignment(.center)
+                    .lineLimit(1...5)
+                    .padding(14)
+                    .background(Color.white.opacity(0.7), in: RoundedRectangle(cornerRadius: 18, style: .continuous))
+                    .accessibilityIdentifier("walk.summary.note")
+
+                Text(WalkFormatting.quality(walk.quality) + (qualityHint(for: walk.quality).map { ". " + $0 } ?? ""))
+                    .font(.footnote)
+                    .foregroundStyle(Color.truffloSlate)
+                    .multilineTextAlignment(.center)
+
+                VStack(spacing: 10) {
+                    Button(action: saveAndClose) {
+                        Label("Enregistrer", systemImage: "plus")
+                            .font(.system(size: 16, weight: .bold, design: .rounded))
+                            .frame(maxWidth: .infinity, minHeight: 40)
+                    }
+                    .buttonStyle(.glassProminent)
+                    .buttonBorderShape(.capsule)
+                    .tint(Color.truffloForest)
+                    .accessibilityIdentifier("walk.summary.done")
+
+                    Button { showEditor = true } label: {
+                        Text("Modifier")
+                            .font(.system(size: 16, weight: .semibold, design: .rounded))
+                            .foregroundStyle(Color.truffloForest)
+                            .frame(maxWidth: .infinity, minHeight: 48)
+                            .overlay(Capsule().strokeBorder(Color.truffloForest.opacity(0.5), lineWidth: 1.5))
+                    }
+                    .buttonStyle(.plain)
+
+                    ShareLink(item: shareText(walk, shown)) {
+                        Text("Partager la balade")
+                            .font(.system(size: 15, weight: .semibold))
+                            .foregroundStyle(Color.truffloForest)
+                            .frame(minHeight: 44)
+                    }
+                }
+                .padding(.top, 4)
             }
+            .padding(.horizontal, TruffloTheme.Spacing.large)
+            .padding(.bottom, TruffloTheme.Spacing.large)
         }
-        .ignoresSafeArea(edges: .top)
         .scrollDismissesKeyboard(.interactively)
+        .background {
+            LinearGradient(colors: [Color(red: 0.89, green: 0.95, blue: 0.91), Color.truffloSand],
+                           startPoint: .top, endPoint: .center)
+                .ignoresSafeArea()
+        }
         .onAppear {
-            // Read once: a resumed summary must not overwrite what is being typed.
             guard !hasLoadedNote else { return }
             note = walk.note
             title = walk.title
             mood = walk.mood
             hasLoadedNote = true
+            withAnimation(.spring(response: 0.5, dampingFraction: 0.6)) { celebrate = true }
         }
+        .sensoryFeedback(.success, trigger: celebrate)
     }
 
-    @ViewBuilder
-    private func hero(for walk: WalkRecord) -> some View {
+    /// "Fin automatique (résumé)" of the 2026-10-07 board: the tracé, the dog
+    /// over it, "Balade enregistrée !", four figures, and "Voir les détails".
+    /// No confetti: the walk did not end by the person's choice.
+    private func savedContent(for walk: WalkRecord) -> some View {
         let shown = presentation(of: walk)
-        if let route = shown.route() {
-            TruffloTrackMap(points: route,
-                            isLive: false,
-                            showsMarkers: false,
-                            isFollowing: $isFollowingTrack)
-                .frame(height: 340)
-                .accessibilityIdentifier("walk.summary.map")
-        } else if let photo = shown.leadPhoto {
-            TruffloDogHero(name: shown.leadName ?? shown.title, photoData: photo, height: 340)
-        } else {
-            // No route and no photo: no stand-in. The page opens on the words, below
-            // the bar that carries "Terminé" (the scroll view runs under it), on the
-            // same mint aura as the dog's other screens.
-            Color.clear.frame(height: 96)
-                .background(alignment: .top) {
-                    TruffloDogAura(photoData: nil)
-                        .frame(height: 360)
-                        .allowsHitTesting(false)
-                }
+        let lead = dogs.first { dog in participants.contains { $0.dogID == dog.id } }
+        var figures: [(icon: String?, value: String, label: String)] = [
+            (nil, WalkFormatting.minutes(walk.confirmedSeconds), "Durée"),
+        ]
+        if let meters = walk.recordedPathMeters {
+            figures.append((nil, WalkFormatting.distance(meters), "Distance"))
+            if walk.confirmedSeconds >= 60 {
+                let kmh = (meters / 1000) / (walk.confirmedSeconds / 3600)
+                figures.append(("gauge.with.needle",
+                                "\(kmh.formatted(.number.precision(.fractionLength(1)).locale(TruffloLocale.french))) km/h",
+                                "Allure moy."))
+            }
+            if let kcal = CalorieEstimate.kcal(weightKg: lead?.weightKg, meters: meters, size: lead?.size) {
+                figures.append(("flame", "\(kcal) kcal", "Estimation"))
+            }
         }
+        return ScrollView {
+            VStack(spacing: 0) {
+                ZStack {
+                    if let route = shown.route(maxPoints: WalkPresentation.picturePoints) {
+                        TruffloRouteMap(points: route, cacheKey: "\(walk.id.uuidString)-\(walk.revision)-summary",
+                                        isVivid: true)
+                    } else {
+                        Color(red: 0.89, green: 0.94, blue: 0.90)
+                    }
+                }
+                .frame(height: 250)
+                .clipShape(RoundedRectangle(cornerRadius: 26, style: .continuous))
+                .padding(.top, 8)
+
+                Group {
+                    if let photo = shown.leadPhoto {
+                        TruffloDogPortrait(name: shown.leadName ?? "", photoData: photo, diameter: 112, aimsAtAnimal: true)
+                    } else {
+                        Image(systemName: "pawprint.fill")
+                            .font(.system(size: 40))
+                            .foregroundStyle(Color.truffloForest)
+                            .frame(width: 112, height: 112)
+                            .background(Color(red: 0.86, green: 0.93, blue: 0.89), in: Circle())
+                    }
+                }
+                .overlay(Circle().strokeBorder(Color.white, lineWidth: 4))
+                .shadow(color: .black.opacity(0.12), radius: 10, y: 4)
+                .padding(.top, -56)
+
+                Text("Balade enregistrée !")
+                    .font(.system(size: 24, weight: .heavy, design: .rounded))
+                    .foregroundStyle(Color.truffloForest)
+                    .padding(.top, 14)
+                    .accessibilityAddTraits(.isHeader)
+                Text(walk.endedAt.map { "\(WalkFormatting.relativeDay($0).capitalizedFirst) · \(WalkFormatting.time($0))" } ?? "")
+                    .font(.system(size: 14))
+                    .foregroundStyle(Color.truffloSlate)
+                    .padding(.top, 2)
+
+                LazyVGrid(columns: [GridItem(.flexible()), GridItem(.flexible())], spacing: 18) {
+                    ForEach(Array(figures.enumerated()), id: \.offset) { _, item in
+                        HStack(spacing: 8) {
+                            if let icon = item.icon {
+                                Image(systemName: icon).font(.system(size: 20)).foregroundStyle(Color.truffloForest)
+                            }
+                            VStack(spacing: 2) {
+                                Text(item.value).font(.system(size: 20, weight: .bold, design: .rounded)).monospacedDigit()
+                                    .foregroundStyle(Color.truffloForest)
+                                Text(item.label).font(.system(size: 12)).foregroundStyle(Color.truffloSlate)
+                            }
+                        }
+                        .frame(maxWidth: .infinity)
+                        .accessibilityElement(children: .combine)
+                    }
+                }
+                .padding(.vertical, 18)
+
+                if let hint = qualityHint(for: walk.quality) {
+                    Text(hint)
+                        .font(.footnote)
+                        .foregroundStyle(Color.truffloSlate)
+                        .multilineTextAlignment(.center)
+                        .padding(.bottom, 12)
+                }
+
+                NavigationLink(value: WalkRoute(id: walk.id)) {
+                    Text("Voir les détails")
+                        .font(.system(size: 16, weight: .bold, design: .rounded))
+                        .foregroundStyle(.white)
+                        .frame(maxWidth: .infinity, minHeight: 52)
+                        .background(Color.truffloForest, in: Capsule())
+                }
+                .buttonStyle(.plain)
+                .accessibilityIdentifier("walk.saved.details")
+
+                Button("Fermer", action: onDone)
+                    .font(.system(size: 15, weight: .semibold))
+                    .foregroundStyle(Color.truffloForest)
+                    .frame(minHeight: 44)
+                    .padding(.top, 6)
+                    .accessibilityIdentifier("walk.summary.done")
+            }
+            .padding(.horizontal, TruffloTheme.Spacing.large)
+            .padding(.bottom, TruffloTheme.Spacing.large)
+        }
+        .background(Color.truffloSand.ignoresSafeArea())
+        .sensoryFeedback(.success, trigger: hasLoadedNote)
+        .onAppear { hasLoadedNote = true }
+    }
+
+    private func figure(_ value: String, _ label: String) -> some View {
+        VStack(spacing: 2) {
+            Text(value).font(.system(size: 24, weight: .bold, design: .rounded)).monospacedDigit()
+                .foregroundStyle(Color.truffloForest)
+            Text(label).font(.system(size: 13)).foregroundStyle(Color.truffloSlate)
+        }
+        .frame(maxWidth: .infinity)
+    }
+
+    private func shareText(_ walk: WalkRecord, _ shown: WalkPresentation) -> String {
+        var parts = ["Balade avec \(shown.title) : \(WalkFormatting.minutes(walk.confirmedSeconds))"]
+        if let meters = walk.recordedPathMeters { parts.append(WalkFormatting.distance(meters)) }
+        return parts.joined(separator: ", ") + ". Avec Trufflo."
     }
 
     /// Names, face and tracé of the balade, by the rules every screen shares.

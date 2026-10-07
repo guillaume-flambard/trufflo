@@ -271,3 +271,25 @@ final class WalkPhotoRecord {
         self.createdAt = createdAt
     }
 }
+
+/// A balade the person plans: when, and where if they say so (2026-10-07 board,
+/// "Prochaine balade"). One upcoming plan at a time; it goes when walked or past.
+@Model
+final class PlannedWalkRecord {
+    @Attribute(.unique) var id: UUID
+    var date: Date
+    var placeName: String
+    var latitude: Double?
+    var longitude: Double?
+    var remind: Bool
+
+    init(id: UUID = UUID(), date: Date, placeName: String = "", latitude: Double? = nil,
+         longitude: Double? = nil, remind: Bool = true) {
+        self.id = id
+        self.date = date
+        self.placeName = placeName
+        self.latitude = latitude
+        self.longitude = longitude
+        self.remind = remind
+    }
+}

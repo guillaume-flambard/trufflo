@@ -86,25 +86,41 @@ struct DogDetailView: View {
                     }
                 }
 
-                VStack(alignment: .leading, spacing: TruffloTheme.Spacing.medium) {
+                VStack(alignment: .leading, spacing: 14) {
                     let count = walkCount ?? 0
-                    TruffloWidget(title: "Balades", systemImage: "figure.walk") {
-                        TruffloStatGrid(items: [
-                            .init(label: "Enregistrées", value: "\(count)"),
-                            .init(label: "Temps en tout", value: count == 0 ? "Pas encore" : WalkFormatting.minutes(recordedSeconds)),
-                        ])
+                    DogFactChips(dog: dog)
+
+                    // The tiles of Today, so a figure reads the same on both screens.
+                    HStack(spacing: 10) {
+                        TruffloStatTile(systemImage: "figure.walk", tint: Color.truffloForest,
+                                        value: "\(count)", label: count > 1 ? "balades" : "balade")
+                        TruffloStatTile(systemImage: "clock", tint: Color(red: 0.85, green: 0.55, blue: 0.15),
+                                        value: count == 0 ? "Pas encore" : WalkFormatting.minutes(recordedSeconds),
+                                        label: "en tout", isSentence: count == 0)
+                        TruffloStatTile(systemImage: "heart.fill", tint: Color(red: 0.24, green: 0.6, blue: 0.42),
+                                        value: lastWalkDate.map { WalkFormatting.relativeDay($0).capitalizedFirst } ?? "Pas encore",
+                                        label: "dernière balade", isSentence: true)
+                    }
+                    .fixedSize(horizontal: false, vertical: true)
+
+                    if !recentWalks.isEmpty {
+                        Text("Dernières balades")
+                            .font(.system(.headline, design: .rounded, weight: .bold))
+                            .foregroundStyle(Color(red: 0.1, green: 0.1, blue: 0.1))
+                            .accessibilityAddTraits(.isHeader)
+                            .padding(.top, 4)
+                        ForEach(recentWalks) { walk in
+                            NavigationLink(value: WalkRoute(id: walk.id)) { TruffloLastWalkRow(walk: walk) }
+                                .buttonStyle(.plain)
+                        }
                     }
 
-                    TruffloWidget(title: "Routine", systemImage: "repeat") {
-                        routineSection(for: dog)
-                    }
-
-                    HouseholdPrompt(place: .profile, dogName: dog.name) { showHousehold = true }
+                    card(title: "Routine", systemImage: "repeat") { routineSection(for: dog) }
 
                     if !dog.preferencesNote.isEmpty {
-                        TruffloWidget(title: "Préférences de balade", systemImage: "text.quote") {
+                        card(title: "Préférences de balade", systemImage: "text.quote") {
                             Text(dog.preferencesNote)
-                                .font(.body)
+                                .font(.system(size: 15))
                                 .foregroundStyle(Color.truffloCharcoal)
                             Text("Écrit par vous")
                                 .font(.footnote)
@@ -112,14 +128,16 @@ struct DogDetailView: View {
                         }
                     }
 
-                    VStack(alignment: .leading, spacing: TruffloTheme.Spacing.xSmall) {
+                    HouseholdPrompt(place: .profile, dogName: dog.name) { showHousehold = true }
+
+                    VStack(alignment: .leading, spacing: 4) {
                         Button(role: .destructive) {
                             showDeleteConfirmation = true
                         } label: {
-                            Text("Supprimer \(dog.name)")
-                                .font(.subheadline.weight(.semibold))
+                            Label("Supprimer \(dog.name)", systemImage: "trash")
+                                .font(.system(size: 15, weight: .semibold))
                                 .foregroundStyle(Color.truffloDanger)
-                                .frame(minHeight: 44, alignment: .leading)
+                                .frame(maxWidth: .infinity, minHeight: 44, alignment: .leading)
                         }
                         .truffloTap(.impact(weight: .medium))
                         .accessibilityIdentifier("dog.delete")
@@ -128,7 +146,7 @@ struct DogDetailView: View {
                             .font(.footnote)
                             .foregroundStyle(Color.truffloSlate)
                     }
-                    .padding(.top, TruffloTheme.Spacing.small)
+                    .truffloBoardCard()
                 }
                 .padding(.horizontal, TruffloTheme.Spacing.screen)
                 .padding(.top, TruffloTheme.Spacing.medium)
@@ -202,6 +220,30 @@ struct DogDetailView: View {
             }
         }
     }
+
+    /// One card of the board: a small header with its symbol, then the content.
+    private func card<Content: View>(title: String, systemImage: String,
+                                     @ViewBuilder content: () -> Content) -> some View {
+        VStack(alignment: .leading, spacing: 8) {
+            Label(title, systemImage: systemImage)
+                .font(.system(size: 14, weight: .semibold))
+                .foregroundStyle(Color.truffloForest)
+                .accessibilityAddTraits(.isHeader)
+            content()
+        }
+        .truffloBoardCard()
+    }
+
+    /// The dog's three latest balades, newest first.
+    private var recentWalks: [WalkRecord] {
+        guard let id = matches.first?.id else { return [] }
+        let ids = Set(participations.filter { $0.dogID == id }.map(\.walkID))
+        return finishedWalks.filter { ids.contains($0.id) }
+            .sorted { ($0.endedAt ?? $0.startedAt) > ($1.endedAt ?? $1.startedAt) }
+            .prefix(3).map { $0 }
+    }
+
+    private var lastWalkDate: Date? { recentWalks.first.map { $0.endedAt ?? $0.startedAt } }
 
     private var facts: JournalFacts { JournalFacts(walks: finishedWalks, links: participations) }
 

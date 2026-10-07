@@ -17,6 +17,11 @@ struct TruffloTrackMap: View {
     /// Owned by the caller so the recentre control can live outside the map, on a
     /// surface with a readable background rather than floating over the tiles.
     @Binding var isFollowing: Bool
+    /// The walking route to a planned place, drawn ahead of the walker.
+    var guideRoute: [CLLocationCoordinate2D] = []
+    var destination: CLLocationCoordinate2D? = nil
+    /// A dog of the foyer close by (`Proximity`), drawn as the board's red paw.
+    var nearbyDog: CLLocationCoordinate2D? = nil
 
     @State private var camera: MapCameraPosition = .automatic
     /// The region this view last asked for. MapKit adjusts whatever region it is
@@ -37,8 +42,34 @@ struct TruffloTrackMap: View {
                     .stroke(Color.truffloForest, lineWidth: 5)
             }
 
+            if guideRoute.count > 1 {
+                MapPolyline(coordinates: guideRoute)
+                    .stroke(Color.truffloForest.opacity(0.55),
+                            style: StrokeStyle(lineWidth: 5, lineCap: .round, dash: [2, 9]))
+            }
+            if let destination {
+                Annotation("", coordinate: destination, anchor: .bottom) {
+                    Image(systemName: "mappin")
+                        .font(.system(size: 26, weight: .bold))
+                        .foregroundStyle(Color(red: 0.08, green: 0.08, blue: 0.08))
+                        .accessibilityHidden(true)
+                }
+            }
+            if let nearbyDog {
+                Annotation("", coordinate: nearbyDog, anchor: .center) {
+                    ZStack {
+                        Circle().fill(Color.red.opacity(0.14)).frame(width: 150, height: 150)
+                        Circle().fill(Color.red.opacity(0.18)).frame(width: 80, height: 80)
+                        Circle().fill(Color(red: 0.93, green: 0.3, blue: 0.18)).frame(width: 46, height: 46)
+                            .overlay(Circle().stroke(Color.white, lineWidth: 3))
+                        Image(systemName: "pawprint.fill").font(.system(size: 19)).foregroundStyle(.white)
+                    }
+                    .accessibilityHidden(true)
+                }
+            }
+
             if showsMarkers, let firstPoint {
-                Annotation("Départ", coordinate: Self.coordinate(firstPoint), anchor: .center) {
+                Annotation("", coordinate: Self.coordinate(firstPoint), anchor: .center) {
                     Circle()
                         .fill(Color.truffloForest)
                         .frame(width: 12, height: 12)
@@ -48,15 +79,17 @@ struct TruffloTrackMap: View {
             }
 
             if showsMarkers, let lastPoint {
-                Annotation("Position actuelle", coordinate: Self.coordinate(lastPoint), anchor: .center) {
+                // Unlabelled, as on the board: a dark dot where it began, the blue
+                // dot of "you are here" where it is now.
+                Annotation("", coordinate: Self.coordinate(lastPoint), anchor: .center) {
                     ZStack {
                         Circle()
-                            .fill(Color.truffloForest.opacity(0.25))
-                            .frame(width: 28, height: 28)
+                            .fill(Color(red: 0.16, green: 0.5, blue: 0.95).opacity(0.22))
+                            .frame(width: 34, height: 34)
                         Circle()
-                            .fill(Color.truffloForest)
-                            .frame(width: 14, height: 14)
-                            .overlay(Circle().stroke(Color.white, lineWidth: 2))
+                            .fill(Color(red: 0.16, green: 0.5, blue: 0.95))
+                            .frame(width: 16, height: 16)
+                            .overlay(Circle().stroke(Color.white, lineWidth: 3))
                     }
                     .accessibilityHidden(true)
                 }

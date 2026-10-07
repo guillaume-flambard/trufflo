@@ -55,6 +55,10 @@ enum MockupDemo {
                           from: (48.8838, 2.3700), to: (48.8800, 2.3765))
         try repository.updateWalkDetails(riviere.id, title: "Bords de rivière", mood: .discovery, note: "")
 
+        // The next balade, planned for 17:30 at the Buttes-Chaumont.
+        try repository.planWalk(at: today(17, 30).addingTimeInterval(today(17, 30) < .now ? 86400 : 0),
+                                placeName: "Parc des Buttes-Chaumont", latitude: 48.8809, longitude: 2.3819)
+
         // The foyer: Vous, Natha and Camille.
         let me = UUID(), natha = UUID(), camille = UUID()
         let household = HouseholdRecord(id: UUID(), name: "Maison", myUserID: me, myRole: .owner,

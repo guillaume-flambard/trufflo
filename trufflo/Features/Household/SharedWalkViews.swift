@@ -25,22 +25,25 @@ struct SharedWalkCard: View {
     }
 
     var body: some View {
-        // The same card as my own balades, the author named where the time is.
-        VStack(alignment: .leading, spacing: TruffloTheme.Spacing.small) {
-            TruffloCardHeader(title: names.isEmpty ? "Balade" : names,
-                              subtitle: "\(WalkFormatting.relativeDayAndTime(date).capitalizedFirst), par \(authorName)")
-            TruffloStatGrid(items: figures.enumerated().map { index, value in
-                .init(label: index == 0 ? "Durée" : "Distance", value: value)
-            })
+        // The row of my own last balade, the author named after the time.
+        VStack(alignment: .leading, spacing: 5) {
+            Label("\(WalkFormatting.relativeDayAndTime(date).capitalizedFirst) · par \(authorName)", systemImage: "clock")
+                .font(.system(size: 12))
+                .foregroundStyle(Color.truffloSlate)
+            Text(names.isEmpty ? "Balade" : names)
+                .font(.system(size: 16, weight: .bold, design: .rounded))
+                .foregroundStyle(Color(red: 0.08, green: 0.08, blue: 0.08))
+                .lineLimit(1)
+            Text(figures.joined(separator: " · "))
+                .font(.system(size: 15, weight: .bold, design: .rounded))
+                .foregroundStyle(Color.truffloForest)
             if possibleDuplicate {
                 Label("Peut-être la même balade qu'une des vôtres", systemImage: "square.on.square")
                     .font(.footnote)
                     .foregroundStyle(Color.truffloSlate)
             }
         }
-        .padding(TruffloTheme.Spacing.medium)
-        .frame(maxWidth: .infinity, alignment: .leading)
-        .truffloWidgetSurface()
+        .truffloBoardCard(padding: 12)
         .accessibilityElement(children: .ignore)
         .accessibilityLabel(spokenLabel)
         .accessibilityAddTraits(.isButton)

@@ -45,9 +45,9 @@ final class StarterUITests: XCTestCase {
         let journal = app.tabBars.buttons["Journal"]
         XCTAssertTrue(journal.waitForExistence(timeout: 5))
         journal.tap()
-        XCTAssertTrue(app.staticTexts["Aucune balade enregistrée"].waitForExistence(timeout: 5))
+        XCTAssertTrue(app.staticTexts["Aucune balade pour l'instant"].waitForExistence(timeout: 5))
 
-        app.tabBars.buttons["Aujourd'hui"].tap()
+        app.tabBars.buttons["Accueil"].tap()
         app.buttons["dog.add"].tap()
         let name = app.textFields["dog.name"]
         XCTAssertTrue(name.waitForExistence(timeout: 5))
@@ -159,7 +159,7 @@ final class StarterUITests: XCTestCase {
         let confirmWalk = app.buttons["Supprimer définitivement"]
         XCTAssertTrue(confirmWalk.waitForExistence(timeout: 5))
         confirmWalk.tap()
-        XCTAssertTrue(app.staticTexts["Aucune balade enregistrée"].waitForExistence(timeout: 5))
+        XCTAssertTrue(app.staticTexts["Aucune balade pour l'instant"].waitForExistence(timeout: 5))
 
         app.tabBars.buttons["Chiens"].tap()
         let dogRow = app.descendants(matching: .any).matching(
@@ -194,7 +194,7 @@ final class StarterUITests: XCTestCase {
         name.typeText("Oslo")
         app.buttons["dog.save"].tap()
 
-        let start = app.buttons["Partir en balade"]
+        let start = app.buttons["Démarrer une balade"]
         XCTAssertTrue(start.waitForExistence(timeout: 5))
         start.tap()
         // The step before the walk: which dog, how, then "Démarrer".
@@ -336,7 +336,7 @@ final class StarterUITests: XCTestCase {
         name.typeText("Oslo")
         app.buttons["dog.save"].tap()
 
-        let start = app.buttons["Partir en balade"]
+        let start = app.buttons["Démarrer une balade"]
         XCTAssertTrue(start.waitForExistence(timeout: 5))
         start.tap()
         // The step before the walk: which dog, how, then "Démarrer".
@@ -416,7 +416,7 @@ final class StarterUITests: XCTestCase {
         )
         XCTAssertTrue(row.label.contains("Balade suivie"))
 
-        app.tabBars.buttons["Aujourd'hui"].tap()
+        app.tabBars.buttons["Accueil"].tap()
         app.navigationBars.buttons["Réglages"].tap()
         app.buttons["Effacer toutes les données"].tap()
         let wipeAgain = app.buttons["Tout effacer"]
@@ -449,7 +449,7 @@ final class StarterUITests: XCTestCase {
         name.typeText("Oslo")
         app.buttons["dog.save"].tap()
 
-        let start = app.buttons["Partir en balade"]
+        let start = app.buttons["Démarrer une balade"]
         XCTAssertTrue(start.waitForExistence(timeout: 5))
         start.tap()
         // The step before the walk: which dog, how, then "Démarrer".
@@ -538,7 +538,7 @@ final class StarterUITests: XCTestCase {
         name.typeText("Oslo")
         app.buttons["dog.save"].tap()
 
-        let start = app.buttons["Partir en balade"]
+        let start = app.buttons["Démarrer une balade"]
         XCTAssertTrue(start.waitForExistence(timeout: 5))
         start.tap()
         // The step before the walk: which dog, how, then "Démarrer".
@@ -631,7 +631,7 @@ final class StarterUITests: XCTestCase {
         name.typeText("Oslo")
         app.buttons["dog.save"].tap()
 
-        let start = app.buttons["Partir en balade"]
+        let start = app.buttons["Démarrer une balade"]
         XCTAssertTrue(start.waitForExistence(timeout: 5))
         start.tap()
 
@@ -668,14 +668,14 @@ final class StarterUITests: XCTestCase {
 
         // Back on Today, with nothing started.
         XCTAssertTrue(
-            app.buttons["Partir en balade"].waitForExistence(timeout: 10),
+            app.buttons["Démarrer une balade"].waitForExistence(timeout: 10),
             "l'accueil doit rester affiché après le refus"
         )
 
         // No phantom session: a refused start must not leave a walk in the log.
         app.tabBars.buttons["Journal"].tap()
         XCTAssertTrue(
-            app.staticTexts["Aucune balade enregistrée"].waitForExistence(timeout: 5),
+            app.staticTexts["Aucune balade pour l'instant"].waitForExistence(timeout: 5),
             "un refus ne doit créer aucune balade"
         )
     }

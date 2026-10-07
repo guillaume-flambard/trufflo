@@ -333,6 +333,11 @@ struct WalkDetailView: View {
                 // page keeps the mock-up's single card.
                 Label(walk.quality == .gpsRecorded ? "Tracé complet" : WalkFormatting.quality(walk.quality),
                       systemImage: "location")
+                    .accessibilityLabel("Mesure : \(WalkFormatting.quality(walk.quality))")
+                // A missing distance is said, never drawn as 0 (AC-003).
+                if walk.recordedPathMeters == nil {
+                    Label("Distance non mesurée", systemImage: "ruler")
+                }
                 if let weather = walk.weather {
                     Label(weather.label, systemImage: weather.systemImage)
                         .symbolRenderingMode(.multicolor)
@@ -345,35 +350,25 @@ struct WalkDetailView: View {
             .font(.system(size: 12))
             .foregroundStyle(Color.truffloCharcoal)
             .labelStyle(EnvironmentChipStyle())
+            // The hours, under the chips: when it began and ended for a balade
+            // suivie, when it ended for one added afterwards (AC-003).
+            Group {
+                if walk.source != .manual, let endedAt = walk.endedAt {
+                    Text("Départ et retour : \(WalkFormatting.timeRange(walk.startedAt, endedAt))")
+                } else {
+                    Text("Fin de la balade : \(walk.endedAt.map(WalkFormatting.relativeDayAndTime) ?? "en cours")")
+                }
+                if let correctedAt = walk.correctedAt {
+                    Text("Corrigée \(WalkFormatting.relativeDayAndTime(correctedAt))")
+                }
+            }
+            .font(.system(size: 12))
+            .foregroundStyle(Color.truffloSlate)
+            .padding(.top, 2)
         }
         .padding(.horizontal, TruffloTheme.Spacing.medium)
         .padding(.vertical, TruffloTheme.Spacing.small)
         .frame(maxWidth: .infinity, alignment: .leading)
-        .background(Color.white, in: RoundedRectangle(cornerRadius: TruffloTheme.Radius.card, style: .continuous))
-    }
-
-    /// How the balade was measured, where the mock-up shows its surroundings: the
-    /// app knows the measure, not the weather.
-    private func measureCard(_ walk: WalkRecord) -> some View {
-        VStack(alignment: .leading, spacing: 0) {
-            Label("Mesure", systemImage: "location")
-                .font(.system(size: 12, weight: .medium))
-                .foregroundStyle(Color.truffloSlate)
-                .padding(.bottom, 4)
-            WalkFactRow("Mesure", WalkFormatting.quality(walk.quality))
-            if walk.recordedPathMeters == nil {
-                WalkFactRow("Distance", "Non mesurée")
-            }
-            if walk.source != .manual, let endedAt = walk.endedAt {
-                WalkFactRow("Départ et retour", WalkFormatting.timeRange(walk.startedAt, endedAt))
-            } else {
-                WalkFactRow("Fin de la balade", walk.endedAt.map(WalkFormatting.relativeDayAndTime) ?? "En cours")
-            }
-            if let correctedAt = walk.correctedAt {
-                WalkFactRow("Corrigée", WalkFormatting.relativeDayAndTime(correctedAt))
-            }
-        }
-        .padding(TruffloTheme.Spacing.medium)
         .background(Color.white, in: RoundedRectangle(cornerRadius: TruffloTheme.Radius.card, style: .continuous))
     }
 

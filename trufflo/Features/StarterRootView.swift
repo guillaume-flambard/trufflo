@@ -33,6 +33,8 @@ struct StarterRootView: View {
     @Query private var householdMembers: [HouseholdMemberRecord]
     @Query private var dogLinks: [DogLinkRecord]
     @Query private var walkPhotos: [WalkPhotoRecord]
+    @Query(sort: \PlannedWalkRecord.date) private var plans: [PlannedWalkRecord]
+    @State private var showPlan = false
     @Environment(HouseholdModel.self) private var household
     @Environment(CommunityModel.self) private var community: CommunityModel?
     @Environment(\.scenePhase) private var scenePhase
@@ -47,7 +49,6 @@ struct StarterRootView: View {
     @State private var openDogFormAfterOnboarding = false
     @State private var startBlock: LocationBlock?
     @State private var exportFile: SharedFile?
-    @State private var showWhoIsWalking = false
     @State private var showNewWalk = false
     @State private var startTaps = 0
     /// One namespace per stack: a walk shown on Today and in the Journal at once
@@ -55,7 +56,10 @@ struct StarterRootView: View {
     @Namespace private var todayZoom
     @Namespace private var journalZoom
     @State private var journalFilter = JournalFilter()
-    @State private var selectedTab = 0
+    /// `--demo-tab=N` (UI test runs only) opens a tab directly, for screen captures.
+    @State private var selectedTab = ProcessInfo.processInfo.arguments.contains("--uitesting")
+        ? ProcessInfo.processInfo.arguments.lazy.compactMap { $0.hasPrefix("--demo-tab=") ? Int($0.dropFirst(11)) : nil }.first ?? 0
+        : 0
     @State private var exportError: String?
     @Environment(\.dynamicTypeSize) private var typeSize
 
@@ -99,7 +103,7 @@ struct StarterRootView: View {
                 .navigationDestination(for: DogRoute.self) { DogDetailView(dogID: $0.id) }
                 .navigationDestination(for: SharedWalkRoute.self) { SharedWalkDetailView(walkID: $0.id) }
             }
-            .tabItem { Label("Aujourd'hui", systemImage: "house.fill") }
+            .tabItem { Label("Accueil", systemImage: "house.fill") }
             .tag(0)
 
             NavigationStack {
@@ -177,17 +181,6 @@ struct StarterRootView: View {
             }
         }
         .sheet(isPresented: $showWalkForm) { ManualWalkFormView(dogs: dogs) }
-        .sheet(isPresented: $showWhoIsWalking) {
-            WhoIsWalkingSheet(dogs: dogs,
-                              start: { ids in
-                                  showWhoIsWalking = false
-                                  Task { @MainActor in
-                                      try? await Task.sleep(for: .milliseconds(350))
-                                      activeWalkCover = .start(ids)
-                                  }
-                              },
-                              cancel: { showWhoIsWalking = false })
-        }
         .sheet(item: $exportFile) { file in
             ShareSheet(items: [file.url])
                 .presentationDetents([.medium, .large])
@@ -283,17 +276,16 @@ struct StarterRootView: View {
         // Foyer tab and in the latest-walk block of Today.
         let sharedShown: [JournalTimelineView.SharedEntry] = []
         if completed.isEmpty {
-            List {
+            ScrollView {
                 LostHouseholdNotice()
-                    .listRowBackground(Color.clear)
-                    .listRowSeparator(.hidden)
-                TruffloEmptyStateView(
-                    imageName: "EmptyWalk",
-                    title: "Aucune balade enregistrée",
-                    description: "Les balades de votre journal apparaîtront ici."
-                )
-                .listRowBackground(Color.clear)
-                .listRowSeparator(.hidden)
+                // "Journal (état vide)" of the 2026-10-07 board.
+                TruffloEmptyScene(picture: .journal,
+                                  title: "Aucune balade pour l'instant",
+                                  message: "Vos promenades apparaîtront ici. Commencez une balade pour créer votre premier souvenir.",
+                                  buttonTitle: "Démarrer une balade", buttonIcon: "play.fill",
+                                  buttonIdentifier: "journal.start",
+                                  action: { selectedTab = 0; startWalk() })
+                    .padding(.top, 120)
             }
         } else if shown.isEmpty && sharedShown.isEmpty {
             TruffloNotice(title: "Aucune balade pour ce filtre",
@@ -402,38 +394,36 @@ struct StarterRootView: View {
     private var todayContent: some View {
         if dogs.isEmpty {
             ScrollView {
-                TruffloWelcome { showDogForm = true }
+                // Before the first dog (2026-10-07 board, "Accueil (état vide)").
+                // The button adds the dog first: a balade needs one.
+                TruffloEmptyScene(picture: .walkers,
+                                  title: "Prêt pour votre première balade ?",
+                                  message: "Ajoutez votre chien, puis enregistrez vos promenades et gardez de beaux souvenirs.",
+                                  buttonTitle: "Ajouter mon chien", buttonIcon: "plus",
+                                  buttonIdentifier: "dog.add",
+                                  action: { showDogForm = true },
+                                  linkTitle: "Revoir l'introduction",
+                                  linkAction: { showOnboardingSheet = true })
+                    .padding(.top, 60)
             }
-            // The introduction closes onto this screen: same aura, so it continues
-            // rather than cuts.
-            .background(alignment: .top) {
-                TruffloDogAura(photoData: nil)
-                    .frame(height: 560)
-                    .ignoresSafeArea(edges: .top)
+            .background {
+                LinearGradient(colors: [Color(red: 0.89, green: 0.95, blue: 0.91), Color.truffloSand],
+                               startPoint: .top, endPoint: .center)
+                    .ignoresSafeArea()
             }
-            .safeAreaInset(edge: .bottom) { addDogButton }
         } else {
             let journal = facts
             ScrollView {
-                VStack(alignment: .leading, spacing: 16) {
-                    TruffloTodayHero(name: dogNames,
-                                     photoData: dogs.count == 1 ? dogs[0].photoData : nil,
-                                     chips: dogs.count == 1 ? heroChips(dogs[0]) : []) {
-                        VStack(alignment: .leading, spacing: TruffloTheme.Spacing.medium) {
-                            if dogs.count == 1, dogs[0].photoData == nil {
-                                NavigationLink(value: DogRoute(id: dogs[0].id)) {
-                                    Label("Ajouter une photo de \(dogs[0].name)", systemImage: "camera")
-                                        .font(.truffloBodyHeavy)
-                                        .foregroundStyle(Color.truffloForest)
-                                }
-                                .buttonStyle(.plain)
-                                .accessibilityIdentifier("today.addPhoto")
-                            }
-                            if let currentWalk = liveWalk {
-                                liveWalkSection(currentWalk)
-                            } else {
-                                startButton
-                            }
+                VStack(alignment: .leading, spacing: 14) {
+                    accueilHeader
+                        .padding(.bottom, 64)
+
+                    if let currentWalk = liveWalk {
+                        liveWalkSection(currentWalk)
+                    } else {
+                        TruffloNextWalkCard(plan: plans.first(where: { $0.date > .now.addingTimeInterval(-3600) }),
+                                            onPlan: { showPlan = true }) {
+                            startButton
                         }
                     }
 
@@ -444,16 +434,20 @@ struct StarterRootView: View {
                     }
 
                     if let line = routineLine(for: dogs[0]) {
-                        TruffloWidget(title: "Routine", systemImage: "repeat") {
+                        VStack(alignment: .leading, spacing: 6) {
+                            Label("Routine", systemImage: "repeat")
+                                .font(.system(size: 14, weight: .semibold))
+                                .foregroundStyle(Color.truffloForest)
                             Text(line)
-                                .font(.truffloBodyRegular)
+                                .font(.system(size: 15))
                                 .foregroundStyle(Color.truffloCharcoal)
                                 .accessibilityIdentifier("today.routine")
                         }
+                        .truffloBoardCard()
                     }
 
                     if let lastWalk = journal.lastWalkID.flatMap({ id in walks.first { $0.id == id } }) {
-                        VStack(alignment: .leading, spacing: TruffloTheme.Spacing.small) {
+                        VStack(alignment: .leading, spacing: 8) {
                             HStack(alignment: .firstTextBaseline) {
                                 sectionTitle("Dernière balade")
                                 Spacer()
@@ -468,7 +462,7 @@ struct StarterRootView: View {
                                 .accessibilityIdentifier("today.seeJournal")
                             }
                             NavigationLink(value: WalkRoute(id: lastWalk.id)) {
-                                WalkTile(walk: lastWalk)
+                                TruffloLastWalkRow(walk: lastWalk)
                             }
                             .buttonStyle(.plain)
                             .matchedTransitionSource(id: lastWalk.id, in: todayZoom)
@@ -483,12 +477,62 @@ struct StarterRootView: View {
                 .padding(.horizontal, TruffloTheme.Spacing.screen)
                 .padding(.bottom, TruffloTheme.Spacing.large)
             }
+            .sheet(isPresented: $showPlan) {
+                PlanWalkSheet(current: plans.first)
+            }
             .background {
                 TruffloTodayBackdrop(name: dogNames, photoData: dogs.count == 1 ? dogs[0].photoData : nil)
             }
             // No blur under the bar: the photo runs clean to the top of the screen.
             .scrollEdgeEffectHidden(true, for: .top)
         }
+    }
+
+    /// "Bonjour", the dog's name leading to its profile, and its declared facts in
+    /// one chip (2026-10-07 board). Without a photo, an invitation to add one.
+    private var accueilHeader: some View {
+        let lead = dogs[0]
+        let facts = [lead.breedKind != "unknown" ? lead.breedDescription : "", lead.ageDescription]
+            .filter { !$0.isEmpty }.joined(separator: " · ")
+        let greeting = Calendar.current.component(.hour, from: .now) >= 18 ? "Bonsoir" : "Bonjour"
+        return VStack(alignment: .leading, spacing: 6) {
+            Text("\(greeting) 👋")
+                .font(.system(size: 17, weight: .semibold, design: .rounded))
+                .foregroundStyle(Color(red: 0.1, green: 0.1, blue: 0.1))
+            NavigationLink(value: DogRoute(id: lead.id)) {
+                HStack(alignment: .firstTextBaseline, spacing: 6) {
+                    Text(dogNames)
+                        .font(.system(size: 34, weight: .heavy, design: .rounded))
+                        .lineLimit(1)
+                        .minimumScaleFactor(0.6)
+                    Image(systemName: "chevron.right")
+                        .font(.system(size: 18, weight: .bold))
+                        .foregroundStyle(Color.truffloForest)
+                }
+                .foregroundStyle(Color(red: 0.08, green: 0.08, blue: 0.08))
+            }
+            .buttonStyle(.plain)
+            .accessibilityIdentifier("today.dog")
+            if dogs.count == 1, !facts.isEmpty {
+                Label(facts, systemImage: "checkmark.seal.fill")
+                    .font(.system(size: 12, weight: .medium))
+                    .foregroundStyle(Color.truffloCharcoal)
+                    .padding(.horizontal, 10)
+                    .padding(.vertical, 5)
+                    .glassEffect(.regular.tint(Color.white.opacity(0.4)), in: Capsule())
+            }
+            if dogs.count == 1, lead.photoData == nil {
+                NavigationLink(value: DogRoute(id: lead.id)) {
+                    Label("Ajouter une photo de \(lead.name)", systemImage: "camera")
+                        .font(.truffloBodyHeavy)
+                        .foregroundStyle(Color.truffloForest)
+                }
+                .buttonStyle(.plain)
+                .accessibilityIdentifier("today.addPhoto")
+            }
+        }
+        .padding(.top, 24)
+        .frame(maxWidth: .infinity, alignment: .leading)
     }
 
     /// Breed, age and sex as chips under the name: what the person declared.
@@ -525,74 +569,70 @@ struct StarterRootView: View {
         .accessibilityIdentifier("today.week")
     }
 
-    /// The Chiens tab: one widget per dog, or the empty state.
+    /// The Chiens tab (2026-10-07 board): a title, one card per dog, and a way to
+    /// add one. The empty state is the board's welcome scene.
     private var dogsTab: some View {
         NavigationStack {
-                List {
+            ScrollView {
+                VStack(alignment: .leading, spacing: 14) {
+                    HStack(alignment: .top) {
+                        VStack(alignment: .leading, spacing: 4) {
+                            Text("Mes chiens")
+                                .font(.system(size: 31, weight: .heavy, design: .rounded))
+                                .foregroundStyle(Color.truffloForest)
+                                .accessibilityAddTraits(.isHeader)
+                            Text(dogs.count > 1 ? "Leurs profils et leurs balades." : "Son profil et ses balades.")
+                                .font(.system(size: 13))
+                                .foregroundStyle(Color.truffloSlate)
+                        }
+                        Spacer()
+                        Button { showDogForm = true } label: {
+                            Image(systemName: "plus")
+                                .font(.system(size: 19))
+                                .foregroundStyle(Color.truffloForest)
+                                .frame(width: 42, height: 42)
+                                .glassEffect(.regular.tint(Color.white.opacity(0.7)).interactive(), in: Circle())
+                        }
+                        .buttonStyle(.plain)
+                        .accessibilityLabel("Ajouter un chien")
+                        .accessibilityIdentifier("dog.add.secondary")
+                    }
+                    .padding(.top, 8)
+                    .padding(.bottom, 6)
+
                     if dogs.isEmpty {
-                        TruffloEmptyStateView(
-                            imageName: "EmptyDog",
-                            title: "Aucun chien",
-                            description: "Ajoutez votre chien pour commencer son journal.",
-                            buttonTitle: "Ajouter un chien",
-                            action: { showDogForm = true }
-                        )
-                        // On the sand, not in a white card: a card holds an object.
-                        .listRowBackground(Color.clear)
-                        .listRowSeparator(.hidden)
+                        TruffloEmptyScene(picture: .walkers,
+                                          title: "Aucun chien pour l'instant",
+                                          message: "Ajoutez votre chien pour commencer son journal.",
+                                          buttonTitle: "Ajouter mon chien", buttonIcon: "plus",
+                                          buttonIdentifier: "dogs.empty.add",
+                                          action: { showDogForm = true })
+                            .padding(.top, 40)
                     } else {
                         let journal = facts
                         ForEach(dogs) { dog in
-                            // The link sits behind the card so the list draws no
-                            // disclosure chevron outside it.
-                            dogCard(dog, walkCount: journal.walkCount(for: dog.id),
-                                    totalSeconds: journal.totalSeconds(for: dog.id))
-                                .background(NavigationLink(value: DogRoute(id: dog.id)) { EmptyView() }.opacity(0))
-                            .listRowBackground(Color.clear)
-                            .listRowSeparator(.hidden)
-                            .listRowInsets(EdgeInsets(top: 6, leading: TruffloTheme.Spacing.screen, bottom: 6, trailing: TruffloTheme.Spacing.screen))
+                            NavigationLink(value: DogRoute(id: dog.id)) {
+                                TruffloDogCard(dog: dog, walkCount: journal.walkCount(for: dog.id),
+                                               totalSeconds: journal.totalSeconds(for: dog.id))
+                            }
+                            .buttonStyle(.plain)
+                            .accessibilityIdentifier("dog.row.\(dog.id.uuidString)")
                         }
                     }
                 }
-                .listStyle(.plain)
-                .navigationTitle("Mes chiens")
-                .truffloAura()
-                .truffloScreen()
-                .toolbar {
-                    ToolbarItem(placement: .topBarTrailing) {
-                        Button("Ajouter", systemImage: "plus") { showDogForm = true }
-                            .accessibilityIdentifier("dog.add.secondary")
-                    }
-                }
-                .navigationDestination(for: WalkRoute.self) { WalkDetailView(walkID: $0.id) }
-                .navigationDestination(for: DogRoute.self) { DogDetailView(dogID: $0.id) }
+                .padding(.horizontal, TruffloTheme.Spacing.screen)
+                .padding(.bottom, TruffloTheme.Spacing.large)
             }
+            .truffloAura(photoData: nil)
+            .truffloScreen()
+            .toolbar(.hidden, for: .navigationBar)
+            .navigationTitle("Mes chiens")
+            .navigationDestination(for: WalkRoute.self) { WalkDetailView(walkID: $0.id) }
+            .navigationDestination(for: DogRoute.self) { DogDetailView(dogID: $0.id) }
+        }
     }
 
     private var completedWalks: [WalkRecord] { walks.filter { $0.phase == .completed } }
-
-    /// One chien as a widget: its face when there is a photo (no stand-in face
-    /// otherwise), its name and declared facts, then its figures in the grid every
-    /// card uses. No ranking between chiens.
-    private func dogCard(_ dog: DogRecord, walkCount count: Int, totalSeconds: TimeInterval) -> some View {
-        let declared = [dog.breedKind != "unknown" ? dog.breedDescription : "", dog.ageDescription,
-                        dog.genderDescription == "Non renseigné" ? "" : dog.genderDescription.lowercased()]
-            .filter { !$0.isEmpty }.joined(separator: ", ")
-        return VStack(alignment: .leading, spacing: TruffloTheme.Spacing.small) {
-            TruffloCardHeader(title: dog.name, subtitle: declared, photo: dog.photoData, photoName: dog.name,
-                              titleFont: .system(.title3, design: .rounded, weight: .heavy))
-            TruffloStatGrid(items: [
-                .init(label: "Balades", value: "\(count)"),
-                .init(label: "Temps en tout", value: count == 0 ? "Pas encore" : WalkFormatting.minutes(totalSeconds)),
-            ])
-        }
-        .padding(TruffloTheme.Spacing.medium)
-        .frame(maxWidth: .infinity, alignment: .leading)
-        .truffloWidgetSurface()
-        .contentShape(Rectangle())
-        .accessibilityElement(children: .combine)
-        .accessibilityIdentifier("dog.row.\(dog.id.uuidString)")
-    }
 
     /// The latest balade another member recorded, when it is newer than mine
     /// and not the same balade (B-REQ-04, decision D2). Apart from my figures,
@@ -622,23 +662,6 @@ struct StarterRootView: View {
             .accessibilityAddTraits(.isHeader)
     }
 
-    /// The dog at the head of the screen, as a portrait (A2-REQ-05). Without a photo
-    /// nothing stands in for it and the header offers the one thing that would change that.
-    private var dogHeader: some View {
-        let lead = dogs[0]
-        return TruffloDogHeader(name: dogNames, photoData: lead.photoData, subtitle: dogSubtitle(lead)) {
-            if lead.photoData == nil {
-                NavigationLink(value: DogRoute(id: lead.id)) {
-                    Label("Ajouter une photo de \(lead.name)", systemImage: "camera")
-                        .font(.truffloBodyHeavy)
-                        .foregroundStyle(Color.truffloForest)
-                }
-                .buttonStyle(.plain)
-                .accessibilityIdentifier("today.addPhoto")
-            }
-        }
-    }
-
     /// One dog with an active routine: the chosen routine and today's count, side
     /// by side, as two facts. Several dogs, or a paused routine: nothing.
     private func routineLine(for dog: DogRecord) -> String? {
@@ -659,15 +682,6 @@ struct StarterRootView: View {
 
     private var dogNames: String {
         dogs.map(\.name).formatted(.list(type: .and).locale(TruffloLocale.french))
-    }
-
-    /// The calendar week of this person's own walks (`WeekSummary`, A2-REQ-01):
-    /// the figure, the seven days, and the time in one line. Descriptive, never a
-    /// target. Distance is not summed, because declared walks have none.
-    private var weekFigure: some View {
-        let week = facts.week
-        let total = week.isEmpty ? nil : "\(WalkFormatting.minutes(week.totalSeconds)) en tout"
-        return TruffloWeekFigure(week: week, totalLine: total)
     }
 
     /// A walk in progress takes the place of the start button, so a second one
@@ -777,63 +791,20 @@ struct StarterRootView: View {
 
     /// The one action of the screen, anchored where the thumb rests.
     private var startButton: some View {
-        VStack(spacing: TruffloTheme.Spacing.xSmall) {
-            Button {
-                startTaps += 1
-                startWalk()
-            } label: {
-                HStack(spacing: TruffloTheme.Spacing.small) {
-                    Spacer(minLength: 0)
-                    if !typeSize.isAccessibilitySize {
-                        Image(systemName: "location.fill").font(.headline.weight(.bold))
-                    }
-                    Text("Partir en balade")
-                        .font(.system(.headline, design: .rounded, weight: .bold))
-                        .lineLimit(2)
-                        .multilineTextAlignment(.center)
-                    Spacer(minLength: 0)
-                }
-                .frame(minHeight: 44)
-                .overlay(alignment: .trailing) {
-                    if !typeSize.isAccessibilitySize {
-                        Image(systemName: "chevron.right")
-                            .font(.headline)
-                            .frame(width: 36, height: 36)
-                            .background(Color.white.opacity(0.15), in: Circle())
-                    }
-                }
-            }
-            .buttonStyle(.glassProminent)
-            .buttonBorderShape(.capsule)
-            .tint(Color.truffloForest)
-            .sensoryFeedback(.impact(weight: .light), trigger: startTaps)
-            Text("Suivi GPS · Même hors ligne")
-                .font(.system(size: 11))
-                .padding(.bottom, 4)
-                .foregroundStyle(Color.truffloSlate)
-                .frame(maxWidth: .infinity)
-                .accessibilityHidden(true)
-        }
-    }
-
-    /// The one action of the welcome screen, anchored like the start button.
-    private var addDogButton: some View {
         Button {
-            showDogForm = true
+            startTaps += 1
+            startWalk()
         } label: {
-            Text("Ajouter mon chien")
-                .font(.truffloBodyHeavy)
-                .multilineTextAlignment(.center)
+            Label("Démarrer une balade", systemImage: "play.fill")
+                .font(.system(size: 16, weight: .bold, design: .rounded))
                 .lineLimit(2)
-                .frame(maxWidth: .infinity, minHeight: 56)
+                .multilineTextAlignment(.center)
+                .frame(maxWidth: .infinity, minHeight: 40)
         }
         .buttonStyle(.glassProminent)
         .buttonBorderShape(.capsule)
         .tint(Color.truffloForest)
-        .truffloTap()
-        .accessibilityIdentifier("dog.add")
-        .padding(.horizontal, TruffloTheme.Spacing.screen)
-        .padding(.bottom, TruffloTheme.Spacing.xSmall)
+        .sensoryFeedback(.impact(weight: .light), trigger: startTaps)
     }
 
     /// Builds the archive (a summary CSV plus one GPX per recorded route) and

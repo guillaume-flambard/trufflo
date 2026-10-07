@@ -299,6 +299,23 @@ struct JournalRepository {
         }
     }
 
+    /// Sets the one upcoming balade, replacing any previous plan.
+    @discardableResult
+    func planWalk(at date: Date, placeName: String, latitude: Double?, longitude: Double?) throws -> PlannedWalkRecord {
+        try commit {
+            for old in try all(PlannedWalkRecord.self) { context.delete(old) }
+            let plan = PlannedWalkRecord(date: date,
+                                         placeName: placeName.trimmingCharacters(in: .whitespacesAndNewlines),
+                                         latitude: latitude, longitude: longitude)
+            context.insert(plan)
+            return plan
+        }
+    }
+
+    func clearPlannedWalk() throws {
+        try commit { for plan in try all(PlannedWalkRecord.self) { context.delete(plan) } }
+    }
+
     /// The title, mood and note of a balade, as the person writes them.
     func updateWalkDetails(_ id: UUID, title: String, mood: WalkMood?, note: String) throws {
         let cleanTitle = title.trimmingCharacters(in: .whitespacesAndNewlines)
@@ -403,6 +420,7 @@ struct JournalRepository {
         try commit {
             for point in try all(TrackPointRecord.self) { context.delete(point) }
             for photo in try all(WalkPhotoRecord.self) { context.delete(photo) }
+            for plan in try all(PlannedWalkRecord.self) { context.delete(plan) }
             for link in try all(WalkDogRecord.self) { context.delete(link) }
             for walk in try all(WalkRecord.self) { context.delete(walk) }
             for dog in try all(DogRecord.self) { context.delete(dog) }
