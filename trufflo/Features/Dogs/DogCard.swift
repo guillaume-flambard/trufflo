@@ -16,6 +16,9 @@ extension View {
 /// traits of character. Nothing read from the walks (product rule 3).
 struct DogFactChips: View {
     let dog: DogRecord
+    /// On the dog page the chips sit centred under the name, on one row: three
+    /// to five short chips fit, and a wrapped centred row reads as a mistake.
+    var centered = false
 
     private var chips: [(icon: String, text: String)] {
         var list: [(String, String)] = []
@@ -28,7 +31,13 @@ struct DogFactChips: View {
     }
 
     var body: some View {
-        if !chips.isEmpty {
+        if !chips.isEmpty, centered {
+            ViewThatFits(in: .horizontal) {
+                HStack(spacing: 6) { chipViews }
+                ScrollView(.horizontal, showsIndicators: false) { HStack(spacing: 6) { chipViews } }
+            }
+            .accessibilityElement(children: .combine)
+        } else if !chips.isEmpty {
             WrapLayout(spacing: 6) {
                 ForEach(Array(chips.enumerated()), id: \.offset) { _, chip in
                     Label(chip.text, systemImage: chip.icon)
@@ -40,6 +49,18 @@ struct DogFactChips: View {
                 }
             }
             .accessibilityElement(children: .combine)
+        }
+    }
+
+    private var chipViews: some View {
+        ForEach(Array(chips.enumerated()), id: \.offset) { _, chip in
+            Label(chip.text, systemImage: chip.icon)
+                .font(.system(size: 12, weight: .medium))
+                .foregroundStyle(Color.truffloForest)
+                .padding(.horizontal, 10)
+                .frame(minHeight: 26)
+                .background(Color(red: 0.89, green: 0.94, blue: 0.90), in: Capsule())
+                .fixedSize()
         }
     }
 }

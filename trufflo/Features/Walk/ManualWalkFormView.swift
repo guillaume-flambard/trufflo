@@ -21,6 +21,8 @@ struct ManualWalkFormView: View {
         NavigationStack {
             ScrollView {
                 VStack(alignment: .leading, spacing: TruffloTheme.Spacing.large) {
+                    TruffloScreenHeader(title: "Balade passée",
+                                        subtitle: "Une balade faite sans l'app, ajoutée au journal.")
                     label("Qui était là ?") {
                         ScrollView(.horizontal, showsIndicators: false) {
                             HStack(spacing: TruffloTheme.Spacing.xSmall) {
@@ -108,6 +110,7 @@ struct ManualWalkFormView: View {
                 .padding(.horizontal, TruffloTheme.Spacing.screen)
                 .padding(.bottom, TruffloTheme.Spacing.xSmall)
             }
+            .truffloAura()
             .background(Color.truffloSand.ignoresSafeArea())
             .navigationTitle("Balade passée")
             .navigationBarTitleDisplayMode(.inline)
@@ -116,6 +119,8 @@ struct ManualWalkFormView: View {
                 ToolbarItem(placement: .cancellationAction) {
                     Button("Annuler") { dismiss() }
                 }
+                // The title is the head of the page, not repeated small in the bar.
+                ToolbarItem(placement: .principal) { Color.clear.frame(width: 1, height: 1) }
             }
         }
         .onAppear {

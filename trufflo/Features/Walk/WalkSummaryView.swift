@@ -247,7 +247,7 @@ struct WalkSummaryView: View {
                     .foregroundStyle(Color.truffloForest)
                     .padding(.top, 14)
                     .accessibilityAddTraits(.isHeader)
-                Text(walk.endedAt.map { "\(WalkFormatting.relativeDay($0).capitalizedFirst) · \(WalkFormatting.time($0))" } ?? "")
+                Text(walk.endedAt.map { WalkFormatting.dayDotTime($0) } ?? "")
                     .font(.system(size: 14))
                     .foregroundStyle(Color.truffloSlate)
                     .padding(.top, 2)

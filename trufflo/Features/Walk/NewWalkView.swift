@@ -36,15 +36,8 @@ struct NewWalkView: View {
     var body: some View {
         ScrollView {
             VStack(alignment: .leading, spacing: TruffloTheme.Spacing.medium) {
-                VStack(alignment: .leading, spacing: 4) {
-                    Text("Nouvelle balade")
-                        .font(.system(size: 26, weight: .heavy, design: .rounded))
-                        .foregroundStyle(Color.truffloForest)
-                        .accessibilityAddTraits(.isHeader)
-                    Text("C'est parti ! Profitez du moment avec votre chien.")
-                        .font(.system(size: 14))
-                        .foregroundStyle(Color.truffloSlate)
-                }
+                TruffloScreenHeader(title: "Nouvelle balade",
+                                    subtitle: "C'est parti ! Profitez du moment avec votre chien.")
                 .padding(.top, 56)
 
                 dogRow
@@ -73,15 +66,7 @@ struct NewWalkView: View {
             Button("Fermer", role: .cancel) {}
         } message: { Text(importError ?? "") }
         .overlay(alignment: .topLeading) {
-            Button { dismiss() } label: {
-                Image(systemName: "xmark")
-                    .font(.system(size: 17, weight: .medium))
-                    .foregroundStyle(Color.truffloCharcoal)
-                    .frame(width: 44, height: 44)
-                    .glassEffect(.regular.interactive(), in: Circle())
-            }
-            .buttonStyle(.plain)
-            .accessibilityLabel("Fermer")
+            TruffloRoundButton(systemImage: "xmark", label: "Fermer") { dismiss() }
             .padding(.leading, TruffloTheme.Spacing.screen)
             .padding(.top, 4)
         }

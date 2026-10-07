@@ -27,7 +27,7 @@ struct SharedWalkCard: View {
     var body: some View {
         // The row of my own last balade, the author named after the time.
         VStack(alignment: .leading, spacing: 5) {
-            Label("\(WalkFormatting.relativeDayAndTime(date).capitalizedFirst) · par \(authorName)", systemImage: "clock")
+            Label("\(WalkFormatting.dayDotTime(date)) · par \(authorName)", systemImage: "clock")
                 .font(.system(size: 12))
                 .foregroundStyle(Color.truffloSlate)
             Text(names.isEmpty ? "Balade" : names)

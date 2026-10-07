@@ -343,18 +343,11 @@ struct HouseholdView: View {
         VStack(alignment: .leading, spacing: 0) {
             // As in the 2026-10-07 mock-up: the title, one line, then everyone in the
             // picture as faces, dogs first.
-            VStack(alignment: .leading, spacing: 6) {
-                Text("Foyer partagé")
-                    .font(.system(size: 30, weight: .heavy, design: .rounded))
-                    .foregroundStyle(Color.truffloForest)
-                    .accessibilityAddTraits(.isHeader)
-                Text(dogs.isEmpty ? "\(household.name), ensemble."
-                     : "Ensemble pour le bien-être \(Self.ofDogs(dogs.map(\.name))).")
-                    .font(.system(size: 14))
-                    .foregroundStyle(Color.truffloSlate)
-            }
+            TruffloScreenHeader(title: "Foyer partagé",
+                                subtitle: dogs.isEmpty ? "\(household.name), ensemble."
+                                    : "Ensemble pour le bien-être \(Self.ofDogs(dogs.map(\.name))).")
             .padding(.horizontal, TruffloTheme.Spacing.screen)
-            .padding(.top, 48)
+            .padding(.top, 8)
 
             facesRow(household)
                 .padding(.top, 20)
@@ -596,7 +589,7 @@ struct HouseholdView: View {
                     (Text(author?.displayName ?? "Un membre").bold() + Text(" a enregistré une balade"))
                         .font(.system(size: 12))
                         .foregroundStyle(Color.truffloCharcoal)
-                    Text("\(WalkFormatting.relativeDay(walk.endedAt).capitalizedFirst) · \(WalkFormatting.time(walk.endedAt))")
+                    Text(WalkFormatting.dayDotTime(walk.endedAt))
                         .font(.system(size: 12))
                         .foregroundStyle(Color.truffloSlate)
                     HStack(spacing: TruffloTheme.Spacing.small) {
@@ -621,7 +614,7 @@ struct HouseholdView: View {
                     (Text("Vous").bold() + Text(" avez ajouté une photo"))
                         .font(.system(size: 12))
                         .foregroundStyle(Color.truffloCharcoal)
-                    Text("\(WalkFormatting.relativeDay(photo.createdAt).capitalizedFirst) · \(WalkFormatting.time(photo.createdAt))")
+                    Text(WalkFormatting.dayDotTime(photo.createdAt))
                         .font(.system(size: 12))
                         .foregroundStyle(Color.truffloSlate)
                 }

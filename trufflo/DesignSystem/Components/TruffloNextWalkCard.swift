@@ -17,7 +17,7 @@ struct TruffloNextWalkCard<StartButton: View>: View {
                             .font(.system(size: 17, weight: .bold, design: .rounded))
                             .foregroundStyle(Color(red: 0.08, green: 0.08, blue: 0.08))
                         if let plan {
-                            Label("\(WalkFormatting.relativeDay(plan.date).capitalizedFirst) · \(WalkFormatting.time(plan.date))",
+                            Label(WalkFormatting.dayDotTime(plan.date),
                                   systemImage: "clock")
                             if !plan.placeName.isEmpty {
                                 Label(plan.placeName, systemImage: "mappin.circle").lineLimit(1)
@@ -68,7 +68,7 @@ struct TruffloLastWalkRow: View {
         if let meters = walk.recordedPathMeters { figures.append(WalkFormatting.distance(meters)) }
         return HStack(spacing: 12) {
             VStack(alignment: .leading, spacing: 5) {
-                Label("\(WalkFormatting.relativeDay(shown.date).capitalizedFirst) · \(WalkFormatting.time(shown.date))",
+                Label(WalkFormatting.dayDotTime(shown.date),
                       systemImage: "clock")
                     .font(.system(size: 12))
                     .foregroundStyle(Color.truffloSlate)

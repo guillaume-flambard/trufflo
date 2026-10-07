@@ -68,46 +68,60 @@ struct DogDetailView: View {
     private func content(for dog: DogRecord) -> some View {
         ScrollView {
             VStack(alignment: .leading, spacing: 0) {
-                TruffloDogPortraitHero(name: dog.name, photoData: dog.photoData,
-                                       subtitle: facts(of: dog), heightFactor: 0.5) {
-                    if dog.photoData == nil {
-                        Button {
-                            showEdit = true
-                        } label: {
-                            // Same link as on Today, so the invitation reads the same twice.
-                            Label("Ajouter une photo de \(dog.name)", systemImage: "camera")
-                                .font(.truffloBodyHeavy)
-                                .frame(minHeight: 44)
+                // As on the board: the face in a circle, the name under it, what was
+                // declared under that. The same portrait as the end of a balade.
+                VStack(spacing: 8) {
+                    Group {
+                        if let photo = dog.photoData {
+                            TruffloDogPortrait(name: dog.name, photoData: photo, diameter: 124, aimsAtAnimal: true)
+                        } else {
+                            Button { showEdit = true } label: {
+                                Image(systemName: "camera")
+                                    .font(.system(size: 30))
+                                    .foregroundStyle(Color.truffloForest)
+                                    .frame(width: 124, height: 124)
+                                    .background(Color(red: 0.89, green: 0.94, blue: 0.90), in: Circle())
+                            }
+                            .buttonStyle(.plain)
+                            .accessibilityLabel("Ajouter une photo de \(dog.name)")
+                            .accessibilityIdentifier("dog.addPhoto")
                         }
-                        .buttonStyle(.plain)
-                        .foregroundStyle(Color.truffloForest)
-                        .truffloTap()
-                        .accessibilityIdentifier("dog.addPhoto")
                     }
+                    .overlay(Circle().strokeBorder(Color.white, lineWidth: 4))
+                    .shadow(color: .black.opacity(0.12), radius: 10, y: 4)
+                    Text(dog.name)
+                        .font(.truffloScreenTitle)
+                        .foregroundStyle(Color.truffloForest)
+                        .padding(.top, 6)
+                    if !facts(of: dog).isEmpty {
+                        Text(facts(of: dog))
+                            .font(.system(size: 14))
+                            .foregroundStyle(Color.truffloSlate)
+                    }
+                    DogFactChips(dog: dog, centered: true).padding(.top, 2)
                 }
+                .frame(maxWidth: .infinity)
+                .padding(.top, 8)
+                .padding(.bottom, 6)
 
                 VStack(alignment: .leading, spacing: 14) {
                     let count = walkCount ?? 0
-                    DogFactChips(dog: dog)
 
                     // The tiles of Today, so a figure reads the same on both screens.
                     HStack(spacing: 10) {
-                        TruffloStatTile(systemImage: "figure.walk", tint: Color.truffloForest,
+                        TruffloStatTile(systemImage: "figure.walk", tint: TruffloTileInk.walks,
                                         value: "\(count)", label: count > 1 ? "balades" : "balade")
-                        TruffloStatTile(systemImage: "clock", tint: Color(red: 0.85, green: 0.55, blue: 0.15),
+                        TruffloStatTile(systemImage: "clock", tint: TruffloTileInk.time,
                                         value: count == 0 ? "Pas encore" : WalkFormatting.minutes(recordedSeconds),
                                         label: "en tout", isSentence: count == 0)
-                        TruffloStatTile(systemImage: "heart.fill", tint: Color(red: 0.24, green: 0.6, blue: 0.42),
-                                        value: lastWalkDate.map { WalkFormatting.relativeDay($0).capitalizedFirst } ?? "Pas encore",
+                        TruffloStatTile(systemImage: "heart.fill", tint: TruffloTileInk.last,
+                                        value: lastWalkDate.map(WalkFormatting.ago) ?? "Pas encore",
                                         label: "dernière balade", isSentence: true)
                     }
                     .fixedSize(horizontal: false, vertical: true)
 
                     if !recentWalks.isEmpty {
-                        Text("Dernières balades")
-                            .font(.system(.headline, design: .rounded, weight: .bold))
-                            .foregroundStyle(Color(red: 0.1, green: 0.1, blue: 0.1))
-                            .accessibilityAddTraits(.isHeader)
+                        TruffloSectionTitle("Dernières balades")
                             .padding(.top, 4)
                         ForEach(recentWalks) { walk in
                             NavigationLink(value: WalkRoute(id: walk.id)) { TruffloLastWalkRow(walk: walk) }
@@ -153,8 +167,7 @@ struct DogDetailView: View {
                 .padding(.bottom, TruffloTheme.Spacing.xLarge)
             }
         }
-        .ignoresSafeArea(edges: .top)
-        .scrollEdgeEffectHidden(true, for: .top)
+        .truffloAura(photoData: nil)
         .sheet(isPresented: $showEdit) { DogFormView(profile: dog) }
         .sheet(isPresented: $showHousehold) { HouseholdView() }
         .sheet(isPresented: $showRoutine) {

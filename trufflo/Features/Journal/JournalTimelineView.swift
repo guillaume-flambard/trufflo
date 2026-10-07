@@ -33,17 +33,14 @@ struct JournalTimelineView: View {
                     if let chips { chips }
                     LostHouseholdNotice()
                     // The mock-up's journal opens on its chips, with no count sentence.
-                    if let sentence = filterSummary ?? (hero == nil ? weekSentence : nil) {
+                    if let sentence = filterSummary ?? (chips == nil ? weekSentence : nil) {
                         Text(sentence)
                             .font(.subheadline)
                             .foregroundStyle(Color.truffloSlate)
                     }
                     ForEach(days, id: \.start) { day in
                         VStack(alignment: .leading, spacing: TruffloTheme.Spacing.small) {
-                            Text(heading(for: day.start))
-                                .font(.system(size: 16, weight: .bold, design: .rounded))
-                                .foregroundStyle(Color.truffloForest)
-                                .accessibilityAddTraits(.isHeader)
+                            TruffloSectionTitle(heading(for: day.start))
                             ForEach(day.items) { item in
                                 switch item {
                                 case .own(let walk):
@@ -64,11 +61,16 @@ struct JournalTimelineView: View {
                     }
                 }
                 .padding(.horizontal, TruffloTheme.Spacing.screen)
-                .padding(.top, 14)
+                .padding(.top, hero == nil ? 8 : 14)
                 .padding(.bottom, TruffloTheme.Spacing.large)
-                // The list rises over the photo on a sand sheet with rounded corners.
-                .background(Color.truffloSand,
-                            in: UnevenRoundedRectangle(topLeadingRadius: 28, topTrailingRadius: 28, style: .continuous))
+                .background {
+                    // Under a photo head the list rises on a sand sheet; under the
+                    // plain head it sits on the screen's own aura.
+                    if hero != nil {
+                        UnevenRoundedRectangle(topLeadingRadius: 28, topTrailingRadius: 28, style: .continuous)
+                            .fill(Color.truffloSand)
+                    }
+                }
                 .padding(.top, hero == nil ? 0 : -40)
             }
         }

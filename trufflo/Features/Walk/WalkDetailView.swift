@@ -148,16 +148,41 @@ struct WalkDetailView: View {
     // MARK: - Pieces
 
     private func header(_ walk: WalkRecord, _ shown: WalkPresentation) -> some View {
-        HStack(alignment: .top, spacing: TruffloTheme.Spacing.medium) {
-            VStack(alignment: .leading, spacing: 4) {
-                // The dogs are the title; the hour is a fact, not a name.
-                Text(shown.title)
-                    .font(.system(size: 26, weight: .heavy, design: .rounded))
-                    .foregroundStyle(Color.truffloForest)
-                    .fixedSize(horizontal: false, vertical: true)
-                Text(WalkFormatting.relativeDayAndTime(shown.date).capitalizedFirst)
+        // The same title as the balade's card in the Journal; the dogs, the day
+        // and the place under it. The note has its own card below, not here.
+        VStack(alignment: .leading, spacing: 8) {
+            Text(shown.heading)
+                .font(.truffloScreenTitle)
+                .foregroundStyle(Color.truffloForest)
+                .fixedSize(horizontal: false, vertical: true)
+                .accessibilityAddTraits(.isHeader)
+            HStack(spacing: 8) {
+                if let photo = shown.leadPhoto {
+                    TruffloDogPortrait(name: shown.leadName ?? "", photoData: photo, diameter: 30, aimsAtAnimal: true)
+                }
+                if shown.heading != shown.title, !shown.names.isEmpty {
+                    Text(shown.title)
+                        .font(.system(size: 15, weight: .semibold, design: .rounded))
+                        .foregroundStyle(Color.truffloCharcoal)
+                }
+                Text(WalkFormatting.dayDotTime(shown.date))
                     .font(.system(size: 14))
                     .foregroundStyle(Color.truffloSlate)
+                Spacer(minLength: 0)
+            }
+            if shown.names.isEmpty {
+                Text("Aucun chien associé à cette balade.")
+                    .font(.subheadline)
+                    .foregroundStyle(Color.truffloSlate)
+            }
+            HStack(spacing: 8) {
+                Label(walk.mood?.label ?? (shown.isTracked ? "Balade suivie" : "Balade ajoutée"),
+                      systemImage: walk.mood?.systemImage ?? "figure.walk")
+                    .font(.system(size: 12, weight: .medium))
+                    .foregroundStyle(Color.truffloForest)
+                    .padding(.horizontal, 10)
+                    .frame(minHeight: 26)
+                    .background(Color(red: 0.89, green: 0.94, blue: 0.90), in: Capsule())
                 if !walk.placeName.isEmpty {
                     Label(walk.placeName, systemImage: "mappin.and.ellipse")
                         .font(.system(size: 12))
@@ -165,34 +190,9 @@ struct WalkDetailView: View {
                         .foregroundStyle(Color.truffloSlate)
                         .accessibilityIdentifier("walk.detail.place")
                 }
-                if !walk.note.isEmpty {
-                    Text(walk.note)
-                        .font(.system(size: 13))
-                        .foregroundStyle(Color.truffloCharcoal)
-                        .lineLimit(2)
-                        .padding(.top, 6)
-                }
-                if shown.names.isEmpty {
-                    Text("Aucun chien associé à cette balade.")
-                        .font(.subheadline)
-                        .foregroundStyle(Color.truffloSlate)
-                }
-            }
-            Spacer(minLength: 0)
-            VStack(alignment: .trailing, spacing: TruffloTheme.Spacing.small) {
-                // A face only when there is a photo: no initial on a disc.
-                if let photo = shown.leadPhoto {
-                    TruffloDogPortrait(name: shown.leadName ?? "", photoData: photo, diameter: 54, aimsAtAnimal: true)
-                }
-                Label(walk.mood?.label ?? (shown.isTracked ? "Balade suivie" : "Balade ajoutée"),
-                      systemImage: walk.mood?.systemImage ?? "figure.walk")
-                    .font(.system(size: 12, weight: .medium))
-                    .foregroundStyle(Color.truffloForest)
-                    .padding(.horizontal, 10)
-                    .padding(.vertical, 6)
-                    .background(Color(red: 0.86, green: 0.93, blue: 0.89), in: Capsule())
             }
         }
+        .frame(maxWidth: .infinity, alignment: .leading)
     }
 
     /// The figures in one tinted block: duration, and for a balade suivie the
@@ -214,33 +214,7 @@ struct WalkDetailView: View {
                                                             meters: walk.recordedPathMeters, size: lead?.size) {
             items.append(("flame", "\(kcal) kcal", "Estimation"))
         }
-        return HStack(spacing: 0) {
-            ForEach(Array(items.enumerated()), id: \.offset) { index, item in
-                if index > 0 {
-                    Rectangle().fill(Color.truffloForest.opacity(0.12)).frame(width: 1, height: 48)
-                }
-                VStack(spacing: 4) {
-                    Image(systemName: item.icon)
-                        .font(.system(size: 17))
-                        .foregroundStyle(Color.truffloForest)
-                    Text(item.value)
-                        .font(.system(size: 14, weight: .bold, design: .rounded))
-                        .monospacedDigit()
-                        .foregroundStyle(Color.truffloForest)
-                        .lineLimit(1)
-                        .minimumScaleFactor(0.7)
-                    Text(item.label)
-                        .font(.system(size: 11))
-                        .foregroundStyle(Color.truffloSlate)
-                        .lineLimit(1)
-                }
-                .frame(maxWidth: .infinity)
-                .accessibilityElement(children: .combine)
-            }
-        }
-        .padding(.vertical, TruffloTheme.Spacing.small)
-        .background(Color(red: 0.91, green: 0.95, blue: 0.92),
-                    in: RoundedRectangle(cornerRadius: TruffloTheme.Radius.card, style: .continuous))
+        return TruffloFigureRow(figures: items.map { .init(systemImage: $0.icon, value: $0.value, label: $0.label) })
     }
 
     private func noteCard(_ walk: WalkRecord) -> some View {
@@ -274,7 +248,7 @@ struct WalkDetailView: View {
         VStack(alignment: .leading, spacing: TruffloTheme.Spacing.xSmall) {
             HStack {
                 Text("Photos")
-                    .font(.system(size: 16, weight: .bold, design: .rounded))
+                    .font(.truffloSectionTitle)
                     .foregroundStyle(Color.truffloForest)
                     .accessibilityAddTraits(.isHeader)
                 Spacer()

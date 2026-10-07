@@ -300,12 +300,17 @@ struct StarterRootView: View {
                                 weekCount: facts.week.walkCount,
                                 zoom: journalZoom,
                                 rowDestination: { WalkRoute(id: $0) },
-                                hero: AnyView(TruffloJournalHero(
-                                    title: "Journal",
-                                    subtitle: "Tous les souvenirs de vos balades avec \(dogNames).",
-                                    photoData: dogs.first(where: { $0.photoData != nil })?.photoData,
-                                    onAdd: liveWalk == nil ? { showWalkForm = true } : nil)),
-                                chips: AnyView(journalChips))
+                                hero: nil,
+                                chips: AnyView(VStack(alignment: .leading, spacing: 14) {
+                                    TruffloScreenHeader(
+                                        title: "Journal",
+                                        subtitle: weekLine,
+                                        action: liveWalk == nil
+                                            ? .init(systemImage: "plus", label: "Ajouter une balade",
+                                                    identifier: "walk.manual.add") { showWalkForm = true }
+                                            : nil)
+                                    journalChips
+                                }))
         }
     }
 
@@ -346,6 +351,15 @@ struct StarterRootView: View {
 
     private var journalHasList: Bool {
         walks.contains { $0.phase == .completed } || !sharedWalks.isEmpty
+    }
+
+    /// The line under the Journal title: this week's count, as Today counts it.
+    private var weekLine: String {
+        switch facts.week.walkCount {
+        case 0: "Tous les souvenirs de vos balades avec \(dogNames)."
+        case 1: "1 balade cette semaine"
+        default: "\(facts.week.walkCount) balades cette semaine"
+        }
     }
 
     /// Toutes, Avec GPS, Ajoutées, and the dog and period filter behind the
@@ -548,20 +562,19 @@ struct StarterRootView: View {
     private func todayTiles(_ journal: JournalFacts) -> some View {
         let week = journal.week
         let last = journal.lastWalkID.flatMap { id in walks.first { $0.id == id } }
-        let ago = last.map { ($0.endedAt ?? $0.startedAt).formatted(.relative(presentation: .named, unitsStyle: .abbreviated)
-                                .locale(TruffloLocale.french)) } ?? ""
+        let ago = last.map { WalkFormatting.ago($0.endedAt ?? $0.startedAt) } ?? ""
         return HStack(spacing: 10) {
-            TruffloStatTile(systemImage: "shoe", tint: Color(red: 0.18, green: 0.42, blue: 0.31),
+            TruffloStatTile(systemImage: "figure.walk", tint: TruffloTileInk.walks,
                             value: "\(week.walkCount)",
                             label: week.walkCount == 1 ? "balade\ncette semaine" : "balades\ncette semaine",
                             valueSize: 17, iconSize: 19)
             // The middle tile is narrower in the mock-up (105 of 358 pt).
-            TruffloStatTile(systemImage: "clock", tint: Color(red: 0.85, green: 0.58, blue: 0.17),
+            TruffloStatTile(systemImage: "clock", tint: TruffloTileInk.time,
                             value: week.isEmpty ? "0 min" : WalkFormatting.minutes(week.totalSeconds),
                             label: "en tout")
                 .frame(width: 105)
-            TruffloStatTile(systemImage: "heart.fill", tint: Color(red: 0.23, green: 0.61, blue: 0.44),
-                            value: ago.capitalizedFirst,
+            TruffloStatTile(systemImage: "heart.fill", tint: TruffloTileInk.last,
+                            value: ago,
                             label: "dernière\nbalade",
                             isSentence: true)
         }
@@ -575,28 +588,11 @@ struct StarterRootView: View {
         NavigationStack {
             ScrollView {
                 VStack(alignment: .leading, spacing: 14) {
-                    HStack(alignment: .top) {
-                        VStack(alignment: .leading, spacing: 4) {
-                            Text("Mes chiens")
-                                .font(.system(size: 31, weight: .heavy, design: .rounded))
-                                .foregroundStyle(Color.truffloForest)
-                                .accessibilityAddTraits(.isHeader)
-                            Text(dogs.count > 1 ? "Leurs profils et leurs balades." : "Son profil et ses balades.")
-                                .font(.system(size: 13))
-                                .foregroundStyle(Color.truffloSlate)
-                        }
-                        Spacer()
-                        Button { showDogForm = true } label: {
-                            Image(systemName: "plus")
-                                .font(.system(size: 19))
-                                .foregroundStyle(Color.truffloForest)
-                                .frame(width: 42, height: 42)
-                                .glassEffect(.regular.tint(Color.white.opacity(0.7)).interactive(), in: Circle())
-                        }
-                        .buttonStyle(.plain)
-                        .accessibilityLabel("Ajouter un chien")
-                        .accessibilityIdentifier("dog.add.secondary")
-                    }
+                    TruffloScreenHeader(
+                        title: "Mes chiens",
+                        subtitle: dogs.count > 1 ? "Leurs profils et leurs balades." : "Son profil et ses balades.",
+                        action: .init(systemImage: "plus", label: "Ajouter un chien",
+                                      identifier: "dog.add.secondary") { showDogForm = true })
                     .padding(.top, 8)
                     .padding(.bottom, 6)
 
@@ -657,8 +653,8 @@ struct StarterRootView: View {
 
     private func sectionTitle(_ text: String) -> some View {
         Text(text)
-            .font(.system(.headline, design: .rounded, weight: .bold))
-            .foregroundStyle(Color(red: 0.1, green: 0.1, blue: 0.1))
+            .font(.truffloSectionTitle)
+            .foregroundStyle(Color.truffloForest)
             .accessibilityAddTraits(.isHeader)
     }
 
