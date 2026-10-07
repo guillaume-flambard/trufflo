@@ -13,3 +13,6 @@ build/
 *.xccheckout
 *.xcscmblueprint
 
+
+# Third-party App Store screenshots, design reference only: never publish.
+docs/design-references/
