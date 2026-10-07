@@ -2,7 +2,7 @@
 -- Default privileges once granted TRUNCATE (which ignores RLS) on every
 -- table; this pins the list so it cannot come back unnoticed.
 begin;
-select plan(2);
+select plan(3);
 select is(
     (select string_agg(line, ' | ' order by line)
      from (select (g.table_name::text || ':' || string_agg(g.privilege_type::text, ',' order by g.privilege_type::text)) collate "C" as line
@@ -26,5 +26,9 @@ select is((select string_agg(table_name::text || ':' || privilege_type::text, ' 
            from information_schema.role_table_grants
            where grantee = 'anon' and table_schema = 'public'),
           'daily_tips:SELECT', 'anon reads the daily tips and nothing else');
+select is((select string_agg(p.proname, ', ' order by p.proname)
+           from pg_proc p join pg_namespace n on n.oid = p.pronamespace
+           where n.nspname = 'public' and has_function_privilege('anon', p.oid, 'execute')),
+          null, 'anon executes no function of public');
 select * from finish();
 rollback;
