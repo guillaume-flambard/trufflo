@@ -49,14 +49,12 @@ struct WalkDetailView: View {
         }
     }
 
-    /// The walk read in full, laid out like an activity: the route first when
-    /// there is one, then who and when, a name from the time of day, the
-    /// figures, the note, and the facts about the measurement in plain rows.
+    /// The walk read in full, laid out on the 2026-10-07 mock-up: the tracé across
+    /// the top, then a sand sheet rising over it with who and when, the figures in
+    /// one tinted block, the note, the facts of the measure, and the actions.
     @ViewBuilder
     private func content(for walk: WalkRecord) -> some View {
         let shown = WalkPresentation(walk: walk, participants: participants, dogs: dogs, points: points)
-        let names = shown.names
-        let date = shown.date
         let trackCoordinates = shown.route() ?? []
         let hasMap = !trackCoordinates.isEmpty
         ScrollView {
@@ -66,115 +64,35 @@ struct WalkDetailView: View {
                                     isLive: false,
                                     showsMarkers: false,
                                     isFollowing: $isFollowingTrack)
-                        .frame(height: 340)
+                        .frame(height: 240)
                         .accessibilityIdentifier("walk.detail.map")
                 }
 
-                VStack(alignment: .leading, spacing: TruffloTheme.Spacing.medium) {
-                    HStack(alignment: .top, spacing: TruffloTheme.Spacing.medium) {
-                        VStack(alignment: .leading, spacing: TruffloTheme.Spacing.xxSmall) {
-                            // The dogs are the title; the hour is a fact, not a name.
-                            Text(shown.title)
-                                .font(.system(.title, design: .rounded, weight: .heavy))
-                                .foregroundStyle(Color.truffloForest)
-                                .fixedSize(horizontal: false, vertical: true)
-                            Text(walk.source == .manual
-                                 ? "\(WalkFormatting.relativeDayAndTime(date).capitalizedFirst), balade ajoutée"
-                                 : WalkFormatting.relativeDayAndTime(date).capitalizedFirst)
-                                .font(.subheadline)
-                                .foregroundStyle(Color.truffloSlate)
-                            if names.isEmpty {
-                                Text("Aucun chien associé à cette balade.")
-                                    .font(.subheadline)
-                                    .foregroundStyle(Color.truffloSlate)
-                            }
-                        }
-                        Spacer(minLength: 0)
-                        // A face only when there is a photo: no initial on a disc.
-                        if let photo = shown.leadPhoto {
-                            TruffloDogPortrait(name: shown.leadName ?? "", photoData: photo, diameter: 56)
-                        }
-                    }
-
-                    // An absent distance is not a figure: it is said in the
-                    // facts below, never set in large type next to the duration.
-                    TruffloWidget(title: "Chiffres", systemImage: "chart.bar") {
-                        TruffloStatGrid(items: [.init(label: "Durée", value: WalkFormatting.minutes(walk.confirmedSeconds))]
-                            + (walk.recordedPathMeters.map { [.init(label: "Distance", value: WalkFormatting.distance($0))] } ?? []))
-                    }
-
-                    if !walk.note.isEmpty {
-                        TruffloWidget(title: "Note", systemImage: "text.quote") {
-                            Text(walk.note)
-                                .font(.body)
-                                .foregroundStyle(Color.truffloCharcoal)
-                        }
-                    }
-
-                    TruffloWidget(title: "Mesure", systemImage: "location") {
-                        VStack(alignment: .leading, spacing: 0) {
-                        WalkFactRow("Mesure", WalkFormatting.quality(walk.quality))
-                        if walk.recordedPathMeters == nil {
-                            WalkFactRow("Distance", "Non mesurée")
-                        }
-                        if walk.source != .manual, let endedAt = walk.endedAt {
-                            WalkFactRow("Départ et retour", WalkFormatting.timeRange(walk.startedAt, endedAt))
-                        } else {
-                            WalkFactRow("Fin de la balade",
-                                        walk.endedAt.map(WalkFormatting.relativeDayAndTime) ?? "En cours")
-                        }
-                        if let correctedAt = walk.correctedAt {
-                            WalkFactRow("Corrigée", WalkFormatting.relativeDayAndTime(correctedAt))
-                        }
-                        }
-                    }
-
-                    if walk.phase == .completed {
-                        Button {
-                            showCorrection = true
-                        } label: {
-                            Label("Corriger la balade", systemImage: "pencil")
-                                .font(.subheadline.weight(.semibold))
-                                .foregroundStyle(Color.truffloForest)
-                                .frame(minHeight: 44, alignment: .leading)
-                        }
-                        .truffloTap()
-                        .accessibilityIdentifier("walk.correct")
-                    }
-
+                VStack(alignment: .leading, spacing: TruffloTheme.Spacing.small) {
                     if hasMap {
-                        Button {
-                            exportRoute(of: walk)
-                        } label: {
-                            Label("Exporter le tracé (GPX)", systemImage: "square.and.arrow.up")
-                                .font(.subheadline.weight(.semibold))
-                                .foregroundStyle(Color.truffloForest)
-                                .frame(minHeight: 44, alignment: .leading)
-                        }
-                        .truffloTap()
-                        .accessibilityIdentifier("walk.export.gpx")
+                        Capsule().fill(Color.black.opacity(0.15)).frame(width: 40, height: 5)
+                            .frame(maxWidth: .infinity)
+                            .accessibilityHidden(true)
                     }
-
-                    VStack(alignment: .leading, spacing: TruffloTheme.Spacing.xxSmall) {
-                        Button(role: .destructive) {
-                            showDeleteConfirmation = true
-                        } label: {
-                            Text("Supprimer la balade")
-                                .font(.subheadline.weight(.semibold))
-                                .foregroundStyle(Color.truffloDanger)
-                                .frame(minHeight: 44, alignment: .leading)
-                        }
-                        .truffloTap(.impact(weight: .medium))
-                        .accessibilityIdentifier("walk.delete")
-                        .accessibilityLabel(accessibilityDeleteLabel(for: walk))
-                        Text("La balade, les chiens qui y figurent et les points enregistrés sont retirés de cet appareil.")
-                            .font(.footnote)
-                            .foregroundStyle(Color.truffloSlate)
-                    }
+                    header(walk, shown)
+                    statsBlock(walk, shown)
+                    if !walk.note.isEmpty { noteCard(walk) }
+                    measureCard(walk)
+                    actionsCard(walk, hasMap: hasMap)
                 }
                 .padding(.horizontal, TruffloTheme.Spacing.screen)
-                .padding(.top, TruffloTheme.Spacing.large)
+                .padding(.top, hasMap ? 10 : 60)
                 .padding(.bottom, TruffloTheme.Spacing.xLarge)
+                .background(hasMap ? Color.truffloSand : Color.clear,
+                            in: UnevenRoundedRectangle(topLeadingRadius: 28, topTrailingRadius: 28, style: .continuous))
+                .padding(.top, hasMap ? -28 : 0)
+            }
+        }
+        .toolbar {
+            if hasMap {
+                ToolbarItem(placement: .topBarTrailing) {
+                    Button("Exporter le tracé", systemImage: "square.and.arrow.up") { exportRoute(of: walk) }
+                }
             }
         }
         // The route runs under the bar, edge to edge; the back button floats in glass.
@@ -207,6 +125,176 @@ struct WalkDetailView: View {
         } message: {
             Text("La balade, ses participants et ses points enregistrés seront retirés de cet appareil.")
         }
+    }
+
+    // MARK: - Pieces
+
+    private func header(_ walk: WalkRecord, _ shown: WalkPresentation) -> some View {
+        HStack(alignment: .top, spacing: TruffloTheme.Spacing.medium) {
+            VStack(alignment: .leading, spacing: 4) {
+                // The dogs are the title; the hour is a fact, not a name.
+                Text(shown.title)
+                    .font(.system(size: 28, weight: .heavy, design: .rounded))
+                    .foregroundStyle(Color.truffloForest)
+                    .fixedSize(horizontal: false, vertical: true)
+                Text(WalkFormatting.relativeDayAndTime(shown.date).capitalizedFirst)
+                    .font(.system(size: 14))
+                    .foregroundStyle(Color.truffloSlate)
+                if shown.names.isEmpty {
+                    Text("Aucun chien associé à cette balade.")
+                        .font(.subheadline)
+                        .foregroundStyle(Color.truffloSlate)
+                }
+            }
+            Spacer(minLength: 0)
+            VStack(alignment: .trailing, spacing: TruffloTheme.Spacing.small) {
+                // A face only when there is a photo: no initial on a disc.
+                if let photo = shown.leadPhoto {
+                    TruffloDogPortrait(name: shown.leadName ?? "", photoData: photo, diameter: 56, aimsAtAnimal: true)
+                }
+                Label(shown.isTracked ? "Balade suivie" : "Balade ajoutée", systemImage: "figure.walk")
+                    .font(.system(size: 12, weight: .medium))
+                    .foregroundStyle(Color.truffloForest)
+                    .padding(.horizontal, 10)
+                    .padding(.vertical, 6)
+                    .background(Color(red: 0.86, green: 0.93, blue: 0.89), in: Capsule())
+            }
+        }
+    }
+
+    /// The figures in one tinted block: duration, and for a balade suivie the
+    /// distance and the average speed it implies. Never a calorie or a target.
+    private func statsBlock(_ walk: WalkRecord, _ shown: WalkPresentation) -> some View {
+        var items: [(icon: String, value: String, label: String)] = [
+            ("clock", WalkFormatting.minutes(walk.confirmedSeconds), "Durée"),
+        ]
+        if shown.isTracked, let meters = walk.recordedPathMeters {
+            items.append(("point.topleft.down.to.point.bottomright.curvepath", WalkFormatting.distance(meters), "Distance"))
+            if walk.confirmedSeconds >= 60 {
+                let kmh = (meters / 1000) / (walk.confirmedSeconds / 3600)
+                let text = kmh.formatted(.number.precision(.fractionLength(1)).locale(TruffloLocale.french))
+                items.append(("gauge.with.needle", "\(text) km/h", "Allure moyenne"))
+            }
+        }
+        return HStack(spacing: 0) {
+            ForEach(Array(items.enumerated()), id: \.offset) { index, item in
+                if index > 0 {
+                    Rectangle().fill(Color.truffloForest.opacity(0.12)).frame(width: 1, height: 48)
+                }
+                VStack(spacing: 4) {
+                    Image(systemName: item.icon)
+                        .font(.system(size: 17))
+                        .foregroundStyle(Color.truffloForest)
+                    Text(item.value)
+                        .font(.system(size: 15, weight: .bold, design: .rounded))
+                        .monospacedDigit()
+                        .foregroundStyle(Color.truffloForest)
+                        .lineLimit(1)
+                        .minimumScaleFactor(0.7)
+                    Text(item.label)
+                        .font(.system(size: 11))
+                        .foregroundStyle(Color.truffloSlate)
+                        .lineLimit(1)
+                }
+                .frame(maxWidth: .infinity)
+                .accessibilityElement(children: .combine)
+            }
+        }
+        .padding(.vertical, TruffloTheme.Spacing.small)
+        .background(Color(red: 0.91, green: 0.95, blue: 0.92),
+                    in: RoundedRectangle(cornerRadius: TruffloTheme.Radius.card, style: .continuous))
+    }
+
+    private func noteCard(_ walk: WalkRecord) -> some View {
+        VStack(alignment: .leading, spacing: TruffloTheme.Spacing.xSmall) {
+            HStack {
+                Label("Note", systemImage: "note.text")
+                    .font(.system(size: 12, weight: .medium))
+                    .foregroundStyle(Color.truffloSlate)
+                Spacer()
+                if walk.phase == .completed {
+                    Button("Modifier") { showCorrection = true }
+                        .font(.system(size: 12, weight: .medium))
+                        .foregroundStyle(Color.truffloForest)
+                }
+            }
+            Text(walk.note)
+                .font(.system(size: 13))
+                .foregroundStyle(Color.truffloCharcoal)
+                .fixedSize(horizontal: false, vertical: true)
+        }
+        .padding(TruffloTheme.Spacing.medium)
+        .frame(maxWidth: .infinity, alignment: .leading)
+        .background(Color.white, in: RoundedRectangle(cornerRadius: TruffloTheme.Radius.card, style: .continuous))
+    }
+
+    /// How the balade was measured, where the mock-up shows its surroundings: the
+    /// app knows the measure, not the weather.
+    private func measureCard(_ walk: WalkRecord) -> some View {
+        VStack(alignment: .leading, spacing: 0) {
+            Label("Mesure", systemImage: "location")
+                .font(.system(size: 12, weight: .medium))
+                .foregroundStyle(Color.truffloSlate)
+                .padding(.bottom, 4)
+            WalkFactRow("Mesure", WalkFormatting.quality(walk.quality))
+            if walk.recordedPathMeters == nil {
+                WalkFactRow("Distance", "Non mesurée")
+            }
+            if walk.source != .manual, let endedAt = walk.endedAt {
+                WalkFactRow("Départ et retour", WalkFormatting.timeRange(walk.startedAt, endedAt))
+            } else {
+                WalkFactRow("Fin de la balade", walk.endedAt.map(WalkFormatting.relativeDayAndTime) ?? "En cours")
+            }
+            if let correctedAt = walk.correctedAt {
+                WalkFactRow("Corrigée", WalkFormatting.relativeDayAndTime(correctedAt))
+            }
+        }
+        .padding(TruffloTheme.Spacing.medium)
+        .background(Color.white, in: RoundedRectangle(cornerRadius: TruffloTheme.Radius.card, style: .continuous))
+    }
+
+    private func actionsCard(_ walk: WalkRecord, hasMap: Bool) -> some View {
+        VStack(spacing: 0) {
+            if walk.phase == .completed {
+                actionRow("Corriger la balade", icon: "pencil", identifier: "walk.correct") { showCorrection = true }
+                Divider().padding(.leading, 52)
+            }
+            if hasMap {
+                actionRow("Exporter le tracé (GPX)", icon: "square.and.arrow.up", identifier: "walk.export.gpx") {
+                    exportRoute(of: walk)
+                }
+                Divider().padding(.leading, 52)
+            }
+            actionRow("Supprimer la balade", icon: "trash", identifier: "walk.delete", isDestructive: true) {
+                showDeleteConfirmation = true
+            }
+            .accessibilityLabel(accessibilityDeleteLabel(for: walk))
+        }
+        .background(Color.white, in: RoundedRectangle(cornerRadius: TruffloTheme.Radius.card, style: .continuous))
+    }
+
+    private func actionRow(_ title: String, icon: String, identifier: String, isDestructive: Bool = false,
+                           action: @escaping () -> Void) -> some View {
+        Button(action: action) {
+            HStack(spacing: TruffloTheme.Spacing.medium) {
+                Image(systemName: icon)
+                    .font(.system(size: 16))
+                    .frame(width: 22)
+                    .foregroundStyle(isDestructive ? Color.truffloDanger : Color.truffloForest)
+                Text(title).font(.system(size: 14))
+                Spacer()
+                Image(systemName: "chevron.right")
+                    .font(.footnote.weight(.semibold))
+                    .foregroundStyle(Color.truffloSlate)
+            }
+            .foregroundStyle(isDestructive ? Color.truffloDanger : Color.truffloCharcoal)
+            .padding(.horizontal, TruffloTheme.Spacing.medium)
+            .frame(minHeight: 46)
+            .contentShape(Rectangle())
+        }
+        .buttonStyle(.plain)
+        .truffloTap()
+        .accessibilityIdentifier(identifier)
     }
 
     // MARK: - Formatting
@@ -275,8 +363,8 @@ struct WalkFactRow: View {
                 Text(value).foregroundStyle(Color.truffloCharcoal)
             }
         }
-        .font(.subheadline)
-        .padding(.vertical, TruffloTheme.Spacing.small)
+        .font(.system(size: 13))
+        .padding(.vertical, 9)
         .overlay(alignment: .bottom) {
             Rectangle().fill(Color.truffloForest.opacity(0.1)).frame(height: 1)
         }
