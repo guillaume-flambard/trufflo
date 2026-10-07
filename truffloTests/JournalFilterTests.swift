@@ -48,3 +48,12 @@ private let mirabelle = UUID()
     #expect(!filter.includes(date: now.addingTimeInterval(-10 * 86_400), dogIDs: [oslo], now: now))
     #expect(!filter.includes(date: now, dogIDs: [mirabelle], now: now))
 }
+
+@Test func theKindChipKeepsOnlyThatKindOfBalade() {
+    #expect(JournalFilter(kind: .tracked).includes(isTracked: true))
+    #expect(!JournalFilter(kind: .tracked).includes(isTracked: false))
+    #expect(JournalFilter(kind: .added).includes(isTracked: false))
+    #expect(!JournalFilter(kind: .added).includes(isTracked: true))
+    #expect(JournalFilter().includes(isTracked: false))
+    #expect(JournalFilter(kind: .added).isActive)
+}

@@ -105,12 +105,11 @@ struct StarterRootView: View {
                 .navigationTitle("Journal")
                 .truffloAura()
                 .truffloScreen()
+                // The photo head carries the title and the "+"; the bar only comes
+                // back for the empty journal, which has no head.
+                .toolbarVisibility(journalHasList ? .hidden : .automatic, for: .navigationBar)
                 .toolbar {
-                    if walks.contains(where: { $0.phase == .completed }) || !sharedWalks.isEmpty {
-                        ToolbarItem(placement: .topBarTrailing) { journalFilterMenu }
-                    }
-                    // A balade ajoutée lives where balades are listed, not on Today.
-                    if !dogs.isEmpty && liveWalk == nil {
+                    if !journalHasList && !dogs.isEmpty && liveWalk == nil {
                         ToolbarItem(placement: .topBarTrailing) {
                             Button("Ajouter une balade", systemImage: "plus") { showWalkForm = true }
                                 .accessibilityIdentifier("walk.manual.add")
@@ -307,8 +306,9 @@ struct StarterRootView: View {
     private var journalContent: some View {
         let completed = walks.filter { $0.phase == .completed }
         let shown = completed.filter { walk in
-            journalFilter.includes(date: walk.endedAt ?? walk.startedAt,
-                                   dogIDs: Set(links.filter { $0.walkID == walk.id }.map(\.dogID)))
+            journalFilter.includes(isTracked: walk.source != .manual)
+                && journalFilter.includes(date: walk.endedAt ?? walk.startedAt,
+                                          dogIDs: Set(links.filter { $0.walkID == walk.id }.map(\.dogID)))
         }
         let sharedShown = sharedEntries(own: completed)
         if completed.isEmpty && sharedWalks.isEmpty {
@@ -336,7 +336,13 @@ struct StarterRootView: View {
                                 // reads the same number on both screens.
                                 weekCount: facts.week.walkCount,
                                 zoom: journalZoom,
-                                rowDestination: { WalkRoute(id: $0) })
+                                rowDestination: { WalkRoute(id: $0) },
+                                hero: AnyView(TruffloJournalHero(
+                                    title: "Journal",
+                                    subtitle: "Tous les souvenirs de vos balades avec \(dogNames).",
+                                    photoData: dogs.first(where: { $0.photoData != nil })?.photoData,
+                                    onAdd: liveWalk == nil ? { showWalkForm = true } : nil)),
+                                chips: AnyView(journalChips))
         }
     }
 
@@ -375,6 +381,26 @@ struct StarterRootView: View {
         return parts.joined(separator: ", ")
     }
 
+    private var journalHasList: Bool {
+        walks.contains { $0.phase == .completed } || !sharedWalks.isEmpty
+    }
+
+    /// Toutes, Avec GPS, Ajoutées, and the dog and period filter behind the
+    /// sliders, as in the mock-up.
+    private var journalChips: some View {
+        HStack(spacing: TruffloTheme.Spacing.xSmall) {
+            TruffloFilterChips(options: JournalFilter.Kind.allCases.map { ($0, $0.label) },
+                               selection: $journalFilter.kind)
+            Spacer(minLength: 0)
+            journalFilterMenu
+                .labelStyle(.iconOnly)
+                .font(.system(size: 17, weight: .medium))
+                .foregroundStyle(Color(red: 0.2, green: 0.2, blue: 0.2))
+                .frame(width: 42, height: 42)
+                .background(Color.black.opacity(0.05), in: Circle())
+        }
+    }
+
     private var journalFilterMenu: some View {
         Menu {
             if dogs.count > 1 {
@@ -390,8 +416,7 @@ struct StarterRootView: View {
                 Button("Tout afficher", systemImage: "xmark.circle") { journalFilter = JournalFilter() }
             }
         } label: {
-            Label("Filtrer", systemImage: journalFilter.isActive
-                  ? "line.3.horizontal.decrease.circle.fill" : "line.3.horizontal.decrease.circle")
+            Label("Filtrer", systemImage: "slider.horizontal.3")
         }
         .accessibilityIdentifier("journal.filter")
     }

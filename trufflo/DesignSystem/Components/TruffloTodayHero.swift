@@ -177,6 +177,10 @@ struct TruffloDogThumbnail: View {
     let name: String
     let photoData: Data
     var side: CGFloat = 56
+    /// Wider than tall when given; a square of `side` otherwise.
+    var width: CGFloat? = nil
+    /// The white edge of a face set over a map; none for a photo standing alone.
+    var bordered = true
 
     @State private var image: UIImage?
     @State private var focus = FocalCrop.fallbackFocus
@@ -184,7 +188,7 @@ struct TruffloDogThumbnail: View {
 
     var body: some View {
         let shape = RoundedRectangle(cornerRadius: TruffloTheme.Radius.medium, style: .continuous)
-        let frame = CGSize(width: side, height: side)
+        let frame = CGSize(width: width ?? side, height: side)
         ZStack(alignment: .topLeading) {
             Color.truffloMint
             if let image {
@@ -195,10 +199,10 @@ struct TruffloDogThumbnail: View {
                     .offset(x: crop.offset.x, y: crop.offset.y)
             }
         }
-        .frame(width: side, height: side, alignment: .topLeading)
+        .frame(width: frame.width, height: frame.height, alignment: .topLeading)
         .clipShape(shape)
-        .overlay(shape.strokeBorder(Color.white, lineWidth: 3))
-        .shadow(color: .black.opacity(0.15), radius: 6, y: 3)
+        .overlay(shape.strokeBorder(Color.white, lineWidth: bordered ? 3 : 0))
+        .shadow(color: .black.opacity(bordered ? 0.15 : 0), radius: 6, y: 3)
         .accessibilityLabel("Photo de \(name)")
         .task(id: photoData) {
             let decoded = TruffloDogPortrait.downsampled(photoData, to: 900)

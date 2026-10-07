@@ -16,16 +16,40 @@ public struct JournalFilter: Equatable, Sendable {
         }
     }
 
+    /// Which balades: all, the suivies (recorded live), or the ajoutées.
+    public enum Kind: String, CaseIterable, Sendable {
+        case all, tracked, added
+
+        public var label: String {
+            switch self {
+            case .all: "Toutes"
+            case .tracked: "Avec GPS"
+            case .added: "Ajoutées"
+            }
+        }
+    }
+
     /// Nil means every dog.
     public var dogID: UUID?
     public var period: Period
+    public var kind: Kind
 
-    public init(dogID: UUID? = nil, period: Period = .all) {
+    public init(dogID: UUID? = nil, period: Period = .all, kind: Kind = .all) {
         self.dogID = dogID
         self.period = period
+        self.kind = kind
     }
 
-    public var isActive: Bool { dogID != nil || period != .all }
+    public var isActive: Bool { dogID != nil || period != .all || kind != .all }
+
+    /// Whether a balade of this kind passes the chips of the Journal.
+    public func includes(isTracked: Bool) -> Bool {
+        switch kind {
+        case .all: true
+        case .tracked: isTracked
+        case .added: !isTracked
+        }
+    }
 
     /// Whether a walk that ended at `date`, with these dogs, belongs in the
     /// filtered journal. A walk with several dogs matches each of them.

@@ -14,47 +14,66 @@ struct JournalTimelineView: View {
     /// The namespace of the zoom from a row to its walk.
     let zoom: Namespace.ID
     let rowDestination: (UUID) -> WalkRoute
+    /// The photo head of the screen, and the chips under it (2026-10-07 mock-up).
+    var hero: AnyView? = nil
+    var chips: AnyView? = nil
+    @State private var topInset: CGFloat = 0
 
     @Environment(\.calendar) private var calendar
     private static let locale = TruffloLocale.french
 
     var body: some View {
         ScrollView {
-            LazyVStack(alignment: .leading, spacing: TruffloTheme.Spacing.large) {
-                LostHouseholdNotice()
-                if let sentence = filterSummary ?? weekSentence {
-                    Text(sentence)
-                        .font(.subheadline)
-                        .foregroundStyle(Color.truffloSlate)
-                }
-                ForEach(days, id: \.start) { day in
-                    VStack(alignment: .leading, spacing: TruffloTheme.Spacing.small) {
-                        Text(heading(for: day.start))
-                            .font(.truffloBodyHeavy)
-                            .foregroundStyle(Color.truffloForest)
-                            .accessibilityAddTraits(.isHeader)
-                        ForEach(day.items) { item in
-                            switch item {
-                            case .own(let walk):
-                                NavigationLink(value: rowDestination(walk.id)) {
-                                    WalkTile(walk: walk)
+            VStack(alignment: .leading, spacing: 0) {
+                // The photo runs up under the status bar: pulled up by the top inset
+                // instead of letting the scroll view ignore the safe area, which made
+                // the tab bar believe the list had scrolled and fold away.
+                if let hero { hero.environment(\.heroTopInset, topInset).padding(.top, -topInset) }
+                LazyVStack(alignment: .leading, spacing: 20) {
+                    if let chips { chips }
+                    LostHouseholdNotice()
+                    // The mock-up's journal opens on its chips, with no count sentence.
+                    if let sentence = filterSummary ?? (hero == nil ? weekSentence : nil) {
+                        Text(sentence)
+                            .font(.subheadline)
+                            .foregroundStyle(Color.truffloSlate)
+                    }
+                    ForEach(days, id: \.start) { day in
+                        VStack(alignment: .leading, spacing: TruffloTheme.Spacing.small) {
+                            Text(heading(for: day.start))
+                                .font(.system(size: 18, weight: .bold, design: .rounded))
+                                .foregroundStyle(Color.truffloForest)
+                                .accessibilityAddTraits(.isHeader)
+                            ForEach(day.items) { item in
+                                switch item {
+                                case .own(let walk):
+                                    NavigationLink(value: rowDestination(walk.id)) {
+                                        JournalWalkTile(walk: walk)
+                                    }
+                                    .buttonStyle(.plain)
+                                    .matchedTransitionSource(id: walk.id, in: zoom)
+                                case .shared(let entry):
+                                    NavigationLink(value: SharedWalkRoute(id: entry.walk.id)) {
+                                        SharedWalkCard(walk: entry.walk, authorName: entry.authorName,
+                                                       possibleDuplicate: entry.possibleDuplicate)
+                                    }
+                                    .buttonStyle(.plain)
                                 }
-                                .buttonStyle(.plain)
-                                .matchedTransitionSource(id: walk.id, in: zoom)
-                            case .shared(let entry):
-                                NavigationLink(value: SharedWalkRoute(id: entry.walk.id)) {
-                                    SharedWalkCard(walk: entry.walk, authorName: entry.authorName,
-                                                   possibleDuplicate: entry.possibleDuplicate)
-                                }
-                                .buttonStyle(.plain)
                             }
                         }
                     }
                 }
+                .padding(.horizontal, TruffloTheme.Spacing.screen)
+                .padding(.top, 18)
+                .padding(.bottom, TruffloTheme.Spacing.large)
+                // The list rises over the photo on a sand sheet with rounded corners.
+                .background(Color.truffloSand,
+                            in: UnevenRoundedRectangle(topLeadingRadius: 28, topTrailingRadius: 28, style: .continuous))
+                .padding(.top, hero == nil ? 0 : -40)
             }
-            .padding(.horizontal, TruffloTheme.Spacing.screen)
-            .padding(.vertical, TruffloTheme.Spacing.small)
         }
+        .scrollEdgeEffectHidden(hero != nil, for: .top)
+        .onGeometryChange(for: CGFloat.self) { $0.safeAreaInsets.top } action: { topInset = $0 }
     }
 
     struct SharedEntry {
