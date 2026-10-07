@@ -40,13 +40,13 @@ struct TruffloDailyTip: View {
                     .accessibilityHidden(true)
                 VStack(alignment: .leading, spacing: 4) {
                     Text("Conseil du jour")
-                        .font(.system(.subheadline, design: .rounded, weight: .bold))
+                        .font(.system(size: 14, weight: .bold, design: .rounded))
                         .foregroundStyle(Color.truffloForest)
                     Text(tip.0)
-                        .font(.footnote)
+                        .font(.system(size: 12))
                         .foregroundStyle(Color(red: 0.1, green: 0.1, blue: 0.1))
                     Text(tip.1)
-                        .font(.footnote)
+                        .font(.system(size: 12))
                         .foregroundStyle(Color.truffloForest.opacity(0.85))
                         .fixedSize(horizontal: false, vertical: true)
                 }

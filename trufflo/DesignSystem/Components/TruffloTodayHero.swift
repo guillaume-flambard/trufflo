@@ -16,15 +16,15 @@ struct TruffloTodayHero<Footer: View>: View {
     var body: some View {
         VStack(alignment: .leading, spacing: 6) {
             Text("\(greeting) 👋")
-                .font(.system(.callout, design: .rounded, weight: .semibold))
+                .font(.system(size: 15, weight: .semibold, design: .rounded))
                 .foregroundStyle(Color(red: 0.1, green: 0.1, blue: 0.1))
             Text("Prêt pour une nouvelle aventure avec")
-                .font(.footnote)
+                .font(.system(size: 12))
                 .foregroundStyle(Color.truffloSlate)
                 .frame(maxWidth: 180, alignment: .leading)
                 .fixedSize(horizontal: false, vertical: true)
             Text(name)
-                .font(.system(size: 34, weight: .heavy, design: .rounded))
+                .font(.system(size: 38, weight: .heavy, design: .rounded))
                 .foregroundStyle(Color(red: 0.1, green: 0.1, blue: 0.1))
                 .lineLimit(2)
                 .minimumScaleFactor(0.5)
@@ -37,7 +37,7 @@ struct TruffloTodayHero<Footer: View>: View {
                         } icon: {
                             if let icon = chip.icon { Image(systemName: icon) }
                         }
-                        .font(.caption.weight(.medium))
+                        .font(.system(size: 11, weight: .medium))
                         .foregroundStyle(Color.truffloCharcoal)
                         .padding(.horizontal, TruffloTheme.Spacing.small)
                         .padding(.vertical, 6)
@@ -47,11 +47,11 @@ struct TruffloTodayHero<Footer: View>: View {
                     }
                 }
             }
-            footer().padding(.top, TruffloTheme.Spacing.small)
+            footer().padding(.top, 14)
         }
         // The greeting rides up under the transparent bar, level with the settings
         // button, as in the mock-up (96 pt from the top of the screen).
-        .padding(.top, -20)
+        .padding(.top, -16)
         .frame(maxWidth: .infinity, alignment: .leading)
     }
 }
@@ -134,7 +134,7 @@ struct TruffloStatTile: View {
     /// A sentence rather than a figure: set smaller, like the mock-up's third tile.
     var isSentence = false
     /// The mock-up sets a lone count smaller than a duration.
-    var valueSize: CGFloat = 21
+    var valueSize: CGFloat = 19
     var iconSize: CGFloat = 21
 
     var body: some View {
@@ -148,20 +148,20 @@ struct TruffloStatTile: View {
             // A fixed row, so the three tiles keep their figures on one line
             // whatever their size, and their labels start at the same height.
             Text(value)
-                .font(.system(size: isSentence ? 17 : valueSize, weight: .bold, design: .rounded))
+                .font(.system(size: isSentence ? 15 : valueSize, weight: .bold, design: .rounded))
                 .foregroundStyle(Color(red: 0.08, green: 0.08, blue: 0.08))
                 .lineLimit(1)
                 .minimumScaleFactor(0.7)
                 .frame(height: 22, alignment: .leading)
             Text(label)
-                .font(.system(size: 13))
+                .font(.system(size: 12))
                 .foregroundStyle(Color(red: 0.42, green: 0.42, blue: 0.42))
                 .lineLimit(2)
                 .fixedSize(horizontal: false, vertical: true)
         }
         .padding(.horizontal, 14)
-        .padding(.top, 12)
-        .padding(.bottom, 8)
+        .padding(.top, 14)
+        .padding(.bottom, 10)
         // Top-aligned in every tile: icons, figures and labels line up across the row.
         .frame(maxWidth: .infinity, minHeight: 96, maxHeight: .infinity, alignment: .topLeading)
         .background(Color(red: 0.984, green: 0.973, blue: 0.953).opacity(0.92),

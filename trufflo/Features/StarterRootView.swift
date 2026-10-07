@@ -461,7 +461,7 @@ struct StarterRootView: View {
         } else {
             let journal = facts
             ScrollView {
-                VStack(alignment: .leading, spacing: 20) {
+                VStack(alignment: .leading, spacing: 16) {
                     TruffloTodayHero(name: dogNames,
                                      photoData: dogs.count == 1 ? dogs[0].photoData : nil,
                                      chips: dogs.count == 1 ? heroChips(dogs[0]) : []) {
@@ -542,7 +542,6 @@ struct StarterRootView: View {
         var chips: [(icon: String?, text: String)] = []
         if dog.breedKind != "unknown" { chips.append(("pawprint.fill", dog.breedDescription)) }
         if !dog.ageDescription.isEmpty { chips.append((nil, dog.ageDescription)) }
-        if dog.genderDescription != "Non renseigné" { chips.append((nil, dog.genderDescription)) }
         return chips
     }
 
@@ -557,7 +556,7 @@ struct StarterRootView: View {
             TruffloStatTile(systemImage: "shoe", tint: Color(red: 0.18, green: 0.42, blue: 0.31),
                             value: "\(week.walkCount)",
                             label: week.walkCount == 1 ? "balade\ncette semaine" : "balades\ncette semaine",
-                            iconSize: 19)
+                            valueSize: 17, iconSize: 19)
             // The middle tile is narrower in the mock-up (105 of 358 pt).
             TruffloStatTile(systemImage: "clock", tint: Color(red: 0.85, green: 0.58, blue: 0.17),
                             value: week.isEmpty ? "0 min" : WalkFormatting.minutes(week.totalSeconds),
@@ -796,7 +795,7 @@ struct StarterRootView: View {
                         .multilineTextAlignment(.center)
                     Spacer(minLength: 0)
                 }
-                .frame(minHeight: 38)
+                .frame(minHeight: 44)
                 .overlay(alignment: .trailing) {
                     if !typeSize.isAccessibilitySize {
                         Image(systemName: "chevron.right")
@@ -811,7 +810,8 @@ struct StarterRootView: View {
             .tint(Color.truffloForest)
             .sensoryFeedback(.impact(weight: .light), trigger: startTaps)
             Text("Suivi GPS · Même hors ligne")
-                .font(.caption)
+                .font(.system(size: 11))
+                .padding(.bottom, 4)
                 .foregroundStyle(Color.truffloSlate)
                 .frame(maxWidth: .infinity)
                 .accessibilityHidden(true)

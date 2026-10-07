@@ -54,7 +54,7 @@ private struct WalkCard: View {
             if let route = shown.route(maxPoints: WalkPresentation.picturePoints) {
                 TruffloRouteMap(points: route, cacheKey: "\(walk.id.uuidString)-\(walk.revision)-\(pointCount)",
                                 isVivid: true)
-                    .frame(width: 200)
+                    .frame(width: 185)
                     .mask(LinearGradient(stops: [.init(color: .clear, location: 0),
                                                  .init(color: .black, location: 0.45)],
                                          startPoint: .leading, endPoint: .trailing))
@@ -67,16 +67,16 @@ private struct WalkCard: View {
                 VStack(alignment: .leading, spacing: 6) {
                     Label("\(WalkFormatting.relativeDay(shown.date).capitalizedFirst) · \(WalkFormatting.time(shown.date))",
                           systemImage: "clock")
-                        .font(.footnote)
+                        .font(.system(size: 14))
                         .foregroundStyle(Color.truffloSlate)
                         .lineLimit(1)
                     Text(shown.heading)
-                        .font(.system(.headline, design: .rounded, weight: .bold))
+                        .font(.system(size: 17, weight: .bold, design: .rounded))
                         .foregroundStyle(Color(red: 0.1, green: 0.1, blue: 0.1))
                         .lineLimit(1)
                     if !walk.note.isEmpty {
                         Text(walk.note)
-                            .font(.footnote)
+                            .font(.system(size: 14))
                             .foregroundStyle(Color.truffloCharcoal.opacity(0.85))
                             .lineLimit(2)
                             .fixedSize(horizontal: false, vertical: true)
@@ -89,24 +89,24 @@ private struct WalkCard: View {
                             }
                             VStack(alignment: .leading, spacing: 0) {
                                 Text(item.value)
-                                    .font(.system(.headline, design: .rounded, weight: .bold))
+                                    .font(.system(size: 20, weight: .bold, design: .rounded))
                                     .monospacedDigit()
                                     .foregroundStyle(Color.truffloForest)
                                     .lineLimit(1)
                                     .fixedSize()
                                 Text(item.label)
-                                    .font(.caption)
+                                    .font(.system(size: 13))
                                     .foregroundStyle(Color.truffloSlate)
                             }
                         }
                     }
                 }
                 .padding(TruffloTheme.Spacing.medium)
-                .frame(width: 200, alignment: .leading)
+                .frame(width: 218, alignment: .leading)
                 Spacer(minLength: 0)
             }
         }
-        .frame(maxWidth: .infinity, minHeight: 150, maxHeight: 150, alignment: .leading)
+        .frame(maxWidth: .infinity, minHeight: 172, maxHeight: 172, alignment: .leading)
         .background(Color.white)
         .clipShape(shape)
         .shadow(color: Color.black.opacity(0.05), radius: 12, y: 4)
