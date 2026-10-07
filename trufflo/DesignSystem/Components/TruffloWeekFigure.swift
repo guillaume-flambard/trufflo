@@ -20,14 +20,14 @@ struct TruffloWeekFigure: View {
     @Environment(\.accessibilityReduceMotion) private var reduceMotion
     /// Follows Dynamic Type, capped: at the largest accessibility sizes a uniform
     /// scale would push the figure past the width of the screen.
-    @ScaledMetric(relativeTo: .largeTitle) private var figureSize: CGFloat = 112
+    @ScaledMetric(relativeTo: .largeTitle) private var figureSize: CGFloat = 56
     /// What the figure shows. Nil until the screen appears, so the first appearance rolls.
     @State private var shownCount: Int?
 
     private var calendar: Calendar { TruffloLocale.calendar }
 
     var body: some View {
-        VStack(alignment: .leading, spacing: TruffloTheme.Spacing.large) {
+        VStack(alignment: .leading, spacing: TruffloTheme.Spacing.medium) {
             VStack(alignment: .leading, spacing: TruffloTheme.Spacing.xSmall) {
                 if week.isEmpty {
                     Text("Pas encore de balade cette semaine.")
@@ -35,14 +35,25 @@ struct TruffloWeekFigure: View {
                         .foregroundStyle(Color.truffloForest)
                         .fixedSize(horizontal: false, vertical: true)
                 } else {
-                    figure
-                    Text(week.walkCount == 1 ? "balade cette semaine" : "balades cette semaine")
-                        .font(.truffloBodyHeavy)
-                        .foregroundStyle(Color.truffloCharcoal)
-                    if let totalLine {
-                        Text(totalLine)
-                            .font(.truffloBodyRegular)
-                            .foregroundStyle(Color.truffloSlate)
+                    // The figure beside its caption, not above it: at 112 pt on a line
+                    // of its own it pushed the last walk under the start button and the
+                    // tab bar (2026-10-07 review). Stacked again at accessibility sizes,
+                    // where the side by side leaves the caption a few letters of width.
+                    let layout = typeSize.isAccessibilitySize
+                        ? AnyLayout(VStackLayout(alignment: .leading, spacing: TruffloTheme.Spacing.xSmall))
+                        : AnyLayout(HStackLayout(alignment: .center, spacing: TruffloTheme.Spacing.small))
+                    layout {
+                        figure
+                        VStack(alignment: .leading, spacing: 2) {
+                            Text(week.walkCount == 1 ? "balade cette semaine" : "balades cette semaine")
+                                .font(.truffloBodyHeavy)
+                                .foregroundStyle(Color.truffloCharcoal)
+                            if let totalLine {
+                                Text(totalLine)
+                                    .font(.truffloBodyRegular)
+                                    .foregroundStyle(Color.truffloSlate)
+                            }
+                        }
                     }
                 }
             }
@@ -55,7 +66,7 @@ struct TruffloWeekFigure: View {
     }
 
     private var figure: some View {
-        let size = min(figureSize, 150)
+        let size = min(figureSize, 96)
         let value = shownCount ?? 0
         return Text(value, format: .number)
             .font(.system(size: size, weight: .heavy, design: .rounded))
@@ -64,9 +75,6 @@ struct TruffloWeekFigure: View {
             .foregroundStyle(Color.truffloForest)
             .lineLimit(1)
             .minimumScaleFactor(0.5)
-            // The font's line box leaves air under the digits: take it back so the
-            // sentence reads as the figure's caption, not as a separate line.
-            .padding(.bottom, -size * 0.16)
             // The one authored moment of motion: the figure rolls up to the week's
             // count when the screen first appears, then only when the count changes.
             .contentTransition(.numericText(value: Double(value)))
