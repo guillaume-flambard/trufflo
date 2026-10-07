@@ -15,6 +15,12 @@ final class DogRecord {
     var preferencesNote: String = ""
     @Attribute(.externalStorage) var photoData: Data?
     var createdAt: Date
+    // V7 (2026-10-07 mock-up): declared by the person, never inferred.
+    /// "small", "medium", "large", or empty when not given.
+    var sizeRaw: String = ""
+    var weightKg: Double? = nil
+    /// Comma-separated trait keys from `DogTrait`, in the order chosen.
+    var traitsRaw: String = ""
 
     init(
         id: UUID = UUID(),
@@ -46,6 +52,9 @@ final class DogRecord {
         default: "Race inconnue"
         }
     }
+
+    var size: DogSize? { DogSize(rawValue: sizeRaw) }
+    var traits: [DogTrait] { DogTrait.list(from: traitsRaw) }
 
     var genderDescription: String {
         switch gender {
@@ -82,6 +91,16 @@ final class WalkRecord {
     /// identified). Nil for a walk as recorded or entered. Optional with a nil
     /// default, so the V3 to V4 lightweight stage fills existing rows.
     var correctedAt: Date? = nil
+    // V7 (2026-10-07 mock-up).
+    /// A title the person gives; empty means the screens fall back to the dogs.
+    var title: String = ""
+    /// A `WalkMood` key, or empty.
+    var moodRaw: String = ""
+    /// Where a balade suivie took place, from its tracé; empty when unknown.
+    var placeName: String = ""
+    /// A `WalkWeather` condition key and the temperature at the end, when known.
+    var weatherRaw: String = ""
+    var temperatureC: Double? = nil
 
     init(id: UUID = UUID(),
          startedAt: Date,
@@ -105,6 +124,9 @@ final class WalkRecord {
         self.lastCheckpointAt = startedAt
         self.note = note
     }
+
+    var mood: WalkMood? { WalkMood(rawValue: moodRaw) }
+    var weather: WalkWeather? { WalkWeather(rawValue: weatherRaw) }
 
     var phase: WalkPhase {
         get { WalkPhase(rawValue: phaseRaw) ?? .interrupted }
@@ -230,5 +252,22 @@ final class RoutineRecord {
         return try? DogRoutine(walksPerDay: outingsPerDay > 0 ? outingsPerDay : nil,
                                minutesPerWalk: minutesPerOuting > 0 ? minutesPerOuting : nil,
                                slots: slots)
+    }
+}
+
+/// A photo the person attached to a balade. Stays on this iPhone: never part of
+/// what the household receives. Resized and stripped of its location on import.
+@Model
+final class WalkPhotoRecord {
+    @Attribute(.unique) var id: UUID
+    var walkID: UUID
+    @Attribute(.externalStorage) var data: Data
+    var createdAt: Date
+
+    init(id: UUID = UUID(), walkID: UUID, data: Data, createdAt: Date = .now) {
+        self.id = id
+        self.walkID = walkID
+        self.data = data
+        self.createdAt = createdAt
     }
 }

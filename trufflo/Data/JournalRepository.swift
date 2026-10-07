@@ -59,6 +59,9 @@ struct JournalRepository {
                 preferencesNote: input.preferencesNote,
                 photoData: input.photoData
             )
+            dog.sizeRaw = input.size?.rawValue ?? ""
+            dog.weightKg = input.weightKg
+            dog.traitsRaw = DogTrait.raw(of: input.traits)
             context.insert(dog)
             return dog
         }
@@ -76,6 +79,9 @@ struct JournalRepository {
             dog.gender = input.gender
             dog.preferencesNote = input.preferencesNote
             dog.photoData = input.photoData
+            dog.sizeRaw = input.size?.rawValue ?? ""
+            dog.weightKg = input.weightKg
+            dog.traitsRaw = DogTrait.raw(of: input.traits)
         }
     }
 
@@ -267,6 +273,38 @@ struct JournalRepository {
         }
     }
 
+    /// The title, mood and note of a balade, as the person writes them.
+    func updateWalkDetails(_ id: UUID, title: String, mood: WalkMood?, note: String) throws {
+        let cleanTitle = title.trimmingCharacters(in: .whitespacesAndNewlines)
+        guard cleanTitle.count <= 80 else { throw WalkError.titleTooLong }
+        let cleanNote = note.trimmingCharacters(in: .whitespacesAndNewlines)
+        guard cleanNote.count <= 500 else { throw WalkError.noteTooLong }
+        guard let walk = requireWalk(id) else { throw JournalError.walkMissing }
+        try commit {
+            walk.title = cleanTitle
+            walk.moodRaw = mood?.rawValue ?? ""
+            walk.note = cleanNote
+            walk.revision += 1
+        }
+    }
+
+    /// A photo the person attaches to a balade. The caller passes it through
+    /// `PhotoImport.prepare`: resized, without its location.
+    func addWalkPhoto(_ walkID: UUID, data: Data) throws {
+        guard requireWalk(walkID) != nil else { throw JournalError.walkMissing }
+        try commit { context.insert(WalkPhotoRecord(walkID: walkID, data: data)) }
+    }
+
+    /// Where a balade suivie took place and the weather at its end.
+    func setWalkSurroundings(_ id: UUID, placeName: String?, weather: WalkWeather?, temperatureC: Double?) throws {
+        guard let walk = requireWalk(id) else { throw JournalError.walkMissing }
+        try commit {
+            if let placeName { walk.placeName = placeName }
+            if let weather { walk.weatherRaw = weather.rawValue }
+            if let temperatureC { walk.temperatureC = temperatureC }
+        }
+    }
+
     /// Applies a correction to a finished walk and marks it corrected (PRD F05).
     ///
     /// A recorded walk refuses a timing change: its duration and end are
@@ -314,6 +352,10 @@ struct JournalRepository {
             guard let walk = requireWalk(id) else { throw JournalError.walkMissing }
             for link in try links(walkID: id) { context.delete(link) }
             for point in try points(walkID: id) { context.delete(point) }
+            let walkID = id
+            for photo in try context.fetch(FetchDescriptor<WalkPhotoRecord>(predicate: #Predicate { $0.walkID == walkID })) {
+                context.delete(photo)
+            }
             context.delete(walk)
         }
     }
@@ -325,6 +367,7 @@ struct JournalRepository {
     func eraseAll() throws {
         try commit {
             for point in try all(TrackPointRecord.self) { context.delete(point) }
+            for photo in try all(WalkPhotoRecord.self) { context.delete(photo) }
             for link in try all(WalkDogRecord.self) { context.delete(link) }
             for walk in try all(WalkRecord.self) { context.delete(walk) }
             for dog in try all(DogRecord.self) { context.delete(dog) }

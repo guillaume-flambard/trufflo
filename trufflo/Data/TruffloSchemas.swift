@@ -176,6 +176,73 @@ enum FrozenV3 {
     }
 }
 
+/// DogRecord and WalkRecord as V4 to V6 wrote them, frozen on 2026-10-07 when V7
+/// gave them the mock-up fields (chantier 8).
+enum FrozenV6 {
+    @Model
+    final class DogRecord {
+        @Attribute(.unique) var id: UUID
+        var name: String
+        var breedKind: String
+        var breedLabel: String
+        var ageDescription: String = ""
+        var gender: String = "unspecified"
+        var preferencesNote: String = ""
+        @Attribute(.externalStorage) var photoData: Data?
+        var createdAt: Date
+
+        init(id: UUID = UUID(), name: String, breedKind: String, breedLabel: String = "",
+             ageDescription: String = "", gender: String = "unspecified",
+             preferencesNote: String = "", photoData: Data? = nil) {
+            self.id = id
+            self.name = name
+            self.breedKind = breedKind
+            self.breedLabel = breedLabel
+            self.ageDescription = ageDescription
+            self.gender = gender
+            self.preferencesNote = preferencesNote
+            self.photoData = photoData
+            self.createdAt = .now
+        }
+    }
+
+    @Model
+    final class WalkRecord {
+        @Attribute(.unique) var id: UUID
+        var startedAt: Date
+        var endedAt: Date?
+        var confirmedSeconds: Double
+        var phaseRaw: String
+        var sourceRaw: String
+        var qualityRaw: String
+        var recordedPathMeters: Double?
+        var measuredEdgeCount: Int
+        var trackSegmentCount: Int
+        var revision: Int
+        var lastCheckpointAt: Date
+        var note: String
+        var correctedAt: Date? = nil
+
+        init(id: UUID = UUID(), startedAt: Date, endedAt: Date? = nil, confirmedSeconds: Double = 0,
+             phaseRaw: String = "completed", sourceRaw: String = "manual", qualityRaw: String = "manual",
+             note: String = "") {
+            self.id = id
+            self.startedAt = startedAt
+            self.endedAt = endedAt
+            self.confirmedSeconds = confirmedSeconds
+            self.phaseRaw = phaseRaw
+            self.sourceRaw = sourceRaw
+            self.qualityRaw = qualityRaw
+            self.recordedPathMeters = nil
+            self.measuredEdgeCount = 0
+            self.trackSegmentCount = 0
+            self.revision = 0
+            self.lastCheckpointAt = startedAt
+            self.note = note
+        }
+    }
+}
+
 /// V1 is the first frozen shape: the journal with session fields, no track table.
 enum SchemaV1: VersionedSchema {
     static let versionIdentifier = Schema.Version(1, 0, 0)
@@ -212,7 +279,7 @@ enum SchemaV3: VersionedSchema {
 enum SchemaV4: VersionedSchema {
     static let versionIdentifier = Schema.Version(4, 0, 0)
     static var models: [any PersistentModel.Type] {
-        [DogRecord.self, WalkRecord.self, WalkDogRecord.self, TrackPointRecord.self]
+        [FrozenV6.DogRecord.self, FrozenV6.WalkRecord.self, WalkDogRecord.self, TrackPointRecord.self]
     }
 }
 
@@ -222,25 +289,40 @@ enum SchemaV4: VersionedSchema {
 enum SchemaV5: VersionedSchema {
     static let versionIdentifier = Schema.Version(5, 0, 0)
     static var models: [any PersistentModel.Type] {
-        [DogRecord.self, WalkRecord.self, WalkDogRecord.self, TrackPointRecord.self, RoutineRecord.self]
+        [FrozenV6.DogRecord.self, FrozenV6.WalkRecord.self, WalkDogRecord.self, TrackPointRecord.self,
+         RoutineRecord.self]
     }
 }
 
-/// V6 is the current version: the shared household (PRD F08, chantier 3).
+/// V6: the shared household (PRD F08, chantier 3).
 /// Five new tables beside the journal; no journal class changes, so every
 /// existing store gains empty tables and nothing else.
 enum SchemaV6: VersionedSchema {
     static let versionIdentifier = Schema.Version(6, 0, 0)
     static var models: [any PersistentModel.Type] {
+        [FrozenV6.DogRecord.self, FrozenV6.WalkRecord.self, WalkDogRecord.self, TrackPointRecord.self,
+         RoutineRecord.self, HouseholdRecord.self, DogLinkRecord.self, SyncLedgerRecord.self,
+         SharedWalkRecord.self, HouseholdMemberRecord.self]
+    }
+}
+
+/// V7 is the current version (chantier 8, the 2026-10-07 mock-ups): a dog gains
+/// size, weight and traits; a walk gains a title, a mood, a place and the
+/// weather; walk photos get their own table. Every new column has a default, so
+/// existing rows fill in a lightweight stage.
+enum SchemaV7: VersionedSchema {
+    static let versionIdentifier = Schema.Version(7, 0, 0)
+    static var models: [any PersistentModel.Type] {
         [DogRecord.self, WalkRecord.self, WalkDogRecord.self, TrackPointRecord.self, RoutineRecord.self,
          HouseholdRecord.self, DogLinkRecord.self, SyncLedgerRecord.self,
-         SharedWalkRecord.self, HouseholdMemberRecord.self]
+         SharedWalkRecord.self, HouseholdMemberRecord.self, WalkPhotoRecord.self]
     }
 }
 
 enum TruffloMigrationPlan: SchemaMigrationPlan {
     static var schemas: [any VersionedSchema.Type] {
-        [SchemaV1.self, SchemaV2.self, SchemaV3.self, SchemaV4.self, SchemaV5.self, SchemaV6.self]
+        [SchemaV1.self, SchemaV2.self, SchemaV3.self, SchemaV4.self, SchemaV5.self, SchemaV6.self,
+         SchemaV7.self]
     }
 
     static var stages: [MigrationStage] {
@@ -250,11 +332,12 @@ enum TruffloMigrationPlan: SchemaMigrationPlan {
             .lightweight(fromVersion: SchemaV3.self, toVersion: SchemaV4.self),
             .lightweight(fromVersion: SchemaV4.self, toVersion: SchemaV5.self),
             .lightweight(fromVersion: SchemaV5.self, toVersion: SchemaV6.self),
+            .lightweight(fromVersion: SchemaV6.self, toVersion: SchemaV7.self),
         ]
     }
 }
 
 enum CurrentSchema {
-    static let versioned = SchemaV6.self
-    static var schema: Schema { Schema(versionedSchema: SchemaV6.self) }
+    static let versioned = SchemaV7.self
+    static var schema: Schema { Schema(versionedSchema: SchemaV7.self) }
 }

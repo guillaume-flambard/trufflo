@@ -21,6 +21,7 @@ public enum WalkError: Error, Equatable, Sendable {
     case invalidDuration
     case missingDog
     case noteTooLong
+    case titleTooLong
 }
 
 /// Persist this snapshot after every accepted state change.

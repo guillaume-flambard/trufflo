@@ -5,6 +5,7 @@ public enum DogError: Error, Equatable, Sendable {
     case invalidBreedLabel
     case preferencesNoteTooLong
     case ageDescriptionTooLong
+    case invalidWeight
 }
 
 /// The fields a person can actually edit. Validation lives here so a form and a
@@ -20,6 +21,9 @@ public struct DogInput: Equatable, Sendable {
     public let gender: String
     public let preferencesNote: String
     public let photoData: Data?
+    public let size: DogSize?
+    public let weightKg: Double?
+    public let traits: [DogTrait]
 
     public init(
         name: String,
@@ -28,7 +32,10 @@ public struct DogInput: Equatable, Sendable {
         ageDescription: String = "",
         gender: String = "unspecified",
         preferencesNote: String = "",
-        photoData: Data? = nil
+        photoData: Data? = nil,
+        size: DogSize? = nil,
+        weightKg: Double? = nil,
+        traits: [DogTrait] = []
     ) throws {
         let cleanName = name.trimmingCharacters(in: .whitespacesAndNewlines)
         guard !cleanName.isEmpty, cleanName.count <= 80 else {
@@ -58,5 +65,9 @@ public struct DogInput: Equatable, Sendable {
         self.gender = validGender
         self.preferencesNote = cleanNote
         self.photoData = photoData
+        if let weightKg, !(0.5...100).contains(weightKg) { throw DogError.invalidWeight }
+        self.size = size
+        self.weightKg = weightKg
+        self.traits = traits
     }
 }

@@ -217,8 +217,9 @@ private func seedLegacyV2Store(at storeURL: URL) throws {
         var writer: ModelContainer? = try PersistenceFactory.makeFixtureStore(
             versioned: SchemaV4.self, at: storeURL)
         let context = try #require(writer?.mainContext)
-        let dog = DogRecord(name: "Oslo", breedKind: "unknown")
-        let walk = WalkRecord.manual(endedAt: Date(timeIntervalSince1970: 7_000), durationSeconds: 900)
+        let dog = FrozenV6.DogRecord(name: "Oslo", breedKind: "unknown")
+        let walk = FrozenV6.WalkRecord(startedAt: Date(timeIntervalSince1970: 6_100),
+                                       endedAt: Date(timeIntervalSince1970: 7_000), confirmedSeconds: 900)
         walk.correctedAt = corrected
         context.insert(dog)
         context.insert(walk)
@@ -244,9 +245,10 @@ private func seedLegacyV2Store(at storeURL: URL) throws {
         var writer: ModelContainer? = try PersistenceFactory.makeFixtureStore(
             versioned: SchemaV5.self, at: storeURL)
         let context = try #require(writer?.mainContext)
-        let dog = DogRecord(name: "Oslo", breedKind: "unknown")
+        let dog = FrozenV6.DogRecord(name: "Oslo", breedKind: "unknown")
         context.insert(dog)
-        context.insert(WalkRecord.manual(endedAt: Date(timeIntervalSince1970: 7_000), durationSeconds: 900))
+        context.insert(FrozenV6.WalkRecord(startedAt: Date(timeIntervalSince1970: 6_100),
+                                           endedAt: Date(timeIntervalSince1970: 7_000), confirmedSeconds: 900))
         context.insert(RoutineRecord(dogID: dog.id, routine: try DogRoutine(walksPerDay: 2, minutesPerWalk: nil, slots: [])))
         try context.save()
         writer = nil
@@ -260,6 +262,37 @@ private func seedLegacyV2Store(at storeURL: URL) throws {
     #expect(try context.fetch(FetchDescriptor<SyncLedgerRecord>()).isEmpty)
     #expect(try context.fetch(FetchDescriptor<SharedWalkRecord>()).isEmpty)
     #expect(try context.fetch(FetchDescriptor<HouseholdMemberRecord>()).isEmpty)
+}
+
+/// A store written by the current release (V6) opens in V7 with every dog and
+/// walk intact and the mock-up fields empty: nothing is invented for old rows.
+@Test @MainActor func aV6StoreOpensWithEmptyMockupFields() throws {
+    let directory = try makeV1StoreDirectory()
+    defer { try? FileManager.default.removeItem(at: directory) }
+    let storeURL = directory.appending(path: "TruffloMigration.store")
+    let dogID = UUID()
+    do {
+        var writer: ModelContainer? = try PersistenceFactory.makeFixtureStore(
+            versioned: SchemaV6.self, at: storeURL)
+        let context = try #require(writer?.mainContext)
+        context.insert(FrozenV6.DogRecord(id: dogID, name: "Oslo", breedKind: "mixed", ageDescription: "3 ans"))
+        context.insert(FrozenV6.WalkRecord(startedAt: Date(timeIntervalSince1970: 6_100),
+                                           endedAt: Date(timeIntervalSince1970: 7_000), confirmedSeconds: 900,
+                                           note: "Tour du parc"))
+        try context.save()
+        writer = nil
+    }
+    let context = ModelContext(try PersistenceFactory.makeMigrated(at: storeURL))
+    let dogs = try context.fetch(FetchDescriptor<DogRecord>())
+    #expect(dogs.count == 1)
+    #expect(dogs[0].id == dogID && dogs[0].ageDescription == "3 ans")
+    #expect(dogs[0].sizeRaw == "" && dogs[0].weightKg == nil && dogs[0].traitsRaw == "")
+    let walks = try context.fetch(FetchDescriptor<WalkRecord>())
+    #expect(walks.count == 1)
+    #expect(walks[0].note == "Tour du parc" && walks[0].confirmedSeconds == 900)
+    #expect(walks[0].title == "" && walks[0].moodRaw == "" && walks[0].placeName == "")
+    #expect(walks[0].temperatureC == nil)
+    #expect(try context.fetch(FetchDescriptor<WalkPhotoRecord>()).isEmpty)
 }
 
 /// The tripwire for unversioned model edits (ADR-008). The live classes are
@@ -278,7 +311,7 @@ private func seedLegacyV2Store(at storeURL: URL) throws {
         .joined(separator: " | ")
 
     let expected = "DogLinkRecord{localDogID,remoteDogID}"
-        + " | DogRecord{ageDescription,breedKind,breedLabel,createdAt,gender,id,name,photoData,preferencesNote}"
+        + " | DogRecord{ageDescription,breedKind,breedLabel,createdAt,gender,id,name,photoData,preferencesNote,sizeRaw,traitsRaw,weightKg}"
         + " | HouseholdMemberRecord{displayName,roleRaw,userID}"
         + " | HouseholdRecord{id,joinedAt,lastError,lastPulledAt,lastSyncAt,myDisplayName,myRoleRaw,myUserID,name}"
         + " | RoutineRecord{dogID,isPaused,minutesPerOuting,outingsPerDay,slotsRaw,updatedAt}"
@@ -286,7 +319,8 @@ private func seedLegacyV2Store(at storeURL: URL) throws {
         + " | SyncLedgerRecord{key,kindRaw,lastError,localID,pushedFingerprint,stateRaw,updatedAt}"
         + " | TrackPointRecord{horizontalAccuracy,id,latitude,longitude,segment,sequence,timestamp,walkID}"
         + " | WalkDogRecord{dogID,dogNameSnapshot,id,walkID}"
-        + " | WalkRecord{confirmedSeconds,correctedAt,endedAt,id,lastCheckpointAt,measuredEdgeCount,note,phaseRaw,qualityRaw,recordedPathMeters,revision,sourceRaw,startedAt,trackSegmentCount}"
+        + " | WalkPhotoRecord{createdAt,data,id,walkID}"
+        + " | WalkRecord{confirmedSeconds,correctedAt,endedAt,id,lastCheckpointAt,measuredEdgeCount,moodRaw,note,phaseRaw,placeName,qualityRaw,recordedPathMeters,revision,sourceRaw,startedAt,temperatureC,title,trackSegmentCount,weatherRaw}"
 
     #expect(dump == expected, "CurrentSchema changed. Freeze the previous shape in TruffloSchemas.swift, add a schema version and stage, then update this expectation. Actual dump: \(dump)")
 }
