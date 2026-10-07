@@ -799,7 +799,7 @@ private struct InviteTicket: View {
     /// code stays in the message for someone who types it instead.
     private var shareMessage: String {
         let link = InviteLink.url(for: code).map { "\n\($0.absoluteString)" } ?? ""
-        return "Rejoins le foyer « \(householdName) » dans Trufflo :\(link)\n\nOu, dans l'app, Réglages, Foyer partagé, Rejoindre, avec ce code : \(code)"
+        return "Rejoins le foyer « \(householdName) » dans Trufflo :\(link)\n\nOu, dans l'app, Réglages, Foyer partagé, J'ai un code, avec ce code : \(code)"
     }
     let householdName: String
     @State private var copied = false
