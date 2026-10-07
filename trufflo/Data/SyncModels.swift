@@ -82,7 +82,7 @@ final class SyncLedgerRecord {
     static let tombstoneFingerprint = "deleted"
 }
 
-enum SyncItemKind: String, Sendable { case walk, dog }
+enum SyncItemKind: String, Sendable { case walk, dog, plan }
 
 /// DATA-CONTRACTS §3. `conflict` is never produced in this version: the
 /// server is the authority and an author's last write wins (ADR 0008).
@@ -108,6 +108,12 @@ final class SharedWalkRecord {
     /// contain a comma, it cannot contain a control character.
     var dogNamesRaw: String
     var updatedAt: Date
+    // What the author wrote and the phone measured (V7). Empty or nil on a walk shared by
+    // an older version of the app.
+    var title: String = ""
+    var moodRaw: String = ""
+    var weatherRaw: String = ""
+    var temperatureC: Double? = nil
 
     init(_ walk: RemoteWalkDTO) {
         id = walk.id
@@ -139,6 +145,10 @@ final class SharedWalkRecord {
         dogIDsRaw = dogs.map(\.dogID.uuidString).joined(separator: Self.separator)
         dogNamesRaw = dogs.map(\.dogNameSnapshot).joined(separator: Self.separator)
         updatedAt = walk.updatedAt
+        title = walk.title
+        moodRaw = walk.mood ?? ""
+        weatherRaw = walk.weather ?? ""
+        temperatureC = walk.temperatureC
     }
 
     static let separator = "\u{1F}"
@@ -147,6 +157,25 @@ final class SharedWalkRecord {
     var dogNames: [String] { dogNamesRaw.split(separator: Self.separator).map(String.init) }
     var quality: WalkQuality { WalkQuality(rawValue: qualityRaw) ?? .unavailable }
     var source: WalkSource { WalkSource(rawValue: sourceRaw) ?? .manual }
+    var mood: WalkMood? { WalkMood(rawValue: moodRaw) }
+    var weather: WalkWeather? { WalkWeather(rawValue: weatherRaw) }
+}
+
+/// A balade another member plans (V7), read-only here: who, when, and the
+/// name of the place. Replaced at every sync by what the server lists.
+@Model
+final class SharedPlannedWalkRecord {
+    @Attribute(.unique) var id: UUID
+    var authorID: UUID
+    var plannedAt: Date
+    var placeName: String
+
+    init(_ plan: RemotePlannedWalkDTO) {
+        id = plan.id
+        authorID = plan.authorID
+        plannedAt = plan.plannedAt
+        placeName = plan.placeName
+    }
 }
 
 /// A member of the household as the others see them.

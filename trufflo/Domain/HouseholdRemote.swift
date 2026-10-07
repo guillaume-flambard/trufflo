@@ -26,6 +26,10 @@ public protocol HouseholdRemote: Sendable {
     /// Owners only. Everything of the household goes with it on the server;
     /// each member's own journal stays on their iPhone.
     func deleteHousehold(id: UUID) async throws
+    /// Deletes the signed-in account and what the server holds for it. A
+    /// household the person alone shares goes with it; the server refuses
+    /// while others remain and none of them is an owner.
+    func deleteMyAccount() async throws
 
     func dogs(householdID: UUID) async throws -> [RemoteDogDTO]
     func upsertDog(_ dog: DogDTO) async throws
@@ -37,6 +41,11 @@ public protocol HouseholdRemote: Sendable {
     /// Walks of the household changed after `since` (all of them when nil),
     /// tombstones included.
     func walks(householdID: UUID, changedSince since: Date?) async throws -> [RemoteWalkDTO]
+
+    func upsertPlannedWalk(_ plan: PlannedWalkDTO) async throws
+    func tombstonePlannedWalk(id: UUID, at date: Date) async throws
+    /// The household's planned balades still to come, none deleted.
+    func plannedWalks(householdID: UUID, after date: Date) async throws -> [RemotePlannedWalkDTO]
 }
 
 /// Failures the person can act on, kept distinct (spec S15).

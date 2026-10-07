@@ -429,6 +429,7 @@ struct JournalRepository {
             // other members is not kept after a global erasure. Nothing is
             // deleted on the server; the screen says so.
             for shared in try all(SharedWalkRecord.self) { context.delete(shared) }
+            for plan in try all(SharedPlannedWalkRecord.self) { context.delete(plan) }
             for member in try all(HouseholdMemberRecord.self) { context.delete(member) }
             for link in try all(DogLinkRecord.self) { context.delete(link) }
             for entry in try all(SyncLedgerRecord.self) { context.delete(entry) }

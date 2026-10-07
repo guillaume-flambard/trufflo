@@ -14,6 +14,15 @@ struct BackendConfig: Sendable {
         baseURL: URL(string: "https://trufflo-api.memolabs.dev")!,
         anonKey: "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJyb2xlIjoiYW5vbiIsImlzcyI6InN1cGFiYXNlIiwiaWF0IjoxNzkxMzA3ODIyLCJleHAiOjE5NDg5ODc4MjJ9.bqXc4ETciLxPFu4MfqBgdGpGoilkyDkwoUR_fJdSb-4")
 
+    #if DEBUG
+    /// The local stack of `backend/` (`supabase start`), for `--local-backend`:
+    /// the simulator reads the data the migrations seed, not text in the app.
+    /// The key is the CLI's public demo anon key, the same on every machine.
+    static let local = BackendConfig(
+        baseURL: URL(string: "http://127.0.0.1:54321")!,
+        anonKey: "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZS1kZW1vIiwicm9sZSI6ImFub24iLCJleHAiOjE5ODM4MTI5OTZ9.CRXP1A7WOeoJeXxjNni43kdQwgnWNReilDMblYTn_I0")
+    #endif
+
     /// The official client, with the app's date format on the wire and the
     /// session in the given storage.
     func makeClient(storage: any AuthLocalStorage) -> SupabaseClient {
@@ -123,6 +132,12 @@ struct SupabaseRemote: HouseholdRemote {
         }
     }
 
+    func deleteMyAccount() async throws {
+        try await mapped {
+            try await client.rpc("delete_my_account").execute()
+        }
+    }
+
     func dogs(householdID: UUID) async throws -> [RemoteDogDTO] {
         try await mapped {
             try await client.from("dogs").select("id,name,breed_kind,breed_label,deleted_at")
@@ -158,10 +173,31 @@ struct SupabaseRemote: HouseholdRemote {
         try await mapped {
             var query = client.from("walks")
                 .select("id,author_id,revision,source,quality,started_at,ended_at,confirmed_seconds,"
-                        + "recorded_path_meters,corrected_at,updated_at,deleted_at,walk_dogs(dog_id,dog_name_snapshot)")
+                        + "recorded_path_meters,corrected_at,updated_at,deleted_at,"
+                        + "title,mood,weather,temperature_c,walk_dogs(dog_id,dog_name_snapshot)")
                 .eq("household_id", value: householdID)
             if let since { query = query.gt("updated_at", value: HouseholdCoding.format(since)) }
             return try await query.order("updated_at").execute().value
+        }
+    }
+
+    func upsertPlannedWalk(_ plan: PlannedWalkDTO) async throws {
+        try await mapped { try await client.from("planned_walks").upsert(plan, returning: .minimal).execute() }
+    }
+
+    func tombstonePlannedWalk(id: UUID, at date: Date) async throws {
+        try await tombstone("planned_walks", id: id, at: date)
+    }
+
+    func plannedWalks(householdID: UUID, after date: Date) async throws -> [RemotePlannedWalkDTO] {
+        try await mapped {
+            try await client.from("planned_walks")
+                .select("id,author_id,planned_at,place_name,deleted_at")
+                .eq("household_id", value: householdID)
+                .is("deleted_at", value: nil)
+                .gt("planned_at", value: HouseholdCoding.format(date))
+                .order("planned_at")
+                .execute().value
         }
     }
 

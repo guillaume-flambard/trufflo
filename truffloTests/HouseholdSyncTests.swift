@@ -423,3 +423,45 @@ func aLoneOwnerDeletesTheHousehold() async throws {
     #expect(anneHome.sync.household() == nil)
     #expect(anneHome.repository.walk(id: walk.id)?.note == "Parc")
 }
+
+@MainActor
+@Test func aPlannedWalkReachesTheFoyerAndLeavesWhenCleared() async throws {
+    let server = FakeHouseholdServer()
+    let anneHome = try Phone(server: server, user: anne)
+    let oslo = try anneHome.repository.addDog(try DogInput(name: "Oslo", breedKind: "unknown"))
+    try await anneHome.sync.createHousehold(name: "Maison", displayName: "Anne")
+    let token = try await anneHome.sync.createInvite(role: .contributor)
+    let brunoHome = try Phone(server: server, user: bruno)
+    let (joined, _) = try await brunoHome.sync.acceptInvite(token: token)
+    try await brunoHome.sync.completeJoin(joined, displayName: "Bruno", links: [:])
+
+    // The phones' clock is 2_000_000: a plan an hour later is still to come.
+    let plan = try anneHome.repository.planWalk(at: Date(timeIntervalSince1970: 2_003_600),
+                                                placeName: "Parc des Buttes-Chaumont",
+                                                latitude: 48.88, longitude: 2.38)
+    try await anneHome.sync.sync()
+    let sent = try #require(server.plans[plan.id])
+    #expect(sent.dto.placeName == "Parc des Buttes-Chaumont")
+
+    try await brunoHome.sync.sync()
+    let seen = try brunoHome.context.fetch(FetchDescriptor<SharedPlannedWalkRecord>())
+    #expect(seen.map(\.id) == [plan.id])
+    #expect(seen.first?.authorID == anne)
+    // Anne does not see her own plan twice.
+    #expect(try anneHome.context.fetch(FetchDescriptor<SharedPlannedWalkRecord>()).isEmpty)
+
+    try anneHome.repository.clearPlannedWalk()
+    try await anneHome.sync.sync()
+    #expect(server.plans[plan.id]?.deletedAt != nil, "le plan effacé part en pierre tombale")
+    try await brunoHome.sync.sync()
+    #expect(try brunoHome.context.fetch(FetchDescriptor<SharedPlannedWalkRecord>()).isEmpty)
+    _ = oslo
+}
+
+@Test func aPlannedWalkCarriesNoCoordinate() throws {
+    let plan = PlannedWalkDTO(id: UUID(), householdID: UUID(), plannedAt: .now, placeName: "Parc")
+    let json = String(decoding: try HouseholdCoding.encoder().encode(plan), as: UTF8.self).lowercased()
+    for forbidden in ["latitude", "longitude", "coordinate"] {
+        #expect(!json.contains(forbidden))
+    }
+}

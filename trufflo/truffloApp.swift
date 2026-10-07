@@ -38,6 +38,10 @@ struct TruffloApp: App {
             if inMemory && ProcessInfo.processInfo.arguments.contains("--demo-signed-in") {
                 return HouseholdModel.demoSignedIn(container: container)
             }
+            if inMemory && ProcessInfo.processInfo.arguments.contains("--local-backend") {
+                return HouseholdModel(container: container,
+                                      client: BackendConfig.local.makeClient(storage: DeviceOnlyKeychainStorage()))
+            }
             #endif
             return inMemory ? HouseholdModel.unavailable(container: container) : HouseholdModel.production(container: container)
         }

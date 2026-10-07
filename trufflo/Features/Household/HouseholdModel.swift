@@ -93,6 +93,20 @@ final class HouseholdModel {
         isSignedIn = false
     }
 
+    /// Deletes the account on the server (App Store 5.1.1(v)), then signs out
+    /// and forgets the household here. The journal on this iPhone stays: it
+    /// never belonged to the account. True when the account is gone.
+    func deleteAccount() async -> Bool {
+        guard let remote, isSignedIn else { return false }
+        var deleted = false
+        await run {
+            try await remote.deleteMyAccount()
+            deleted = true
+        }
+        if deleted { await signOut() }
+        return deleted
+    }
+
     /// Global erasure (spec S12): the session goes with the journal.
     func forgetSession() async {
         await stopLiveUpdates()
@@ -220,6 +234,8 @@ final class HouseholdModel {
         switch error {
         case .rejected(let detail) where detail.contains("invite not valid"):
             "Ce code n'est pas valable : il a déjà servi, il a expiré ou il a été mal recopié."
+        case .rejected(let detail) where detail.contains("name another owner first"):
+            "D'autres membres restent dans votre foyer : nommez l'un d'eux responsable avant de supprimer votre compte."
         case .rejected(let detail) where detail.contains("at least one owner"):
             "Vous êtes le dernier responsable : le foyer ne peut pas rester sans responsable."
         default:

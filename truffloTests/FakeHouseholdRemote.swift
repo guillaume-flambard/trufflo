@@ -23,6 +23,7 @@ final class FakeHouseholdServer: @unchecked Sendable {
     private(set) var invites: [String: (household: UUID, role: HouseholdRole, used: Bool)] = [:]
     private(set) var dogs: [UUID: (dto: DogDTO, deletedAt: Date?)] = [:]
     private(set) var walks: [UUID: Walk] = [:]
+    private(set) var plans: [UUID: (dto: PlannedWalkDTO, authorID: UUID, deletedAt: Date?)] = [:]
     /// Every call, in order, for assertions such as "nothing was sent".
     private(set) var calls: [String] = []
     var clock = Date(timeIntervalSince1970: 1_000_000)
@@ -55,6 +56,12 @@ final class FakeHouseholdServer: @unchecked Sendable {
     fileprivate func requireWriter(_ user: UUID, _ household: UUID) throws {
         guard let role = role(user, in: household), role != .reader else { throw RemoteError.forbidden("rls") }
     }
+
+    fileprivate func putPlan(_ plan: PlannedWalkDTO, by user: UUID) throws {
+        if let existing = plans[plan.id], existing.authorID != user { throw RemoteError.forbidden("rls") }
+        plans[plan.id] = (plan, user, nil)
+    }
+    fileprivate func dropPlan(_ id: UUID, _ date: Date) { plans[id]?.deletedAt = date }
 
     // Mutations, called by the client under `run`.
     fileprivate func insertHousehold(_ id: UUID, _ name: String, by user: UUID) {
@@ -193,6 +200,10 @@ struct FakeHouseholdRemote: HouseholdRemote {
         }
     }
 
+    func deleteMyAccount() async throws {
+        try server.run("deleteMyAccount") {}
+    }
+
     func deleteHousehold(id: UUID) async throws {
         try server.run("deleteHousehold") {
             guard server.role(user, in: id) == .owner else { throw RemoteError.forbidden("rls") }
@@ -232,6 +243,28 @@ struct FakeHouseholdRemote: HouseholdRemote {
         try server.run("replaceParticipants") { try server.setParticipants(walkID, dogs) }
     }
 
+    func upsertPlannedWalk(_ plan: PlannedWalkDTO) async throws {
+        try server.run("upsertPlannedWalk") {
+            try server.requireWriter(user, plan.householdID)
+            try server.putPlan(plan, by: user)
+        }
+    }
+
+    func tombstonePlannedWalk(id: UUID, at date: Date) async throws {
+        try server.run("tombstonePlannedWalk") { server.dropPlan(id, date) }
+    }
+
+    func plannedWalks(householdID: UUID, after date: Date) async throws -> [RemotePlannedWalkDTO] {
+        try server.run("plannedWalks") {
+            guard server.role(user, in: householdID) != nil else { return [] }
+            return server.plans.values
+                .filter { $0.dto.householdID == householdID && $0.deletedAt == nil && $0.dto.plannedAt > date }
+                .sorted { $0.dto.plannedAt < $1.dto.plannedAt }
+                .map { RemotePlannedWalkDTO(id: $0.dto.id, authorID: $0.authorID, plannedAt: $0.dto.plannedAt,
+                                            placeName: $0.dto.placeName, deletedAt: nil) }
+        }
+    }
+
     func tombstoneWalk(id: UUID, at date: Date) async throws {
         try server.run("tombstoneWalk") { server.deleteWalk(id, date) }
     }
@@ -251,7 +284,10 @@ struct FakeHouseholdRemote: HouseholdRemote {
                                   recordedPathMeters: walk.summary.recordedPathMeters,
                                   correctedAt: walk.summary.correctedAt, updatedAt: walk.updatedAt,
                                   deletedAt: walk.deletedAt,
-                                  dogs: walk.dogs.map { .init(dogID: $0.dogID, dogNameSnapshot: $0.dogNameSnapshot) })
+                                  dogs: walk.dogs.map { .init(dogID: $0.dogID, dogNameSnapshot: $0.dogNameSnapshot) },
+                                  title: walk.summary.title, mood: walk.summary.mood,
+                                  weather: walk.summary.weather,
+                                  temperatureC: walk.summary.temperatureC)
                 }
         }
     }

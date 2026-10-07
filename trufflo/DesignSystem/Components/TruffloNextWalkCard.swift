@@ -7,6 +7,11 @@ struct TruffloNextWalkCard<StartButton: View>: View {
     let plan: PlannedWalkRecord?
     let onPlan: () -> Void
     @ViewBuilder var startButton: () -> StartButton
+    /// Without a plan of mine, the next one a member of the foyer shared.
+    @Query(sort: \SharedPlannedWalkRecord.plannedAt) private var foyerPlans: [SharedPlannedWalkRecord]
+    @Query private var members: [HouseholdMemberRecord]
+
+    private var foyerPlan: SharedPlannedWalkRecord? { foyerPlans.first { $0.plannedAt > .now } }
 
     var body: some View {
         VStack(alignment: .leading, spacing: 12) {
@@ -21,6 +26,12 @@ struct TruffloNextWalkCard<StartButton: View>: View {
                                   systemImage: "clock")
                             if !plan.placeName.isEmpty {
                                 Label(plan.placeName, systemImage: "mappin.circle").lineLimit(1)
+                            }
+                        } else if let shared = foyerPlan {
+                            let author = members.first { $0.userID == shared.authorID }?.displayName ?? "Un membre du foyer"
+                            Label("\(WalkFormatting.dayDotTime(shared.plannedAt)) · \(author)", systemImage: "person.2")
+                            if !shared.placeName.isEmpty {
+                                Label(shared.placeName, systemImage: "mappin.circle").lineLimit(1)
                             }
                         } else {
                             Label("Pas encore prévue : choisir un moment", systemImage: "calendar.badge.plus")

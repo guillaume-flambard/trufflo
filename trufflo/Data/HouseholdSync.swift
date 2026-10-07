@@ -153,7 +153,7 @@ struct HouseholdSync {
     /// Forgets the household on this iPhone: received walks, members, links,
     /// ledger. The person's own dogs and walks are untouched (spec S10).
     func purge() throws {
-        for type in [SharedWalkRecord.self, HouseholdMemberRecord.self, DogLinkRecord.self,
+        for type in [SharedWalkRecord.self, SharedPlannedWalkRecord.self, HouseholdMemberRecord.self, DogLinkRecord.self,
                      SyncLedgerRecord.self, HouseholdRecord.self] as [any PersistentModel.Type] {
             try context.delete(model: type)
         }
@@ -179,8 +179,10 @@ struct HouseholdSync {
             if household.myRole != .reader {
                 try await pushDogs(household, into: &report)
                 try await pushWalks(household, into: &report)
+                try await pushPlans(household, into: &report)
             }
             try await pullWalks(household, into: &report)
+            try await pullPlans(household)
             household.lastSyncAt = now()
             household.lastError = report.failures > 0 ? "Certaines balades n'ont pas été envoyées." : nil
             try context.save()
@@ -217,7 +219,9 @@ struct HouseholdSync {
         for dog in dogs where links[dog.id] == dog.id {
             let dto = DogDTO(id: dog.id, householdID: household.id, name: dog.name,
                              breedKind: dog.breedKind, breedLabel: dog.breedLabel,
-                             ageDescription: dog.ageDescription)
+                             ageDescription: dog.ageDescription,
+                             size: dog.size?.rawValue, weightKg: dog.weightKg,
+                             traits: dog.traits.map(\.rawValue))
             let entry = ledger[dog.id] ?? insertLedger(.dog, dog.id)
             ledger[dog.id] = entry
             let fingerprint = SyncFingerprint.of(dto)
@@ -275,6 +279,48 @@ struct HouseholdSync {
         try context.save()
     }
 
+    /// My planned balades go up; a plan cleared or replaced here goes up as a
+    /// tombstone, so the others stop seeing it.
+    private func pushPlans(_ household: HouseholdRecord, into report: inout SyncReport) async throws {
+        let plans = try context.fetch(FetchDescriptor<PlannedWalkRecord>())
+        var ledger = try ledgerEntries(.plan)
+        for plan in plans {
+            let dto = PlannedWalkDTO(id: plan.id, householdID: household.id, plannedAt: plan.date,
+                                     placeName: plan.placeName)
+            let entry = ledger[plan.id] ?? insertLedger(.plan, plan.id)
+            ledger[plan.id] = entry
+            let fingerprint = SyncFingerprint.of(dto)
+            guard entry.pushedFingerprint != fingerprint else { continue }
+            try await send(entry, fingerprint: fingerprint, report: &report) {
+                try await remote.upsertPlannedWalk(dto)
+            }
+        }
+        let present = Set(plans.map(\.id))
+        for (localID, entry) in ledger where !present.contains(localID)
+            && entry.pushedFingerprint != SyncLedgerRecord.tombstoneFingerprint {
+            if entry.pushedFingerprint == nil {
+                context.delete(entry)
+                continue
+            }
+            try await send(entry, fingerprint: SyncLedgerRecord.tombstoneFingerprint, report: &report) {
+                try await remote.tombstonePlannedWalk(id: localID, at: now())
+            }
+        }
+        try context.save()
+    }
+
+    /// The others' planned balades still to come, as the server lists them now.
+    private func pullPlans(_ household: HouseholdRecord) async throws {
+        let mine = Set(try context.fetch(FetchDescriptor<PlannedWalkRecord>()).map(\.id))
+            .union(try ledgerEntries(.plan).keys)
+        let plans = try await remote.plannedWalks(householdID: household.id, after: now())
+        try context.delete(model: SharedPlannedWalkRecord.self)
+        for plan in plans where !mine.contains(plan.id) {
+            context.insert(SharedPlannedWalkRecord(plan))
+        }
+        try context.save()
+    }
+
     /// The exact payload for one walk, or nil while it is not finished (S3).
     func walkPush(_ walk: WalkRecord, household: HouseholdRecord,
                   links: [UUID: UUID]) throws -> WalkPush? {
@@ -293,7 +339,9 @@ struct HouseholdSync {
             startedAt: walk.startedAt, endedAt: max(endedAt, walk.startedAt),
             confirmedSeconds: walk.confirmedSeconds,
             recordedPathMeters: walk.source == .gps ? walk.recordedPathMeters : nil,
-            correctedAt: walk.correctedAt)
+            correctedAt: walk.correctedAt,
+            title: walk.title, mood: walk.mood?.rawValue,
+            weather: walk.weather?.rawValue, temperatureC: walk.temperatureC)
         return WalkPush(walk: summary, dogs: dogs)
     }
 

@@ -241,6 +241,42 @@ enum FrozenV6 {
             self.note = note
         }
     }
+
+    /// The household's walk summary as V6 stored it, frozen when V7 gave it the
+    /// title, mood, place and weather the household now shares.
+    @Model
+    final class SharedWalkRecord {
+        @Attribute(.unique) var id: UUID
+        var authorID: UUID
+        var startedAt: Date
+        var endedAt: Date
+        var confirmedSeconds: Double
+        var recordedPathMeters: Double?
+        var qualityRaw: String
+        var sourceRaw: String
+        var revision: Int
+        var correctedAt: Date?
+        var dogIDsRaw: String
+        var dogNamesRaw: String
+        var updatedAt: Date
+
+        init(id: UUID, authorID: UUID, startedAt: Date, endedAt: Date, confirmedSeconds: Double,
+             qualityRaw: String, sourceRaw: String, revision: Int, updatedAt: Date) {
+            self.id = id
+            self.authorID = authorID
+            self.startedAt = startedAt
+            self.endedAt = endedAt
+            self.confirmedSeconds = confirmedSeconds
+            self.recordedPathMeters = nil
+            self.qualityRaw = qualityRaw
+            self.sourceRaw = sourceRaw
+            self.revision = revision
+            self.correctedAt = nil
+            self.dogIDsRaw = ""
+            self.dogNamesRaw = ""
+            self.updatedAt = updatedAt
+        }
+    }
 }
 
 /// V1 is the first frozen shape: the journal with session fields, no track table.
@@ -302,13 +338,14 @@ enum SchemaV6: VersionedSchema {
     static var models: [any PersistentModel.Type] {
         [FrozenV6.DogRecord.self, FrozenV6.WalkRecord.self, WalkDogRecord.self, TrackPointRecord.self,
          RoutineRecord.self, HouseholdRecord.self, DogLinkRecord.self, SyncLedgerRecord.self,
-         SharedWalkRecord.self, HouseholdMemberRecord.self]
+         FrozenV6.SharedWalkRecord.self, HouseholdMemberRecord.self]
     }
 }
 
 /// V7 is the current version (chantier 8, the 2026-10-07 mock-ups): a dog gains
 /// size, weight and traits; a walk gains a title, a mood, a place and the
-/// weather; walk photos and the planned balade get their own tables. V7 has not
+/// weather, and so does the household's copy of a walk; walk photos and the
+/// planned balade get their own tables. V7 has not
 /// shipped, so its shape may still change before the next release. Every new column has a default, so
 /// existing rows fill in a lightweight stage.
 enum SchemaV7: VersionedSchema {
@@ -316,7 +353,8 @@ enum SchemaV7: VersionedSchema {
     static var models: [any PersistentModel.Type] {
         [DogRecord.self, WalkRecord.self, WalkDogRecord.self, TrackPointRecord.self, RoutineRecord.self,
          HouseholdRecord.self, DogLinkRecord.self, SyncLedgerRecord.self,
-         SharedWalkRecord.self, HouseholdMemberRecord.self, WalkPhotoRecord.self, PlannedWalkRecord.self]
+         SharedWalkRecord.self, HouseholdMemberRecord.self, WalkPhotoRecord.self, PlannedWalkRecord.self,
+         SharedPlannedWalkRecord.self]
     }
 }
 

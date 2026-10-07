@@ -43,6 +43,9 @@ struct StarterRootView: View {
     @State private var showWalkForm = false
     @State private var activeWalkCover: ActiveWalkCover?
     @State private var showEraseConfirmation = false
+    @State private var showDeleteAccount = false
+    @State private var accountDeleted = false
+    @State private var showDeleteAccountError = false
     @State private var storageError = false
     @AppStorage("hasCompletedOnboarding") private var hasCompletedOnboarding = false
     @State private var showOnboardingSheet = false
@@ -92,6 +95,15 @@ struct StarterRootView: View {
                             .accessibilityIdentifier("journal.export")
                             Button("Revoir l'introduction", systemImage: "sparkles") {
                                 showOnboardingSheet = true
+                            }
+                            if household.isSignedIn {
+                                Button("Se déconnecter", systemImage: "rectangle.portrait.and.arrow.right") {
+                                    Task { await household.signOut() }
+                                }
+                                Button("Supprimer mon compte", systemImage: "person.crop.circle.badge.xmark",
+                                       role: .destructive) {
+                                    showDeleteAccount = true
+                                }
                             }
                             Button("Effacer toutes les données", systemImage: "trash", role: .destructive) {
                                 showEraseConfirmation = true
@@ -163,6 +175,8 @@ struct StarterRootView: View {
             showHousehold = true
         }
         .task {
+            // The daily tips are read without an account (`daily_tips`).
+            if let client = household.client { await DailyTipsRemote.refresh(client: client) }
             await household.refreshSessionState()
             await household.syncNow()
             await household.startLiveUpdates()
@@ -171,6 +185,7 @@ struct StarterRootView: View {
             switch phase {
             case .active:
                 Task {
+                    if let client = household.client { await DailyTipsRemote.refresh(client: client) }
                     await household.syncNow()
                     await household.startLiveUpdates()
                 }
@@ -245,6 +260,30 @@ struct StarterRootView: View {
             if ProcessInfo.processInfo.arguments.contains("--show-onboarding") { showOnboardingSheet = true }
             if ProcessInfo.processInfo.arguments.contains("--open-household") { showHousehold = true }
             #endif
+        }
+        .confirmationDialog("Supprimer votre compte Trufflo ?",
+                            isPresented: $showDeleteAccount, titleVisibility: .visible) {
+            Button("Supprimer mon compte", role: .destructive) {
+                Task {
+                    accountDeleted = await household.deleteAccount()
+                    showDeleteAccountError = !accountDeleted
+                }
+            }
+        } message: {
+            Text("Votre compte et ce que le serveur garde pour vous sont supprimés : vos balades partagées, votre nom dans le foyer. Le journal de cet iPhone reste.")
+        }
+        .alert("Compte supprimé", isPresented: $accountDeleted) {
+            Button("OK", role: .cancel) {}
+        } message: {
+            Text("Votre compte n'existe plus. Votre journal reste sur cet iPhone.")
+        }
+        .alert("Suppression impossible", isPresented: Binding(
+            get: { household.errorMessage != nil && showDeleteAccountError },
+            set: { if !$0 { showDeleteAccountError = false } }
+        )) {
+            Button("OK", role: .cancel) {}
+        } message: {
+            Text(household.errorMessage ?? "")
         }
         .confirmationDialog("Effacer le journal et les chiens de cet iPhone ?",
                             isPresented: $showEraseConfirmation, titleVisibility: .visible) {

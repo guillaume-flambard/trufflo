@@ -30,6 +30,10 @@ public struct WalkSummaryDTO: Codable, Equatable, Sendable {
     /// Nil means "not measured", never zero. Always nil for a declared walk.
     public var recordedPathMeters: Double?
     public var correctedAt: Date?
+    public var title: String = ""
+    public var mood: String? = nil
+    public var weather: String? = nil
+    public var temperatureC: Double? = nil
 
     enum CodingKeys: String, CodingKey {
         case id
@@ -40,6 +44,9 @@ public struct WalkSummaryDTO: Codable, Equatable, Sendable {
         case confirmedSeconds = "confirmed_seconds"
         case recordedPathMeters = "recorded_path_meters"
         case correctedAt = "corrected_at"
+        case title, mood
+        case weather
+        case temperatureC = "temperature_c"
     }
 
     public func encode(to encoder: Encoder) throws {
@@ -55,6 +62,10 @@ public struct WalkSummaryDTO: Codable, Equatable, Sendable {
         // the server still holds, not leave it in place.
         try c.encode(recordedPathMeters, forKey: .recordedPathMeters)
         try c.encode(correctedAt, forKey: .correctedAt)
+        try c.encode(title, forKey: .title)
+        try c.encode(mood, forKey: .mood)
+        try c.encode(weather, forKey: .weather)
+        try c.encode(temperatureC, forKey: .temperatureC)
     }
 }
 
@@ -71,7 +82,8 @@ public struct WalkDogDTO: Codable, Equatable, Sendable {
     }
 }
 
-/// A dog profile as shared. No photo, no gender, no preferences note.
+/// A dog profile as shared: what the person declared. No photo, no sex, no
+/// preferences note.
 public struct DogDTO: Codable, Equatable, Sendable {
     public var id: UUID
     public var householdID: UUID
@@ -79,6 +91,9 @@ public struct DogDTO: Codable, Equatable, Sendable {
     public var breedKind: String
     public var breedLabel: String
     public var ageDescription: String
+    public var size: String? = nil
+    public var weightKg: Double? = nil
+    public var traits: [String] = []
 
     enum CodingKeys: String, CodingKey {
         case id
@@ -87,6 +102,23 @@ public struct DogDTO: Codable, Equatable, Sendable {
         case breedKind = "breed_kind"
         case breedLabel = "breed_label"
         case ageDescription = "age_description"
+        case size
+        case weightKg = "weight_kg"
+        case traits
+    }
+
+    public func encode(to encoder: Encoder) throws {
+        var c = encoder.container(keyedBy: CodingKeys.self)
+        try c.encode(id, forKey: .id)
+        try c.encode(householdID, forKey: .householdID)
+        try c.encode(name, forKey: .name)
+        try c.encode(breedKind, forKey: .breedKind)
+        try c.encode(breedLabel, forKey: .breedLabel)
+        try c.encode(ageDescription, forKey: .ageDescription)
+        // Explicit nulls, so clearing a size or a weight clears it on the server.
+        try c.encode(size, forKey: .size)
+        try c.encode(weightKg, forKey: .weightKg)
+        try c.encode(traits, forKey: .traits)
     }
 }
 
@@ -121,6 +153,10 @@ public struct RemoteWalkDTO: Decodable, Equatable, Sendable {
     public var updatedAt: Date
     public var deletedAt: Date?
     public var dogs: [Participant]
+    public var title: String = ""
+    public var mood: String? = nil
+    public var weather: String? = nil
+    public var temperatureC: Double? = nil
 
     public struct Participant: Decodable, Equatable, Sendable {
         public var dogID: UUID
@@ -144,6 +180,88 @@ public struct RemoteWalkDTO: Decodable, Equatable, Sendable {
         case updatedAt = "updated_at"
         case deletedAt = "deleted_at"
         case dogs = "walk_dogs"
+        case title, mood
+        case weather
+        case temperatureC = "temperature_c"
+    }
+
+    public init(id: UUID, authorID: UUID, revision: Int, source: String, quality: String,
+                startedAt: Date, endedAt: Date, confirmedSeconds: Double, recordedPathMeters: Double?,
+                correctedAt: Date?, updatedAt: Date, deletedAt: Date?, dogs: [Participant],
+                title: String = "", mood: String? = nil,
+                weather: String? = nil, temperatureC: Double? = nil) {
+        self.id = id
+        self.authorID = authorID
+        self.revision = revision
+        self.source = source
+        self.quality = quality
+        self.startedAt = startedAt
+        self.endedAt = endedAt
+        self.confirmedSeconds = confirmedSeconds
+        self.recordedPathMeters = recordedPathMeters
+        self.correctedAt = correctedAt
+        self.updatedAt = updatedAt
+        self.deletedAt = deletedAt
+        self.dogs = dogs
+        self.title = title
+        self.mood = mood
+        self.weather = weather
+        self.temperatureC = temperatureC
+    }
+
+    public init(from decoder: Decoder) throws {
+        let c = try decoder.container(keyedBy: CodingKeys.self)
+        id = try c.decode(UUID.self, forKey: .id)
+        authorID = try c.decode(UUID.self, forKey: .authorID)
+        revision = try c.decode(Int.self, forKey: .revision)
+        source = try c.decode(String.self, forKey: .source)
+        quality = try c.decode(String.self, forKey: .quality)
+        startedAt = try c.decode(Date.self, forKey: .startedAt)
+        endedAt = try c.decode(Date.self, forKey: .endedAt)
+        confirmedSeconds = try c.decode(Double.self, forKey: .confirmedSeconds)
+        recordedPathMeters = try c.decodeIfPresent(Double.self, forKey: .recordedPathMeters)
+        correctedAt = try c.decodeIfPresent(Date.self, forKey: .correctedAt)
+        updatedAt = try c.decode(Date.self, forKey: .updatedAt)
+        deletedAt = try c.decodeIfPresent(Date.self, forKey: .deletedAt)
+        dogs = try c.decode([Participant].self, forKey: .dogs)
+        // Absent on a server without the 2026-10-07 migration: empty, not an error.
+        title = try c.decodeIfPresent(String.self, forKey: .title) ?? ""
+        mood = try c.decodeIfPresent(String.self, forKey: .mood)
+        weather = try c.decodeIfPresent(String.self, forKey: .weather)
+        temperatureC = try c.decodeIfPresent(Double.self, forKey: .temperatureC)
+    }
+}
+
+/// A planned balade as shared with the household: when, and the name of the
+/// place. Never coordinates.
+public struct PlannedWalkDTO: Codable, Equatable, Sendable {
+    public var id: UUID
+    public var householdID: UUID
+    public var plannedAt: Date
+    public var placeName: String
+
+    enum CodingKeys: String, CodingKey {
+        case id
+        case householdID = "household_id"
+        case plannedAt = "planned_at"
+        case placeName = "place_name"
+    }
+}
+
+/// A planned balade of the household as read back, tombstone included.
+public struct RemotePlannedWalkDTO: Decodable, Equatable, Sendable {
+    public var id: UUID
+    public var authorID: UUID
+    public var plannedAt: Date
+    public var placeName: String
+    public var deletedAt: Date?
+
+    enum CodingKeys: String, CodingKey {
+        case id
+        case authorID = "author_id"
+        case plannedAt = "planned_at"
+        case placeName = "place_name"
+        case deletedAt = "deleted_at"
     }
 }
 

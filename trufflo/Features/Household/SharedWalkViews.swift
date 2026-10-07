@@ -30,13 +30,21 @@ struct SharedWalkCard: View {
             Label("\(WalkFormatting.dayDotTime(date)) · par \(authorName)", systemImage: "clock")
                 .font(.system(size: 12))
                 .foregroundStyle(Color.truffloSlate)
-            Text(names.isEmpty ? "Balade" : names)
+            // The author's title when they gave one, as on their own Journal.
+            Text(!walk.title.isEmpty ? walk.title : (names.isEmpty ? "Balade" : names))
                 .font(.system(size: 16, weight: .bold, design: .rounded))
                 .foregroundStyle(Color(red: 0.08, green: 0.08, blue: 0.08))
                 .lineLimit(1)
-            Text(figures.joined(separator: " · "))
-                .font(.system(size: 15, weight: .bold, design: .rounded))
-                .foregroundStyle(Color.truffloForest)
+            HStack(spacing: 10) {
+                Text(figures.joined(separator: " · "))
+                    .font(.system(size: 15, weight: .bold, design: .rounded))
+                    .foregroundStyle(Color.truffloForest)
+                if let mood = walk.mood {
+                    Label(mood.label, systemImage: mood.systemImage)
+                        .font(.system(size: 12))
+                        .foregroundStyle(Color.truffloSlate)
+                }
+            }
             if possibleDuplicate {
                 Label("Peut-être la même balade qu'une des vôtres", systemImage: "square.on.square")
                     .font(.footnote)
