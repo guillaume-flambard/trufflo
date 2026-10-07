@@ -125,7 +125,7 @@ struct StarterRootView: View {
 
             // The foyer, a tab of its own (2026-10-07 mock-up) rather than a sheet
             // behind the settings.
-            HouseholdView(showsCloseButton: false)
+            HouseholdView(showsCloseButton: false, onSeeJournal: { selectedTab = 1 })
                 .tabItem { Label("Foyer", systemImage: "person.3.fill") }
                 .tag(2)
 

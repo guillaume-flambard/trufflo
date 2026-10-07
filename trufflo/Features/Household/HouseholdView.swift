@@ -28,8 +28,11 @@ struct HouseholdView: View {
     @State private var confirmDelete = false
     @State private var memberToRemove: HouseholdMemberRecord?
     @State private var resumable: HouseholdDTO?
+    @State private var showsSyncDetails = false
     /// In the Foyer tab there is nothing to close: the sheet's close button hides.
     var showsCloseButton = true
+    /// Opens the Journal from "Voir tout", when the screen is a tab.
+    var onSeeJournal: (() -> Void)? = nil
 
     private enum Choice { case create, join }
     private var household: HouseholdRecord? { households.first }
@@ -337,55 +340,27 @@ struct HouseholdView: View {
 
     private func memberContent(_ household: HouseholdRecord) -> some View {
         VStack(alignment: .leading, spacing: 0) {
-            HouseholdBand(title: household.name,
-                          subtitle: members.count <= 1 ? "Vous seul pour l'instant."
-                              : "\(String(localized: "\(members.count) membres")), \(String(localized: "\(shared.count) balades reçues")).",
-                          faces: members.map { .person($0.displayName) },
-                          badge: household.myRole.label)
+            // As in the 2026-10-07 mock-up: the title, one line, then everyone in the
+            // picture as faces, dogs first.
+            VStack(alignment: .leading, spacing: 6) {
+                Text("Foyer partagé")
+                    .font(.system(size: 30, weight: .heavy, design: .rounded))
+                    .foregroundStyle(Color.truffloForest)
+                    .accessibilityAddTraits(.isHeader)
+                Text(dogs.isEmpty ? "\(household.name), ensemble."
+                     : "Ensemble pour le bien-être \(Self.ofDogs(dogs.map(\.name))).")
+                    .font(.system(size: 14))
+                    .foregroundStyle(Color.truffloSlate)
+            }
+            .padding(.horizontal, TruffloTheme.Spacing.screen)
+            .padding(.top, TruffloTheme.Spacing.xLarge)
+
+            facesRow(household)
+                .padding(.top, TruffloTheme.Spacing.large)
 
             VStack(alignment: .leading, spacing: TruffloTheme.Spacing.large) {
-                SyncStatusCard(household: household, isBusy: model.isBusy) {
-                    Task { await model.syncNow() }
-                }
-
-                VStack(alignment: .leading, spacing: TruffloTheme.Spacing.small) {
-                    WalkSectionTitle("Membres")
-                    VStack(spacing: 0) {
-                        ForEach(Array(members.enumerated()), id: \.element.userID) { index, member in
-                            let isMe = member.userID == household.myUserID
-                            let row = MemberRow(name: member.displayName, role: member.role,
-                                                isMe: isMe, tintIndex: index,
-                                                isManageable: household.myRole == .owner && !isMe)
-                            if household.myRole == .owner && !isMe {
-                                // The owner manages the others from their row.
-                                Menu {
-                                    ForEach(HouseholdRole.allCases.filter { $0 != member.role }, id: \.self) { role in
-                                        Button("Passer \(role.label.lowercased())") {
-                                            Task { await model.setRole(role, of: member.userID) }
-                                        }
-                                    }
-                                    Divider()
-                                    Button("Retirer du foyer", role: .destructive) { memberToRemove = member }
-                                } label: {
-                                    row.contentShape(Rectangle())
-                                }
-                                .buttonStyle(.plain)
-                                .accessibilityHint("Changer son rôle ou le retirer du foyer")
-                                .accessibilityIdentifier("household.member.\(member.userID.uuidString)")
-                            } else {
-                                row
-                            }
-                            if index < members.count - 1 {
-                                Rectangle().fill(Color.truffloForest.opacity(0.1)).frame(height: 1)
-                                    .padding(.leading, 52)
-                            }
-                        }
-                    }
-                    .overlay(alignment: .top) {
-                        Rectangle().fill(Color.truffloForest.opacity(0.1)).frame(height: 1)
-                    }
-                }
-
+                sereneCard(household)
+                recentActivity(household)
                 if household.myRole == .owner { inviteSection(household) }
 
                 exitSection(household)
@@ -416,31 +391,215 @@ struct HouseholdView: View {
         }
     }
 
-    private func inviteSection(_ household: HouseholdRecord) -> some View {
+    /// "d'Oslo", "de Pixel", "d'Oslo et de Pixel".
+    static func ofDogs(_ names: [String]) -> String {
+        names.map { name in
+            let vowel = name.first.map { "AEIOUYÉÈÊHaeiouyéèêh".contains($0) } ?? false
+            return vowel ? "d'\(name)" : "de \(name)"
+        }.formatted(.list(type: .and).locale(TruffloLocale.french))
+    }
+
+    /// Dogs then people, as round faces with a name and a role, and a round + to
+    /// invite. The owner manages a member from their face.
+    private func facesRow(_ household: HouseholdRecord) -> some View {
+        ScrollView(.horizontal, showsIndicators: false) {
+            HStack(alignment: .top, spacing: TruffloTheme.Spacing.small) {
+                ForEach(dogs) { dog in
+                    VStack(spacing: 4) {
+                        TruffloDogPortrait(name: dog.name, photoData: dog.photoData, diameter: 56, aimsAtAnimal: true)
+                            .overlay(Circle().strokeBorder(Color.white, lineWidth: 3))
+                            .overlay(alignment: .bottomTrailing) {
+                                Image(systemName: "pawprint.fill")
+                                    .font(.system(size: 11, weight: .bold))
+                                    .foregroundStyle(.white)
+                                    .frame(width: 20, height: 20)
+                                    .background(Color.truffloForest, in: Circle())
+                                    .overlay(Circle().strokeBorder(Color.white, lineWidth: 2))
+                            }
+                        Text(dog.name).font(.system(size: 13, weight: .semibold)).foregroundStyle(Color.truffloCharcoal)
+                    }
+                    .frame(width: 66)
+                }
+                ForEach(Array(members.enumerated()), id: \.element.userID) { index, member in
+                    let isMe = member.userID == household.myUserID
+                    let face = VStack(spacing: 4) {
+                        PersonDisc(name: member.displayName, diameter: 52, tintIndex: index)
+                            .overlay(Circle().strokeBorder(Color.white, lineWidth: 3))
+                        Text(isMe ? "Vous" : member.displayName)
+                            .font(.system(size: 13, weight: .medium)).foregroundStyle(Color.truffloCharcoal)
+                            .lineLimit(1)
+                        Text(member.role.label).font(.system(size: 11)).foregroundStyle(Color.truffloSlate)
+                            .lineLimit(1).minimumScaleFactor(0.8)
+                    }
+                    .frame(width: 70)
+                    if household.myRole == .owner && !isMe {
+                        Menu {
+                            ForEach(HouseholdRole.allCases.filter { $0 != member.role }, id: \.self) { role in
+                                Button("Passer \(role.label.lowercased())") {
+                                    Task { await model.setRole(role, of: member.userID) }
+                                }
+                            }
+                            Divider()
+                            Button("Retirer du foyer", role: .destructive) { memberToRemove = member }
+                        } label: { face }
+                        .buttonStyle(.plain)
+                        .accessibilityHint("Changer son rôle ou le retirer du foyer")
+                        .accessibilityIdentifier("household.member.\(member.userID.uuidString)")
+                    } else {
+                        face
+                    }
+                }
+                if household.myRole == .owner {
+                    Button {
+                        Task { invite = await model.invite(role: .contributor) }
+                    } label: {
+                        VStack(spacing: 4) {
+                            Image(systemName: "plus")
+                                .font(.system(size: 20, weight: .regular))
+                                .foregroundStyle(Color.truffloForest)
+                                .frame(width: 52, height: 52)
+                                .glassEffect(.regular.tint(Color.white.opacity(0.6)).interactive(), in: Circle())
+                            Text("Inviter\nun proche")
+                                .font(.system(size: 12, weight: .medium))
+                                .foregroundStyle(Color.truffloCharcoal)
+                                .multilineTextAlignment(.center)
+                        }
+                        .frame(width: 70)
+                    }
+                    .buttonStyle(.plain)
+                }
+            }
+            .padding(.horizontal, TruffloTheme.Spacing.screen)
+        }
+    }
+
+    /// What sharing does, in one card; the sync state when it is open.
+    private func sereneCard(_ household: HouseholdRecord) -> some View {
         VStack(alignment: .leading, spacing: TruffloTheme.Spacing.small) {
-            WalkSectionTitle("Inviter quelqu'un")
-            TruffloChoice(options: [(HouseholdRole.contributor.rawValue, "Contributeur"),
-                                    (HouseholdRole.reader.rawValue, "Lecteur")],
-                          selection: $inviteRole)
-                .accessibilityIdentifier("household.inviteRole")
-            Text(inviteRole == HouseholdRole.contributor.rawValue
-                 ? "Ajoute ses balades et corrige les siennes."
-                 : "Consulte le journal du foyer, sans rien ajouter.")
-                .font(.subheadline)
-                .foregroundStyle(Color.truffloSlate)
+            Button {
+                withAnimation(.snappy) { showsSyncDetails.toggle() }
+            } label: {
+                HStack(spacing: TruffloTheme.Spacing.medium) {
+                    Image(systemName: "person.3.fill")
+                        .font(.system(size: 17))
+                        .foregroundStyle(Color.truffloForest)
+                        .frame(width: 48, height: 48)
+                        .background(Color.white.opacity(0.8), in: Circle())
+                    VStack(alignment: .leading, spacing: 3) {
+                        Text("Un foyer plus serein")
+                            .font(.system(size: 14, weight: .bold, design: .rounded))
+                            .foregroundStyle(Color.truffloForest)
+                        Text("Chacun voit les balades partagées \(dogs.isEmpty ? "du foyer" : Self.ofDogs(dogs.map(\.name))). Les tracés restent sur l'iPhone de chacun.")
+                            .font(.system(size: 12))
+                            .foregroundStyle(Color.truffloSlate)
+                            .fixedSize(horizontal: false, vertical: true)
+                    }
+                    Spacer(minLength: 0)
+                    Image(systemName: "chevron.right")
+                        .font(.footnote.weight(.semibold))
+                        .foregroundStyle(Color.truffloForest)
+                        .rotationEffect(.degrees(showsSyncDetails ? 90 : 0))
+                }
+                .contentShape(Rectangle())
+            }
+            .buttonStyle(.plain)
+            if showsSyncDetails {
+                SyncStatusCard(household: household, isBusy: model.isBusy) {
+                    Task { await model.syncNow() }
+                }
+            }
+        }
+        .padding(TruffloTheme.Spacing.medium)
+        .background(Color(red: 0.86, green: 0.93, blue: 0.89).opacity(0.85),
+                    in: RoundedRectangle(cornerRadius: TruffloTheme.Radius.card, style: .continuous))
+    }
+
+    /// The last balades the others shared, newest first.
+    @ViewBuilder
+    private func recentActivity(_ household: HouseholdRecord) -> some View {
+        let recent = shared.sorted { $0.endedAt > $1.endedAt }.prefix(3)
+        if !recent.isEmpty {
+            VStack(alignment: .leading, spacing: TruffloTheme.Spacing.small) {
+                HStack(alignment: .firstTextBaseline) {
+                    Text("Activité récente")
+                        .font(.system(size: 17, weight: .bold, design: .rounded))
+                        .foregroundStyle(Color.truffloForest)
+                        .accessibilityAddTraits(.isHeader)
+                    Spacer()
+                    if let onSeeJournal {
+                        Button(action: onSeeJournal) {
+                            HStack(spacing: 4) { Text("Voir tout"); Image(systemName: "chevron.right").imageScale(.small) }
+                                .font(.system(size: 13))
+                                .foregroundStyle(Color.truffloSlate)
+                        }
+                        .buttonStyle(.plain)
+                    }
+                }
+                VStack(spacing: 0) {
+                    ForEach(Array(recent.enumerated()), id: \.element.id) { index, walk in
+                        let author = members.first { $0.userID == walk.authorID }
+                        let tint = members.firstIndex { $0.userID == walk.authorID } ?? 0
+                        HStack(alignment: .top, spacing: TruffloTheme.Spacing.small) {
+                            PersonDisc(name: author?.displayName ?? "?", diameter: 36, tintIndex: tint)
+                            VStack(alignment: .leading, spacing: 3) {
+                                (Text(author?.displayName ?? "Un membre").bold() + Text(" a enregistré une balade"))
+                                    .font(.system(size: 13))
+                                    .foregroundStyle(Color.truffloCharcoal)
+                                Text("\(WalkFormatting.relativeDay(walk.endedAt).capitalizedFirst) · \(WalkFormatting.time(walk.endedAt))")
+                                    .font(.system(size: 12))
+                                    .foregroundStyle(Color.truffloSlate)
+                                HStack(spacing: TruffloTheme.Spacing.small) {
+                                    Label(WalkFormatting.minutes(walk.confirmedSeconds), systemImage: "clock")
+                                    if let meters = walk.recordedPathMeters {
+                                        Label(WalkFormatting.distance(meters), systemImage: "point.topleft.down.to.point.bottomright.curvepath")
+                                    }
+                                }
+                                .font(.system(size: 12))
+                                .foregroundStyle(Color.truffloCharcoal)
+                            }
+                            Spacer(minLength: 0)
+                            if let photo = dogs.first(where: { $0.photoData != nil })?.photoData {
+                                TruffloDogThumbnail(name: dogs.first?.name ?? "", photoData: photo, side: 52, bordered: false)
+                            }
+                        }
+                        .padding(.vertical, TruffloTheme.Spacing.small)
+                        if index < recent.count - 1 {
+                            Rectangle().fill(Color.truffloForest.opacity(0.08)).frame(height: 1)
+                        }
+                    }
+                }
+                .padding(.horizontal, TruffloTheme.Spacing.medium)
+                .padding(.vertical, TruffloTheme.Spacing.xSmall)
+                .background(Color.white.opacity(0.92),
+                            in: RoundedRectangle(cornerRadius: TruffloTheme.Radius.card, style: .continuous))
+                .shadow(color: Color.black.opacity(0.04), radius: 10, y: 4)
+            }
+        }
+    }
+
+    private func inviteSection(_ household: HouseholdRecord) -> some View {
+        // Only the button, as in the mock-up. A new member joins as a
+        // contributor; the owner changes the role from their face.
+        VStack(alignment: .leading, spacing: TruffloTheme.Spacing.small) {
             if let invite {
                 InviteTicket(code: invite, householdName: household.name)
             } else {
-                Button {
-                    Task { invite = await model.invite(role: HouseholdRole(rawValue: inviteRole) ?? .reader) }
-                } label: {
-                    Label("Créer un code d'invitation", systemImage: "person.badge.plus")
-                        .font(.headline)
-                        .frame(maxWidth: .infinity, minHeight: 50)
+                VStack(spacing: TruffloTheme.Spacing.xSmall) {
+                    Button {
+                        Task { invite = await model.invite(role: .contributor) }
+                    } label: {
+                        Label("Inviter un proche", systemImage: "link")
+                            .font(.system(.headline, design: .rounded, weight: .bold))
+                            .frame(maxWidth: .infinity, minHeight: 44)
+                    }
+                    .buttonStyle(.glassProminent)
+                    .buttonBorderShape(.capsule)
+                    .tint(Color.truffloForest)
+                    .accessibilityIdentifier("household.invite")
+                    Text("Partagez un lien pour rejoindre le foyer.")
+                        .font(.footnote)
+                        .foregroundStyle(Color.truffloSlate)
                 }
-                .buttonStyle(.glass)
-                .tint(Color.truffloForest)
-                .accessibilityIdentifier("household.invite")
             }
         }
         .onChange(of: inviteRole) { invite = nil }
