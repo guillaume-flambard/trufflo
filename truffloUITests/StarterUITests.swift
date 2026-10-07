@@ -197,6 +197,10 @@ final class StarterUITests: XCTestCase {
         let start = app.buttons["Partir en balade"]
         XCTAssertTrue(start.waitForExistence(timeout: 5))
         start.tap()
+        // The step before the walk: which dog, how, then "Démarrer".
+        let go = app.buttons["walk.new.start"]
+        XCTAssertTrue(go.waitForExistence(timeout: 5), "l'écran Nouvelle balade doit s'ouvrir")
+        go.tap()
 
         XCTAssertTrue(
             app.buttons["walk.minimize"].waitForExistence(timeout: 10),
@@ -335,6 +339,10 @@ final class StarterUITests: XCTestCase {
         let start = app.buttons["Partir en balade"]
         XCTAssertTrue(start.waitForExistence(timeout: 5))
         start.tap()
+        // The step before the walk: which dog, how, then "Démarrer".
+        let go = app.buttons["walk.new.start"]
+        XCTAssertTrue(go.waitForExistence(timeout: 5), "l'écran Nouvelle balade doit s'ouvrir")
+        go.tap()
         XCTAssertTrue(
             app.buttons["walk.minimize"].waitForExistence(timeout: 10),
             "l'écran de balade en direct doit s'ouvrir"
@@ -444,6 +452,10 @@ final class StarterUITests: XCTestCase {
         let start = app.buttons["Partir en balade"]
         XCTAssertTrue(start.waitForExistence(timeout: 5))
         start.tap()
+        // The step before the walk: which dog, how, then "Démarrer".
+        let go = app.buttons["walk.new.start"]
+        XCTAssertTrue(go.waitForExistence(timeout: 5), "l'écran Nouvelle balade doit s'ouvrir")
+        go.tap()
         XCTAssertTrue(
             app.buttons["walk.minimize"].waitForExistence(timeout: 10),
             "l'écran de balade en direct doit s'ouvrir"
@@ -529,6 +541,10 @@ final class StarterUITests: XCTestCase {
         let start = app.buttons["Partir en balade"]
         XCTAssertTrue(start.waitForExistence(timeout: 5))
         start.tap()
+        // The step before the walk: which dog, how, then "Démarrer".
+        let go = app.buttons["walk.new.start"]
+        XCTAssertTrue(go.waitForExistence(timeout: 5), "l'écran Nouvelle balade doit s'ouvrir")
+        go.tap()
         XCTAssertTrue(
             app.buttons["walk.minimize"].waitForExistence(timeout: 10),
             "l'écran de balade en direct doit s'ouvrir"

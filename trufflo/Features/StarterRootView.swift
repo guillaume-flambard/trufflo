@@ -47,6 +47,7 @@ struct StarterRootView: View {
     @State private var startBlock: LocationBlock?
     @State private var exportFile: SharedFile?
     @State private var showWhoIsWalking = false
+    @State private var showNewWalk = false
     @State private var startTaps = 0
     /// One namespace per stack: a walk shown on Today and in the Journal at once
     /// would otherwise be two sources for the same zoom.
@@ -253,6 +254,21 @@ struct StarterRootView: View {
                                   }
                               },
                               dismiss: { startBlock = nil })
+        }
+        .fullScreenCover(isPresented: $showNewWalk) {
+            NewWalkView(dogs: dogs,
+                        onStart: { ids in
+                            Task { @MainActor in
+                                try? await Task.sleep(for: .milliseconds(450))
+                                activeWalkCover = .start(ids)
+                            }
+                        },
+                        onManual: {
+                            Task { @MainActor in
+                                try? await Task.sleep(for: .milliseconds(450))
+                                showWalkForm = true
+                            }
+                        })
         }
         .fullScreenCover(item: $activeWalkCover) { cover in
             switch cover {
@@ -755,10 +771,9 @@ struct StarterRootView: View {
         case .notDetermined, .authorizedWhenInUse, .authorizedAlways:
             if probe.authorization != .notDetermined && !probe.servicesAvailable {
                 startBlock = .servicesUnavailable
-            } else if dogs.count > 1 {
-                showWhoIsWalking = true
             } else {
-                activeWalkCover = .start(dogs.map(\.id))
+                // The step before the walk (2026-10-07 mock-up): which dogs, how, where.
+                showNewWalk = true
             }
         }
     }
