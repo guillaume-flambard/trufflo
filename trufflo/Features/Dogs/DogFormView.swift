@@ -52,7 +52,7 @@ struct DogFormView: View {
     var body: some View {
         NavigationStack {
             ScrollView {
-                VStack(alignment: .leading, spacing: TruffloTheme.Spacing.small) {
+                VStack(alignment: .leading, spacing: 8) {
                     // As in the 2026-10-07 mock-up: a title and one line, the face,
                     // then each field in its own white card.
                     VStack(alignment: .leading, spacing: 4) {
@@ -147,7 +147,8 @@ struct DogFormView: View {
                         .foregroundStyle(Color.truffloSlate)
                 }
                 .padding(.horizontal, TruffloTheme.Spacing.screen)
-                .padding(.vertical, TruffloTheme.Spacing.medium)
+                .padding(.top, 0)
+                .padding(.bottom, 80)
             }
             .scrollDismissesKeyboard(.interactively)
             .safeAreaInset(edge: .bottom) {
@@ -174,7 +175,7 @@ struct DogFormView: View {
                 .truffloTap()
                 .accessibilityIdentifier("dog.save")
                 .padding(.horizontal, TruffloTheme.Spacing.screen)
-                .padding(.bottom, TruffloTheme.Spacing.xSmall)
+                .padding(.bottom, -6)
             }
             .background(Color.truffloSand.ignoresSafeArea())
             .onChange(of: selectedPhotoItem) { _, newItem in
@@ -220,13 +221,13 @@ struct DogFormView: View {
             PhotosPicker(selection: $selectedPhotoItem, matching: .images, photoLibrary: .shared()) {
                 ZStack {
                     if photoData != nil || !name.trimmingCharacters(in: .whitespaces).isEmpty {
-                        TruffloDogPortrait(name: name.isEmpty ? "?" : name, photoData: photoData, diameter: 96)
+                        TruffloDogPortrait(name: name.isEmpty ? "?" : name, photoData: photoData, diameter: 112)
                     } else {
                         Circle()
                             .fill(Color.white.opacity(0.7))
                             .overlay(Circle().strokeBorder(Color.truffloForest.opacity(0.3),
                                                            style: StrokeStyle(lineWidth: 2, dash: [6, 5])))
-                            .frame(width: 96, height: 96)
+                            .frame(width: 112, height: 112)
                     }
                 }
                 .overlay(Circle().strokeBorder(Color.white, lineWidth: 3))
@@ -289,13 +290,14 @@ struct DogFormView: View {
 
     /// One field in its own white card, its label inside (2026-10-07 mock-up).
     private func field<Content: View>(_ label: String, @ViewBuilder content: () -> Content) -> some View {
-        VStack(alignment: .leading, spacing: TruffloTheme.Spacing.xSmall) {
+        VStack(alignment: .leading, spacing: 6) {
             Text(label)
                 .font(.system(size: 12, weight: .medium))
                 .foregroundStyle(Color.truffloSlate)
             content()
         }
-        .padding(12)
+        .padding(.horizontal, 12)
+        .padding(.vertical, 9)
         .frame(maxWidth: .infinity, alignment: .leading)
         .background(Color.white.opacity(0.9), in: RoundedRectangle(cornerRadius: 20, style: .continuous))
     }
@@ -365,8 +367,7 @@ struct FormFieldStyle: ViewModifier {
         content
             .font(.system(size: 14))
             .padding(.horizontal, 14)
-            .frame(minHeight: 38)
-            .padding(.vertical, 2)
+            .frame(minHeight: 34)
             .background(Color(red: 0.99, green: 0.985, blue: 0.97),
                         in: RoundedRectangle(cornerRadius: 19, style: .continuous))
             .overlay(RoundedRectangle(cornerRadius: 19, style: .continuous)
@@ -392,7 +393,7 @@ struct TruffloChoice: View {
                         .font(.system(size: 13, weight: isOn ? .semibold : .regular))
                         .multilineTextAlignment(.center)
                         .foregroundStyle(isOn ? Color.truffloForest : Color.truffloCharcoal)
-                        .frame(maxWidth: .infinity, minHeight: 34)
+                        .frame(maxWidth: .infinity, minHeight: 30)
                         .background(isOn ? Color(red: 0.86, green: 0.93, blue: 0.89) : Color.black.opacity(0.03),
                                     in: Capsule())
                 }
@@ -418,8 +419,8 @@ struct TraitChips: View {
                     Label(trait.label, systemImage: trait.systemImage)
                         .font(.system(size: 13, weight: isOn ? .semibold : .regular))
                         .foregroundStyle(isOn ? Color.truffloForest : Color.truffloCharcoal)
-                        .padding(.horizontal, 12)
-                        .frame(minHeight: 34)
+                        .padding(.horizontal, 10)
+                        .frame(minHeight: 30)
                         .background(isOn ? Color(red: 0.86, green: 0.93, blue: 0.89) : Color.black.opacity(0.03),
                                     in: Capsule())
                         .overlay(Capsule().strokeBorder(isOn ? Color.truffloForest.opacity(0.4) : .clear, lineWidth: 1))
