@@ -56,8 +56,12 @@ struct StarterRootView: View {
     @State private var exportError: String?
     @Environment(\.dynamicTypeSize) private var typeSize
 
+    /// The journal's counts, the week, the last and the live balade, read in one
+    /// place (`JournalFacts`) so Today, the dog list and the Journal agree.
+    private var facts: JournalFacts { JournalFacts(walks: walks, links: links) }
+
     private var liveWalk: WalkRecord? {
-        walks.first { $0.phase == .recording || $0.phase == .paused || $0.phase == .interrupted }
+        facts.liveWalkID.flatMap { id in walks.first { $0.id == id } }
     }
 
     var body: some View {
@@ -123,10 +127,11 @@ struct StarterRootView: View {
                         .listRowBackground(Color.clear)
                         .listRowSeparator(.hidden)
                     } else {
+                        let journal = facts
                         ForEach(dogs) { dog in
                             // The link sits behind the card so the list draws no
                             // disclosure chevron outside it.
-                            dogCard(dog)
+                            dogCard(dog, walkCount: journal.walkCount(for: dog.id))
                                 .background(NavigationLink(value: DogRoute(id: dog.id)) { EmptyView() }.opacity(0))
                             .listRowBackground(Color.clear)
                             .listRowSeparatorTint(Color.truffloForest.opacity(0.12))
@@ -306,6 +311,10 @@ struct StarterRootView: View {
         } else {
             JournalTimelineView(walks: shown, shared: sharedShown,
                                 filterSummary: journalFilter.isActive ? filterSummary(count: shown.count + sharedShown.count) : nil,
+                                // My balades only, the figure of Today (decision D2): the
+                                // foyer's are listed but not counted, so "cette semaine"
+                                // reads the same number on both screens.
+                                weekCount: facts.week.walkCount,
                                 zoom: journalZoom,
                                 rowDestination: { WalkRoute(id: $0) })
         }
@@ -371,7 +380,7 @@ struct StarterRootView: View {
 
     /// Today is not a list. The dog is the subject, the start button is the one
     /// action, and the last walk is read as a short passage rather than a card.
-    /// Facts here are descriptive (a count, an age of the last outing) and never a
+    /// Facts here are descriptive (a count, an age of the last balade) and never a
     /// target, a streak or a comparison.
     @ViewBuilder
     private var todayContent: some View {
@@ -406,7 +415,7 @@ struct StarterRootView: View {
                         } else {
                             weekFigure
                         }
-                        if let lastWalk = completedWalks.first {
+                        if let lastWalk = facts.lastWalkID.flatMap({ id in walks.first { $0.id == id } }) {
                             VStack(alignment: .leading, spacing: TruffloTheme.Spacing.small) {
                                 sectionTitle("Dernière balade")
                                 NavigationLink(value: WalkRoute(id: lastWalk.id)) {
@@ -446,18 +455,17 @@ struct StarterRootView: View {
     /// One dog per line: its face when there is a photo (no initial on a disc
     /// otherwise), name, declared facts, and the number of walks shared with
     /// it. No ranking between dogs.
-    private func dogCard(_ dog: DogRecord) -> some View {
-        let facts = [dog.breedKind != "unknown" ? dog.breedDescription : "", dog.ageDescription]
+    private func dogCard(_ dog: DogRecord, walkCount count: Int) -> some View {
+        let declared = [dog.breedKind != "unknown" ? dog.breedDescription : "", dog.ageDescription]
             .filter { !$0.isEmpty }.joined(separator: ", ")
-        let count = walkCount(for: dog)
         let noun = count == 1 ? String(localized: "walks_noun_one") : String(localized: "walks_noun_other")
         let portrait = dog.photoData.map { TruffloDogPortrait(name: dog.name, photoData: $0, diameter: 56) }
         let nameAndFacts = VStack(alignment: .leading, spacing: 2) {
             Text(dog.name)
                 .font(.system(.title2, design: .rounded, weight: .heavy))
                 .foregroundStyle(Color.truffloForest)
-            if !facts.isEmpty {
-                Text(facts).font(.subheadline).foregroundStyle(Color.truffloSlate)
+            if !declared.isEmpty {
+                Text(declared).font(.subheadline).foregroundStyle(Color.truffloSlate)
             }
         }
         return Group {
@@ -493,23 +501,8 @@ struct StarterRootView: View {
         .accessibilityIdentifier("dog.row.\(dog.id.uuidString)")
     }
 
-    private func walkCount(for dog: DogRecord) -> Int {
-        let finished = Set(completedWalks.map(\.id))
-        return links.filter { $0.dogID == dog.id && finished.contains($0.walkID) }.count
-    }
-
-    private func walkCountText(for dog: DogRecord) -> String {
-        let finished = Set(completedWalks.map(\.id))
-        let count = links.filter { $0.dogID == dog.id && finished.contains($0.walkID) }.count
-        switch count {
-        case 0: return "Pas encore de balade"
-        case 1: return "1 balade enregistrée"
-        default: return "\(count) balades enregistrées"
-        }
-    }
-
-    /// The latest outing another member recorded, when it is newer than mine
-    /// and not the same outing (B-REQ-04, decision D2). Apart from my figures,
+    /// The latest balade another member recorded, when it is newer than mine
+    /// and not the same balade (B-REQ-04, decision D2). Apart from my figures,
     /// and attributed: who, which dogs, when, how long.
     @ViewBuilder
     private var householdLatestWalkSection: some View {
@@ -559,10 +552,7 @@ struct StarterRootView: View {
         guard dogs.count == 1,
               let record = routines.first(where: { $0.dogID == dog.id }), !record.isPaused,
               let routine = record.routine else { return nil }
-        let today = completedWalks.filter { walk in
-            Calendar.current.isDateInToday(walk.endedAt ?? walk.startedAt)
-                && links.contains { $0.walkID == walk.id && $0.dogID == dog.id }
-        }.count
+        let today = facts.todayCount(for: dog.id)
         return "Routine choisie : \(routine.summary.prefix(1).lowercased() + routine.summary.dropFirst()). \(routine.today(recordedWalks: today))"
     }
 
@@ -581,10 +571,7 @@ struct StarterRootView: View {
     /// the figure, the seven days, and the time in one line. Descriptive, never a
     /// target. Distance is not summed, because declared walks have none.
     private var weekFigure: some View {
-        let week = WeekSummary.make(
-            walks: completedWalks.map { .init(endedAt: $0.endedAt ?? $0.startedAt, seconds: $0.confirmedSeconds) },
-            now: .now,
-            calendar: TruffloLocale.calendar)
+        let week = facts.week
         let total = week.isEmpty ? nil : "\(WalkFormatting.minutes(week.totalSeconds)) en tout"
         return TruffloWeekFigure(week: week, totalLine: total)
     }

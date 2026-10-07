@@ -6,7 +6,7 @@ import Foundation
 /// a streak or a missed day, so no screen built on it can show one.
 public struct WeekSummary: Equatable, Sendable {
     /// One finished walk of the person, reduced to what the week needs.
-    public struct Outing: Equatable, Sendable {
+    public struct Walk: Equatable, Sendable {
         public let endedAt: Date
         public let seconds: TimeInterval
 
@@ -34,7 +34,7 @@ public struct WeekSummary: Equatable, Sendable {
 
     /// Walks outside the week of `now` are ignored. Both boundaries belong to
     /// the week they open: Monday 00:00:00 is in, the second before it is not.
-    public static func make(walks: [Outing], now: Date, calendar: Calendar) -> WeekSummary {
+    public static func make(walks: [Walk], now: Date, calendar: Calendar) -> WeekSummary {
         guard let week = calendar.dateInterval(of: .weekOfYear, for: now) else {
             return WeekSummary(days: [], walkCount: 0, totalSeconds: 0)
         }

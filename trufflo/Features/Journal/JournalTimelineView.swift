@@ -10,6 +10,8 @@ struct JournalTimelineView: View {
     var shared: [SharedEntry] = []
     /// Shown instead of the week sentence when the list is filtered.
     var filterSummary: String? = nil
+    /// My balades of the calendar week, the number Today shows (`JournalFacts.week`).
+    let weekCount: Int
     /// The namespace of the zoom from a row to its walk.
     let zoom: Namespace.ID
     let rowDestination: (UUID) -> WalkRoute
@@ -103,15 +105,12 @@ struct JournalTimelineView: View {
         return text.prefix(1).uppercased() + text.dropFirst()
     }
 
-    /// The last seven days, not the calendar week, so Monday is not a reset.
+    /// The calendar week, as on Today: "cette semaine" has one meaning.
     private var weekSentence: String? {
-        let weekAgo = Date().addingTimeInterval(-7 * 24 * 3600)
-        let count = walks.filter { ($0.endedAt ?? $0.startedAt) >= weekAgo }.count
-            + shared.filter { $0.walk.endedAt >= weekAgo }.count
-        switch count {
+        switch weekCount {
         case 0: return nil
         case 1: return "1 balade enregistrée cette semaine"
-        default: return "\(count) balades enregistrées cette semaine"
+        default: return "\(weekCount) balades enregistrées cette semaine"
         }
     }
 }

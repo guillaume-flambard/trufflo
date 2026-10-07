@@ -13,8 +13,8 @@ struct DogDetailView: View {
 
     @Query private var matches: [DogRecord]
     @Query private var participations: [WalkDogRecord]
-    @Query private var routines: [RoutineRecord]
     @Query(filter: #Predicate<WalkRecord> { $0.phaseRaw == "completed" }) private var finishedWalks: [WalkRecord]
+    @Query private var routines: [RoutineRecord]
 
     @State private var showEdit = false
     @State private var showRoutine = false
@@ -206,20 +206,15 @@ struct DogDetailView: View {
         }
     }
 
-    /// Time is descriptive and safe to sum: every walk has a duration, declared
-    /// or measured. Distance is not, so it is not summed here.
+    private var facts: JournalFacts { JournalFacts(walks: finishedWalks, links: participations) }
+
+    /// Time is descriptive and safe to sum (`JournalFacts`); distance is not.
     private var recordedSeconds: TimeInterval {
-        guard let dog = matches.first else { return 0 }
-        let mine = Set(participations.filter { $0.dogID == dog.id }.map(\.walkID))
-        return finishedWalks.filter { mine.contains($0.id) }.map(\.confirmedSeconds).reduce(0, +)
+        matches.first.map { facts.totalSeconds(for: $0.id) } ?? 0
     }
 
     private var walkCount: Int? {
-        guard let dog = matches.first else { return nil }
-        // A walk counts for a dog through its participation record, and only
-        // once it is finished; a recording in progress is not yet a walk.
-        let finished = Set(finishedWalks.map(\.id))
-        return participations.filter { $0.dogID == dog.id && finished.contains($0.walkID) }.count
+        matches.first.map { facts.walkCount(for: $0.id) }
     }
 
     private func delete(dogID: UUID) {

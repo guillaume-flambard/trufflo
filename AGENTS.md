@@ -152,7 +152,7 @@ journal. The server rules themselves are tested with
 
 | Target | Framework | Files | Cost |
 |---|---|---|---|
-| `truffloTests` | Swift Testing | WalkDomainTests, TrackWriterTests, StorageTests, MigrationTests, TrackAccumulatorResumeTests | low |
+| `truffloTests` | Swift Testing | WalkDomainTests, TrackWriterTests, StorageTests, MigrationTests, TrackAccumulatorResumeTests, JournalFactsTests (the journal's counts and week, read by every screen), and more | low |
 | `truffloUITests` | XCTest UI | StarterUITests | high: simulator boot, app relaunch, UI automation |
 
 ### Narrowing a run
