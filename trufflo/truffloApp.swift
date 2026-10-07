@@ -26,6 +26,7 @@ struct TruffloApp: App {
             #if DEBUG
             if inMemory && HouseholdDemo.isRequested { try HouseholdDemo.seed(container.mainContext) }
             if inMemory && HouseholdDemo.dogsOnly { try HouseholdDemo.seedDogs(container.mainContext) }
+            if inMemory, let name = MatrixDemo.requested { try MatrixDemo.seed(name, in: container.mainContext) }
             #endif
             return container
         }
