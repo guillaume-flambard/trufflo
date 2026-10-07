@@ -185,6 +185,18 @@ final class HouseholdModel {
         return token
     }
 
+    /// The owner's invites still open; empty on any failure (the list is a
+    /// convenience, the error shows on the next action).
+    func pendingInvites() async -> [PendingInviteDTO] {
+        guard let sync, isSignedIn else { return [] }
+        return (try? await sync.pendingInvites()) ?? []
+    }
+
+    func revokeInvite(_ id: UUID) async {
+        guard let sync else { return }
+        await run { try await sync.revokeInvite(id) }
+    }
+
     func leave() async {
         guard let sync else { return }
         await run { try await sync.leave() }

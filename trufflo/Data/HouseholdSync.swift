@@ -117,6 +117,15 @@ struct HouseholdSync {
         return try await remote.createInvite(householdID: household.id, role: role)
     }
 
+    func pendingInvites() async throws -> [PendingInviteDTO] {
+        guard let household = household(), household.myRole == .owner else { return [] }
+        return try await remote.pendingInvites(householdID: household.id, now: now())
+    }
+
+    func revokeInvite(_ id: UUID) async throws {
+        try await remote.revokeInvite(id: id, at: now())
+    }
+
     /// Leaves on the server, then forgets everything received (spec S11).
     func leave() async throws {
         guard let household = household() else { return }

@@ -465,3 +465,20 @@ func aLoneOwnerDeletesTheHousehold() async throws {
         #expect(!json.contains(forbidden))
     }
 }
+
+@MainActor
+@Test func anOwnerSeesOpenInvitesAndARevokedOneCannotBeUsed() async throws {
+    let server = FakeHouseholdServer()
+    let anneHome = try Phone(server: server, user: anne)
+    try await anneHome.sync.createHousehold(name: "Maison", displayName: "Anne")
+    let token = try await anneHome.sync.createInvite(role: .reader)
+    let open = try await anneHome.sync.pendingInvites()
+    #expect(open.map(\.role) == [.reader])
+
+    try await anneHome.sync.revokeInvite(try #require(open.first).id)
+    #expect(try await anneHome.sync.pendingInvites().isEmpty)
+    let brunoHome = try Phone(server: server, user: bruno)
+    await #expect(throws: RemoteError.rejected("invite not valid")) {
+        _ = try await brunoHome.sync.acceptInvite(token: token)
+    }
+}

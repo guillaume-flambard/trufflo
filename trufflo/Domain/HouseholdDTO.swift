@@ -265,6 +265,24 @@ public struct RemotePlannedWalkDTO: Decodable, Equatable, Sendable {
     }
 }
 
+/// An invite not used yet, as its owner sees it: what role, until when.
+public struct PendingInviteDTO: Decodable, Equatable, Sendable, Identifiable {
+    public var id: UUID
+    public var role: HouseholdRole
+    public var expiresAt: Date
+
+    public init(id: UUID, role: HouseholdRole, expiresAt: Date) {
+        self.id = id
+        self.role = role
+        self.expiresAt = expiresAt
+    }
+
+    enum CodingKeys: String, CodingKey {
+        case id, role
+        case expiresAt = "expires_at"
+    }
+}
+
 public struct HouseholdDTO: Decodable, Equatable, Sendable {
     public var id: UUID
     public var name: String

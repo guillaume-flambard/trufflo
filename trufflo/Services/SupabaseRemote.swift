@@ -92,6 +92,27 @@ struct SupabaseRemote: HouseholdRemote {
         }
     }
 
+    func pendingInvites(householdID: UUID, now: Date) async throws -> [PendingInviteDTO] {
+        try await mapped {
+            try await client.from("household_invites")
+                .select("id,role,expires_at")
+                .eq("household_id", value: householdID)
+                .is("accepted_at", value: nil)
+                .is("revoked_at", value: nil)
+                .gt("expires_at", value: HouseholdCoding.format(now))
+                .order("created_at")
+                .execute().value
+        }
+    }
+
+    func revokeInvite(id: UUID, at date: Date) async throws {
+        struct Patch: Encodable { var revoked_at: Date }
+        try await mapped {
+            try await client.from("household_invites").update(Patch(revoked_at: date), returning: .minimal)
+                .eq("id", value: id).execute()
+        }
+    }
+
     func createInvite(householdID: UUID, role: HouseholdRole) async throws -> String {
         // An owner may read invites, so this insert can return its token.
         struct Row: Encodable { var household_id: UUID; var role: HouseholdRole }

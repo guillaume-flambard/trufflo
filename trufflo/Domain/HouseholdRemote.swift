@@ -16,6 +16,10 @@ public protocol HouseholdRemote: Sendable {
     func members(householdID: UUID) async throws -> [MemberDTO]
     func setDisplayName(_ name: String, householdID: UUID, userID: UUID) async throws
     func createInvite(householdID: UUID, role: HouseholdRole) async throws -> String
+    /// Owners only: invites neither used, revoked nor expired.
+    func pendingInvites(householdID: UUID, now: Date) async throws -> [PendingInviteDTO]
+    /// Owners only. A revoked invite can no longer be accepted.
+    func revokeInvite(id: UUID, at date: Date) async throws
     /// Returns the household joined.
     func acceptInvite(token: String) async throws -> UUID
     /// Removes a membership: the person's own (leaving), or another member's

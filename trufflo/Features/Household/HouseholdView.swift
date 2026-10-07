@@ -27,6 +27,8 @@ struct HouseholdView: View {
     /// The invite asks which role the person joins with (PRD F08): contributor
     /// or reader. The owner can still change it from their face afterwards.
     @State private var askInviteRole = false
+    /// The owner's invites still open, with a way to revoke each.
+    @State private var pendingInvites: [PendingInviteDTO] = []
     @State private var invite: String?
     @State private var confirmLeave = false
     @State private var confirmDelete = false
@@ -655,7 +657,36 @@ struct HouseholdView: View {
                         .foregroundStyle(Color.truffloSlate)
                 }
             }
+            if household.myRole == .owner, !pendingInvites.isEmpty {
+                VStack(alignment: .leading, spacing: 6) {
+                    TruffloSectionTitle("Invitations en cours")
+                    ForEach(pendingInvites) { pending in
+                        HStack {
+                            VStack(alignment: .leading, spacing: 2) {
+                                Text(pending.role == .reader ? "Lecteur" : "Contributeur")
+                                    .font(.system(size: 14, weight: .semibold))
+                                    .foregroundStyle(Color.truffloCharcoal)
+                                Text("Valable jusqu'au \(pending.expiresAt.formatted(.dateTime.day().month(.wide).locale(TruffloLocale.french)))")
+                                    .font(.system(size: 12))
+                                    .foregroundStyle(Color.truffloSlate)
+                            }
+                            Spacer()
+                            Button("Révoquer", role: .destructive) {
+                                Task {
+                                    await model.revokeInvite(pending.id)
+                                    pendingInvites = await model.pendingInvites()
+                                }
+                            }
+                            .font(.system(size: 14, weight: .semibold))
+                            .accessibilityIdentifier("household.invite.revoke")
+                        }
+                        .truffloBoardCard(padding: 12)
+                    }
+                }
+                .padding(.top, 8)
+            }
         }
+        .task(id: invite) { pendingInvites = await model.pendingInvites() }
         .confirmationDialog("Inviter un proche", isPresented: $askInviteRole, titleVisibility: .visible) {
             Button("Contributeur : ajoute ses balades") {
                 Task { invite = await model.invite(role: .contributor) }

@@ -70,6 +70,13 @@ final class FakeHouseholdServer: @unchecked Sendable {
     }
     fileprivate func setName(_ name: String, _ household: UUID, _ user: UUID) { names[household, default: [:]][user] = name }
     fileprivate func addInvite(_ token: String, _ household: UUID, _ role: HouseholdRole) { invites[token] = (household, role, false) }
+    /// Invite ids, as the server gives them, for listing and revoking.
+    private(set) var inviteIDs: [String: UUID] = [:]
+    fileprivate func inviteID(_ token: String) -> UUID {
+        if let id = inviteIDs[token] { return id }
+        let id = UUID(); inviteIDs[token] = id; return id
+    }
+    fileprivate func revoke(_ id: UUID) { if let token = inviteIDs.first(where: { $0.value == id })?.key { invites[token]?.used = true } }
     fileprivate func useInvite(_ token: String, by user: UUID) throws -> UUID {
         guard let invite = invites[token], !invite.used else { throw RemoteError.rejected("invite not valid") }
         invites[token]?.used = true
@@ -180,6 +187,19 @@ struct FakeHouseholdRemote: HouseholdRemote {
             server.addInvite(token, householdID, role)
             return token
         }
+    }
+
+    func pendingInvites(householdID: UUID, now: Date) async throws -> [PendingInviteDTO] {
+        try server.run("pendingInvites") {
+            guard server.role(user, in: householdID) == .owner else { throw RemoteError.forbidden("rls") }
+            return server.invites.filter { $0.value.household == householdID && !$0.value.used }
+                .map { PendingInviteDTO(id: server.inviteID($0.key), role: $0.value.role,
+                                        expiresAt: now.addingTimeInterval(7 * 86_400)) }
+        }
+    }
+
+    func revokeInvite(id: UUID, at date: Date) async throws {
+        try server.run("revokeInvite") { server.revoke(id) }
     }
 
     func acceptInvite(token: String) async throws -> UUID {
