@@ -44,11 +44,25 @@ struct DogFormView: View {
     var body: some View {
         NavigationStack {
             ScrollView {
-                VStack(alignment: .leading, spacing: TruffloTheme.Spacing.large) {
+                VStack(alignment: .leading, spacing: TruffloTheme.Spacing.small) {
+                    // As in the 2026-10-07 mock-up: a title and one line, the face,
+                    // then each field in its own white card.
+                    VStack(alignment: .leading, spacing: 4) {
+                        Text(isEditing ? "Modifier \(name.isEmpty ? "le chien" : name)" : "Ajouter un chien")
+                            .font(.system(size: 24, weight: .heavy, design: .rounded))
+                            .foregroundStyle(Color.truffloForest)
+                            .accessibilityAddTraits(.isHeader)
+                        Text("Parlez-nous un peu de votre compagnon.")
+                            .font(.system(size: 13))
+                            .foregroundStyle(Color.truffloSlate)
+                    }
+                    .padding(.bottom, TruffloTheme.Spacing.xSmall)
+
                     photoPicker
                         .frame(maxWidth: .infinity)
+                        .padding(.bottom, TruffloTheme.Spacing.xSmall)
 
-                    field("Nom") {
+                    field("Nom *") {
                         TextField("Nom de votre chien", text: $name)
                             .textInputAutocapitalization(.words)
                             .accessibilityIdentifier("dog.name")
@@ -80,7 +94,7 @@ struct DogFormView: View {
                             ageField.frame(maxWidth: .infinity)
                             sexField.frame(maxWidth: .infinity)
                         }
-                        VStack(alignment: .leading, spacing: TruffloTheme.Spacing.large) {
+                        VStack(alignment: .leading, spacing: TruffloTheme.Spacing.small) {
                             ageField
                             sexField
                         }
@@ -117,12 +131,16 @@ struct DogFormView: View {
                                 .transition(.scale.combined(with: .opacity))
                         }
                         Text(didSave ? "Enregistré" : "Enregistrer")
-                            .font(.headline)
+                            .font(.system(.headline, design: .rounded, weight: .semibold))
                             .contentTransition(.opacity)
                     }
-                    .frame(maxWidth: .infinity, minHeight: 56)
+                    .frame(maxWidth: .infinity, minHeight: 40)
+                    .overlay(alignment: .trailing) {
+                        if !didSave { Image(systemName: "chevron.right").font(.headline) }
+                    }
                 }
                 .buttonStyle(.glassProminent)
+                .buttonBorderShape(.capsule)
                 .tint(Color.truffloForest)
                 .disabled(didSave)
                 .truffloTap()
@@ -151,55 +169,83 @@ struct DogFormView: View {
             }
             .navigationTitle(isEditing ? "Modifier le chien" : "Nouveau chien")
             .navigationBarTitleDisplayMode(.inline)
-            .tint(Color.truffloForest)
+            // The title is drawn in the page, large; the bar keeps only the way back.
             .toolbar {
+                ToolbarItem(placement: .principal) { Color.clear.frame(width: 1, height: 1) }
                 ToolbarItem(placement: .cancellationAction) {
-                    Button("Annuler") { dismiss() }
+                    Button("Annuler", systemImage: "arrow.left") { dismiss() }
                 }
+            }
+            .tint(Color.truffloForest)
+            .background {
+                TruffloDogAura(photoData: nil).frame(height: 360).frame(maxHeight: .infinity, alignment: .top)
+                    .ignoresSafeArea()
             }
         }
     }
 
-    /// The face first: the photo when chosen, otherwise the initial as soon as
-    /// a name is typed, so the portrait is never an empty hole.
+    /// The face, with a camera badge, and while there is no photo a note that
+    /// points at it (2026-10-07 mock-up). The initial shows once a name is typed,
+    /// so the circle is never an empty hole.
     private var photoPicker: some View {
-        VStack(spacing: TruffloTheme.Spacing.xSmall) {
+        HStack(alignment: .center, spacing: TruffloTheme.Spacing.small) {
             PhotosPicker(selection: $selectedPhotoItem, matching: .images, photoLibrary: .shared()) {
                 ZStack {
                     if photoData != nil || !name.trimmingCharacters(in: .whitespaces).isEmpty {
-                        TruffloDogPortrait(name: name.isEmpty ? "?" : name, photoData: photoData, diameter: 112)
+                        TruffloDogPortrait(name: name.isEmpty ? "?" : name, photoData: photoData, diameter: 96)
                     } else {
                         Circle()
-                            .strokeBorder(Color.truffloForest.opacity(0.35), style: StrokeStyle(lineWidth: 2, dash: [6, 5]))
-                            .frame(width: 112, height: 112)
-                            .overlay(Image(systemName: "camera").font(.title2).foregroundStyle(Color.truffloForest))
+                            .fill(Color.white.opacity(0.7))
+                            .overlay(Circle().strokeBorder(Color.truffloForest.opacity(0.3),
+                                                           style: StrokeStyle(lineWidth: 2, dash: [6, 5])))
+                            .frame(width: 96, height: 96)
                     }
+                }
+                .overlay(Circle().strokeBorder(Color.white, lineWidth: 3))
+                .overlay(alignment: .bottomTrailing) {
+                    Image(systemName: "camera.fill")
+                        .font(.system(size: 13))
+                        .foregroundStyle(Color.truffloForest)
+                        .frame(width: 30, height: 30)
+                        .background(Color.white, in: Circle())
+                        .shadow(color: .black.opacity(0.12), radius: 4, y: 2)
                 }
             }
             .accessibilityLabel(photoData == nil ? "Choisir une photo" : "Changer la photo")
-            HStack(spacing: TruffloTheme.Spacing.medium) {
-                PhotosPicker(selection: $selectedPhotoItem, matching: .images, photoLibrary: .shared()) {
-                    Text(photoData == nil ? "Choisir une photo" : "Changer la photo")
-                        .font(.subheadline.weight(.semibold))
-                        .foregroundStyle(Color.truffloForest)
-                        .frame(minHeight: 36)
-                }
-                if photoData != nil {
-                    Button("Retirer") {
-                        photoData = nil
-                        selectedPhotoItem = nil
+            if photoData == nil {
+                HStack(spacing: 6) {
+                    Image(systemName: "arrow.left")
+                        .font(.system(size: 13))
+                        .foregroundStyle(Color.truffloForest.opacity(0.5))
+                    VStack(spacing: 4) {
+                        Image(systemName: "pawprint.fill")
+                            .font(.system(size: 15))
+                            .foregroundStyle(Color.truffloForest)
+                        Text("Une photo\npour commencer !")
+                            .font(.system(size: 12, design: .serif).italic())
+                            .foregroundStyle(Color.truffloForest)
+                            .multilineTextAlignment(.center)
                     }
-                    .font(.subheadline.weight(.semibold))
-                    .foregroundStyle(Color.truffloDanger)
-                    .truffloTap()
+                    .padding(10)
+                    .background(Color(red: 0.86, green: 0.93, blue: 0.89).opacity(0.8),
+                                in: RoundedRectangle(cornerRadius: 14, style: .continuous))
                 }
+                .accessibilityHidden(true)
+            } else {
+                Button("Retirer") {
+                    photoData = nil
+                    selectedPhotoItem = nil
+                }
+                .font(.subheadline.weight(.semibold))
+                .foregroundStyle(Color.truffloDanger)
+                .truffloTap()
             }
         }
     }
 
     private var ageField: some View {
-        field("Âge") {
-            TextField("Par exemple : 3 ans", text: $ageDescription)
+        field("Âge *") {
+            TextField("Ex. 3 ans", text: $ageDescription)
                 .accessibilityIdentifier("dog.age")
                 .modifier(FormFieldStyle())
         }
@@ -213,13 +259,17 @@ struct DogFormView: View {
         }
     }
 
+    /// One field in its own white card, its label inside (2026-10-07 mock-up).
     private func field<Content: View>(_ label: String, @ViewBuilder content: () -> Content) -> some View {
         VStack(alignment: .leading, spacing: TruffloTheme.Spacing.xSmall) {
             Text(label)
-                .font(.footnote.weight(.semibold))
+                .font(.system(size: 12, weight: .medium))
                 .foregroundStyle(Color.truffloSlate)
             content()
         }
+        .padding(12)
+        .frame(maxWidth: .infinity, alignment: .leading)
+        .background(Color.white.opacity(0.9), in: RoundedRectangle(cornerRadius: 20, style: .continuous))
     }
 
     private func save() {
@@ -274,12 +324,14 @@ struct DogFormView: View {
 struct FormFieldStyle: ViewModifier {
     func body(content: Content) -> some View {
         content
-            .font(.body)
+            .font(.system(size: 14))
             .padding(.horizontal, 14)
-            .padding(.vertical, 14)
-            .background(Color.white, in: RoundedRectangle(cornerRadius: TruffloTheme.Radius.card, style: .continuous))
-            .overlay(RoundedRectangle(cornerRadius: TruffloTheme.Radius.card, style: .continuous)
-                .strokeBorder(Color.truffloForest.opacity(0.1), lineWidth: 1))
+            .frame(minHeight: 38)
+            .padding(.vertical, 2)
+            .background(Color(red: 0.99, green: 0.985, blue: 0.97),
+                        in: RoundedRectangle(cornerRadius: 19, style: .continuous))
+            .overlay(RoundedRectangle(cornerRadius: 19, style: .continuous)
+                .strokeBorder(Color.black.opacity(0.1), lineWidth: 1))
     }
 }
 
@@ -291,26 +343,23 @@ struct TruffloChoice: View {
     var clearsTo: String? = nil
 
     var body: some View {
-        HStack(spacing: 3) {
+        HStack(spacing: 6) {
             ForEach(options, id: \.0) { option in
                 let isOn = selection == option.0
                 Button {
                     if isOn, let clearsTo { selection = clearsTo } else { selection = option.0 }
                 } label: {
                     Text(option.1)
-                        .font(.subheadline.weight(.semibold))
+                        .font(.system(size: 13, weight: isOn ? .semibold : .regular))
                         .multilineTextAlignment(.center)
                         .foregroundStyle(isOn ? Color.truffloForest : Color.truffloCharcoal)
-                        .frame(maxWidth: .infinity, minHeight: 42)
-                        .background(isOn ? Color.white : Color.clear,
-                                    in: RoundedRectangle(cornerRadius: TruffloTheme.Radius.medium, style: .continuous))
-                        .shadow(color: isOn ? Color.truffloForestDeep.opacity(0.12) : .clear, radius: 2, y: 1)
+                        .frame(maxWidth: .infinity, minHeight: 34)
+                        .background(isOn ? Color(red: 0.86, green: 0.93, blue: 0.89) : Color.black.opacity(0.03),
+                                    in: Capsule())
                 }
                 .buttonStyle(.plain)
                 .accessibilityAddTraits(isOn ? .isSelected : [])
             }
         }
-        .padding(3)
-        .background(Color.truffloForest.opacity(0.07), in: RoundedRectangle(cornerRadius: TruffloTheme.Radius.card, style: .continuous))
     }
 }

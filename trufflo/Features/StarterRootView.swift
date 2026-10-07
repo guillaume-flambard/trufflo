@@ -185,7 +185,8 @@ struct StarterRootView: View {
         // The system tab bar: Liquid Glass, its own animations, and it folds away
         // while a long screen scrolls (Apple, *Adopting Liquid Glass*).
         .tabBarMinimizeBehavior(.onScrollDown)
-        .sheet(isPresented: $showDogForm) { DogFormView() }
+        // Full screen, as in the mock-up: the form is a page of its own.
+        .fullScreenCover(isPresented: $showDogForm) { DogFormView() }
         .sheet(isPresented: $showHousehold) { HouseholdView() }
         // https://trufflo.memolabs.dev/rejoindre/<code> (B-REQ-02, ADR 0009).
         // Anything else that reaches the app is ignored.
