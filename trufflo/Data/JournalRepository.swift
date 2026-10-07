@@ -273,6 +273,32 @@ struct JournalRepository {
         }
     }
 
+    /// A balade from an imported GPX tracé: a balade suivie, its points kept, its
+    /// distance measured from them. Refuses a vanished dog like a manual walk does.
+    @discardableResult
+    func addImportedWalk(_ track: GPXTrack, dogIDs: [UUID]) throws -> WalkRecord {
+        guard !dogIDs.isEmpty else { throw WalkError.missingDog }
+        return try commit {
+            let walk = WalkRecord(startedAt: track.startedAt, endedAt: track.endedAt,
+                                  confirmedSeconds: track.seconds, phase: .completed,
+                                  source: .gps, quality: .gpsRecorded)
+            walk.recordedPathMeters = track.meters
+            walk.trackSegmentCount = Set(track.points.map(\.segment)).count
+            walk.measuredEdgeCount = max(track.points.count - walk.trackSegmentCount, 0)
+            context.insert(walk)
+            for dogID in dogIDs {
+                guard let dog = requireDog(dogID) else { throw JournalError.profileMissing }
+                context.insert(WalkDogRecord(walkID: walk.id, dogID: dog.id, dogNameSnapshot: dog.name))
+            }
+            for (index, point) in track.points.enumerated() {
+                context.insert(TrackPointRecord(walkID: walk.id, sequence: index, segment: point.segment,
+                                                latitude: point.latitude, longitude: point.longitude,
+                                                horizontalAccuracy: 10, timestamp: point.time))
+            }
+            return walk
+        }
+    }
+
     /// The title, mood and note of a balade, as the person writes them.
     func updateWalkDetails(_ id: UUID, title: String, mood: WalkMood?, note: String) throws {
         let cleanTitle = title.trimmingCharacters(in: .whitespacesAndNewlines)

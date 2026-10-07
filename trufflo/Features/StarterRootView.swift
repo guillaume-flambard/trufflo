@@ -131,46 +131,7 @@ struct StarterRootView: View {
                 .tabItem { Label("Foyer", systemImage: "person.3.fill") }
                 .tag(2)
 
-            NavigationStack {
-                List {
-                    if dogs.isEmpty {
-                        TruffloEmptyStateView(
-                            imageName: "EmptyDog",
-                            title: "Aucun chien",
-                            description: "Ajoutez votre chien pour commencer son journal.",
-                            buttonTitle: "Ajouter un chien",
-                            action: { showDogForm = true }
-                        )
-                        // On the sand, not in a white card: a card holds an object.
-                        .listRowBackground(Color.clear)
-                        .listRowSeparator(.hidden)
-                    } else {
-                        let journal = facts
-                        ForEach(dogs) { dog in
-                            // The link sits behind the card so the list draws no
-                            // disclosure chevron outside it.
-                            dogCard(dog, walkCount: journal.walkCount(for: dog.id),
-                                    totalSeconds: journal.totalSeconds(for: dog.id))
-                                .background(NavigationLink(value: DogRoute(id: dog.id)) { EmptyView() }.opacity(0))
-                            .listRowBackground(Color.clear)
-                            .listRowSeparator(.hidden)
-                            .listRowInsets(EdgeInsets(top: 6, leading: TruffloTheme.Spacing.screen, bottom: 6, trailing: TruffloTheme.Spacing.screen))
-                        }
-                    }
-                }
-                .listStyle(.plain)
-                .navigationTitle("Mes chiens")
-                .truffloAura()
-                .truffloScreen()
-                .toolbar {
-                    ToolbarItem(placement: .topBarTrailing) {
-                        Button("Ajouter", systemImage: "plus") { showDogForm = true }
-                            .accessibilityIdentifier("dog.add.secondary")
-                    }
-                }
-                .navigationDestination(for: WalkRoute.self) { WalkDetailView(walkID: $0.id) }
-                .navigationDestination(for: DogRoute.self) { DogDetailView(dogID: $0.id) }
-            }
+            dogsTab
             .tabItem { Label("Chiens", systemImage: "pawprint.fill") }
             .tag(3)
 
@@ -256,21 +217,10 @@ struct StarterRootView: View {
                               },
                               dismiss: { startBlock = nil })
         }
-        .fullScreenCover(isPresented: $showNewWalk) {
-            NewWalkView(dogs: dogs,
-                        onStart: { ids in
-                            Task { @MainActor in
-                                try? await Task.sleep(for: .milliseconds(450))
-                                activeWalkCover = .start(ids)
-                            }
-                        },
-                        onManual: {
-                            Task { @MainActor in
-                                try? await Task.sleep(for: .milliseconds(450))
-                                showWalkForm = true
-                            }
-                        })
-        }
+        .modifier(NewWalkCover(isPresented: $showNewWalk, dogs: dogs,
+                               onStart: { ids in activeWalkCover = .start(ids) },
+                               onManual: { showWalkForm = true },
+                               onAddDog: { showDogForm = true }))
         .fullScreenCover(item: $activeWalkCover) { cover in
             switch cover {
             case .resume(let walkID):
@@ -573,6 +523,50 @@ struct StarterRootView: View {
         }
         .fixedSize(horizontal: false, vertical: true)
         .accessibilityIdentifier("today.week")
+    }
+
+    /// The Chiens tab: one widget per dog, or the empty state.
+    private var dogsTab: some View {
+        NavigationStack {
+                List {
+                    if dogs.isEmpty {
+                        TruffloEmptyStateView(
+                            imageName: "EmptyDog",
+                            title: "Aucun chien",
+                            description: "Ajoutez votre chien pour commencer son journal.",
+                            buttonTitle: "Ajouter un chien",
+                            action: { showDogForm = true }
+                        )
+                        // On the sand, not in a white card: a card holds an object.
+                        .listRowBackground(Color.clear)
+                        .listRowSeparator(.hidden)
+                    } else {
+                        let journal = facts
+                        ForEach(dogs) { dog in
+                            // The link sits behind the card so the list draws no
+                            // disclosure chevron outside it.
+                            dogCard(dog, walkCount: journal.walkCount(for: dog.id),
+                                    totalSeconds: journal.totalSeconds(for: dog.id))
+                                .background(NavigationLink(value: DogRoute(id: dog.id)) { EmptyView() }.opacity(0))
+                            .listRowBackground(Color.clear)
+                            .listRowSeparator(.hidden)
+                            .listRowInsets(EdgeInsets(top: 6, leading: TruffloTheme.Spacing.screen, bottom: 6, trailing: TruffloTheme.Spacing.screen))
+                        }
+                    }
+                }
+                .listStyle(.plain)
+                .navigationTitle("Mes chiens")
+                .truffloAura()
+                .truffloScreen()
+                .toolbar {
+                    ToolbarItem(placement: .topBarTrailing) {
+                        Button("Ajouter", systemImage: "plus") { showDogForm = true }
+                            .accessibilityIdentifier("dog.add.secondary")
+                    }
+                }
+                .navigationDestination(for: WalkRoute.self) { WalkDetailView(walkID: $0.id) }
+                .navigationDestination(for: DogRoute.self) { DogDetailView(dogID: $0.id) }
+            }
     }
 
     private var completedWalks: [WalkRecord] { walks.filter { $0.phase == .completed } }
@@ -887,6 +881,32 @@ private struct TrailingIconLabelStyle: LabelStyle {
         HStack(spacing: 4) {
             configuration.title
             configuration.icon.imageScale(.small)
+        }
+    }
+}
+
+/// "Nouvelle balade" as a full-screen step; each exit waits for the cover to be
+/// gone before opening the next screen, which SwiftUI would otherwise drop.
+private struct NewWalkCover: ViewModifier {
+    @Binding var isPresented: Bool
+    let dogs: [DogRecord]
+    let onStart: ([UUID]) -> Void
+    let onManual: () -> Void
+    let onAddDog: () -> Void
+
+    func body(content: Content) -> some View {
+        content.fullScreenCover(isPresented: $isPresented) {
+            NewWalkView(dogs: dogs,
+                        onStart: { ids in later { onStart(ids) } },
+                        onManual: { later(onManual) },
+                        onAddDog: { later(onAddDog) })
+        }
+    }
+
+    private func later(_ action: @escaping () -> Void) {
+        Task { @MainActor in
+            try? await Task.sleep(for: .milliseconds(450))
+            action()
         }
     }
 }
