@@ -59,7 +59,14 @@ Les corrections conservent l’origine et la révision. Les objectifs passés ne
 
 ## 7. Droits futurs
 
-Le propriétaire du tracé voit ses coordonnées. Les membres autorisés voient les synthèses partagées. Les participants communautaires voient seulement l’événement et le profil publié. Le modérateur voit les données strictement utiles au signalement, pas l’historique GPS local.
+Le propriétaire du tracé voit ses coordonnées. Les membres autorisés voient les synthèses partagées.
+
+Exception décidée par Guillaume le 2026-10-08, « chiens du foyer à proximité » : sur accord explicite
+(réglage du Foyer, désactivé par défaut), un membre partage pendant ses propres balades sa position
+avec les membres de son foyer, et personne d'autre. Le serveur l'arrondit à environ 10 m, l'oublie
+deux minutes après le dernier envoi, n'en garde aucun historique ; le membre l'efface à la fin de la
+balade (`live_positions`, migration `20261008100000`). Aucun tracé ne part, et rien de tel n'existe
+pour les sorties communautaires. Les participants communautaires voient seulement l’événement et le profil publié. Le modérateur voit les données strictement utiles au signalement, pas l’historique GPS local.
 
 Une révocation n’est pas contournable par un rôle mis en cache. Purger à la reconnexion et interdire les lectures serveur immédiatement. Un client hors ligne peut créer un journal local mais ne peut pas confirmer une place dans un événement dont la capacité serveur est inconnue.
 
