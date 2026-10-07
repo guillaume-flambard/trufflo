@@ -27,7 +27,7 @@ enum MockupDemo {
 
         // Today 17:48, the Buttes-Chaumont, as on every mock-up.
         let quartier = gps(context, oslo, minutes: 42, meters: 2140, endedAt: today(17, 48),
-                           from: (48.8823, 2.3797), to: (48.8786, 2.3862))
+                           from: (48.8822, 2.3792), to: (48.8790, 2.3845))
         try repository.updateWalkDetails(quartier.id, title: "Balade dans le quartier", mood: .great,
                                          note: "Il a croisé le beagle de la rue du Parc.\nUne super balade dans la bonne humeur !")
         try repository.setWalkSurroundings(quartier.id, placeName: "Parc des Buttes-Chaumont, Paris 19e",
