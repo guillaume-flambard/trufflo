@@ -32,11 +32,16 @@ enum MockupDemo {
                                          note: "Il a croisé le beagle de la rue du Parc.\nUne super balade dans la bonne humeur !")
         try repository.setWalkSurroundings(quartier.id, placeName: "Parc des Buttes-Chaumont, Paris 19e",
                                            weather: .sunny, temperatureC: 18)
+        // Five photos, on its page; its card shows the tracé, which comes first.
         if let photo { for _ in 0..<5 { try repository.addWalkPhoto(quartier.id, data: photo) } }
 
-        // Yesterday 08:15, added by hand, with a photo.
-        let parc = try repository.addManualWalk(try ManualWalkInput(dogIDs: [oslo.id], durationSeconds: 35 * 60, note: ""),
-                                                endedAt: today(8, 15, daysAgo: 1))
+        // Yesterday 08:15: recorded, 1,87 km measured, but no tracé kept (a
+        // partial measure), so its card shows its photo, as in the mock-up.
+        let parc = WalkRecord(startedAt: today(7, 40, daysAgo: 1), endedAt: today(8, 15, daysAgo: 1),
+                              confirmedSeconds: 35 * 60, phase: .completed, source: .gps, quality: .gpsPartial)
+        parc.recordedPathMeters = 1870
+        context.insert(parc)
+        context.insert(WalkDogRecord(walkID: parc.id, dogID: oslo.id, dogNameSnapshot: oslo.name))
         try repository.updateWalkDetails(parc.id, title: "Tour du parc", mood: .calm, note: "Matin calme et ensoleillé ☀️")
         if let photo { try repository.addWalkPhoto(parc.id, data: photo) }
 

@@ -18,13 +18,14 @@ public struct JournalFilter: Equatable, Sendable {
 
     /// Which balades: all, the suivies (recorded live), or the ajoutées.
     public enum Kind: String, CaseIterable, Sendable {
-        case all, tracked, added
+        case all, tracked, added, photos
 
         public var label: String {
             switch self {
             case .all: "Toutes"
             case .tracked: "Avec GPS"
             case .added: "Ajoutées"
+            case .photos: "Photos"
             }
         }
     }
@@ -43,11 +44,12 @@ public struct JournalFilter: Equatable, Sendable {
     public var isActive: Bool { dogID != nil || period != .all || kind != .all }
 
     /// Whether a balade of this kind passes the chips of the Journal.
-    public func includes(isTracked: Bool) -> Bool {
+    public func includes(isTracked: Bool, hasPhotos: Bool = false) -> Bool {
         switch kind {
         case .all: true
         case .tracked: isTracked
         case .added: !isTracked
+        case .photos: hasPhotos
         }
     }
 

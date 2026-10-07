@@ -56,4 +56,6 @@ private let mirabelle = UUID()
     #expect(!JournalFilter(kind: .added).includes(isTracked: true))
     #expect(JournalFilter().includes(isTracked: false))
     #expect(JournalFilter(kind: .added).isActive)
+    #expect(JournalFilter(kind: .photos).includes(isTracked: true, hasPhotos: true))
+    #expect(!JournalFilter(kind: .photos).includes(isTracked: true, hasPhotos: false))
 }

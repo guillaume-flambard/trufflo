@@ -15,7 +15,7 @@ struct TruffloJournalHero: View {
     /// The status bar's height, set by the screen the hero heads: the photo runs
     /// up under it.
     @Environment(\.heroTopInset) private var topInset
-    private var height: CGFloat { 196 + topInset }
+    private var height: CGFloat { 180 + topInset }
 
     private var hasPhoto: Bool { image != nil }
 
@@ -24,18 +24,18 @@ struct TruffloJournalHero: View {
             backdrop
             VStack(alignment: .leading, spacing: 6) {
                 Text(title)
-                    .font(.system(size: 34, weight: .heavy, design: .rounded))
+                    .font(.system(size: 31, weight: .heavy, design: .rounded))
                     .foregroundStyle(hasPhoto ? Color.white : Color.truffloForest)
                     .accessibilityAddTraits(.isHeader)
                 Text(subtitle)
-                    .font(.system(size: 14))
+                    .font(.system(size: 13))
                     .foregroundStyle(hasPhoto ? Color.white.opacity(0.95) : Color.truffloSlate)
-                    .frame(maxWidth: 200, alignment: .leading)
+                    .frame(maxWidth: 175, alignment: .leading)
                     .fixedSize(horizontal: false, vertical: true)
             }
             .padding(.horizontal, TruffloTheme.Spacing.large)
             // Room for the sand sheet that overlaps the bottom of the photo.
-            .padding(.bottom, 50)
+            .padding(.bottom, 46)
         }
         .frame(height: height)
         .frame(maxWidth: .infinity)
@@ -115,10 +115,10 @@ struct TruffloFilterChips<Value: Hashable>: View {
                     }
                 } label: {
                     Text(option.label)
-                        .font(.system(size: 13, weight: isOn ? .semibold : .regular))
+                        .font(.system(size: 12, weight: isOn ? .semibold : .regular))
                         .foregroundStyle(isOn ? Color.white : Color(red: 0.2, green: 0.2, blue: 0.2))
-                        .padding(.horizontal, 14)
-                        .frame(height: 32)
+                        .padding(.horizontal, 12)
+                        .frame(height: 28)
                         .background(isOn ? Color.truffloForest : Color.black.opacity(0.05), in: Capsule())
                 }
                 .buttonStyle(.plain)

@@ -29,7 +29,7 @@ struct JournalTimelineView: View {
                 // instead of letting the scroll view ignore the safe area, which made
                 // the tab bar believe the list had scrolled and fold away.
                 if let hero { hero.environment(\.heroTopInset, topInset).padding(.top, -topInset) }
-                LazyVStack(alignment: .leading, spacing: 20) {
+                LazyVStack(alignment: .leading, spacing: 14) {
                     if let chips { chips }
                     LostHouseholdNotice()
                     // The mock-up's journal opens on its chips, with no count sentence.
@@ -41,7 +41,7 @@ struct JournalTimelineView: View {
                     ForEach(days, id: \.start) { day in
                         VStack(alignment: .leading, spacing: TruffloTheme.Spacing.small) {
                             Text(heading(for: day.start))
-                                .font(.system(size: 18, weight: .bold, design: .rounded))
+                                .font(.system(size: 16, weight: .bold, design: .rounded))
                                 .foregroundStyle(Color.truffloForest)
                                 .accessibilityAddTraits(.isHeader)
                             ForEach(day.items) { item in
@@ -64,7 +64,7 @@ struct JournalTimelineView: View {
                     }
                 }
                 .padding(.horizontal, TruffloTheme.Spacing.screen)
-                .padding(.top, 18)
+                .padding(.top, 14)
                 .padding(.bottom, TruffloTheme.Spacing.large)
                 // The list rises over the photo on a sand sheet with rounded corners.
                 .background(Color.truffloSand,
@@ -117,7 +117,7 @@ struct JournalTimelineView: View {
     private func heading(for day: Date) -> String {
         if calendar.isDateInToday(day) { return "Aujourd'hui" }
         if calendar.isDateInYesterday(day) { return "Hier" }
-        let text = day.formatted(.dateTime.weekday(.wide).day().month(.wide).locale(Self.locale))
+        let text = day.formatted(.dateTime.weekday(.wide).day().month(.abbreviated).locale(Self.locale))
         return text.prefix(1).uppercased() + text.dropFirst()
     }
 

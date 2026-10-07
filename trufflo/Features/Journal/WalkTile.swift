@@ -190,10 +190,10 @@ private struct JournalWalkCard: View {
                     } icon: {
                         Image(systemName: "figure.walk").foregroundStyle(Color.truffloForest)
                     }
-                    .font(.system(size: 13))
+                    .font(.system(size: 12))
                     .foregroundStyle(Color.truffloSlate)
                     Text(shown.heading)
-                        .font(.system(size: 16, weight: .bold, design: .rounded))
+                        .font(.system(size: 15, weight: .bold, design: .rounded))
                         .foregroundStyle(Color(red: 0.08, green: 0.08, blue: 0.08))
                         .lineLimit(1)
                     if !walk.note.isEmpty {
@@ -214,7 +214,7 @@ private struct JournalWalkCard: View {
                     }
                     VStack(alignment: .leading, spacing: 0) {
                         Text(item.value)
-                            .font(.system(size: 17, weight: .bold, design: .rounded))
+                            .font(.system(size: 16, weight: .bold, design: .rounded))
                             .monospacedDigit()
                             .foregroundStyle(Color.truffloForest)
                         Text(item.label)
@@ -231,7 +231,7 @@ private struct JournalWalkCard: View {
                 }
             }
         }
-        .padding(14)
+        .padding(12)
         .frame(maxWidth: .infinity, alignment: .leading)
         .background(Color.white, in: shape)
         .shadow(color: Color.black.opacity(0.05), radius: 12, y: 4)
@@ -249,7 +249,7 @@ private struct JournalWalkCard: View {
         if let route = shown.route(maxPoints: WalkPresentation.picturePoints) {
             TruffloRouteMap(points: route, cacheKey: "\(walk.id.uuidString)-\(walk.revision)-\(pointCount)",
                             isVivid: true)
-                .frame(width: 118, height: 92)
+                .frame(width: 112, height: 84)
                 .clipShape(pictureShape)
                 .overlay(alignment: .bottomTrailing) {
                     if let photo = shown.leadPhoto {
@@ -258,7 +258,7 @@ private struct JournalWalkCard: View {
                     }
                 }
         } else if let photo = firstPhoto ?? shown.leadPhoto {
-            TruffloDogThumbnail(name: shown.leadName ?? "", photoData: photo, side: 92, width: 118, bordered: false)
+            TruffloDogThumbnail(name: shown.leadName ?? "", photoData: photo, side: 84, width: 112, bordered: false)
         }
     }
 

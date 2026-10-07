@@ -32,6 +32,7 @@ struct StarterRootView: View {
     @Query private var sharedWalks: [SharedWalkRecord]
     @Query private var householdMembers: [HouseholdMemberRecord]
     @Query private var dogLinks: [DogLinkRecord]
+    @Query private var walkPhotos: [WalkPhotoRecord]
     @Environment(HouseholdModel.self) private var household
     @Environment(CommunityModel.self) private var community: CommunityModel?
     @Environment(\.scenePhase) private var scenePhase
@@ -323,12 +324,15 @@ struct StarterRootView: View {
     private var journalContent: some View {
         let completed = walks.filter { $0.phase == .completed }
         let shown = completed.filter { walk in
-            journalFilter.includes(isTracked: walk.source != .manual)
+            journalFilter.includes(isTracked: walk.source != .manual,
+                                   hasPhotos: walkPhotos.contains { $0.walkID == walk.id })
                 && journalFilter.includes(date: walk.endedAt ?? walk.startedAt,
                                           dogIDs: Set(links.filter { $0.walkID == walk.id }.map(\.dogID)))
         }
-        let sharedShown = sharedEntries(own: completed)
-        if completed.isEmpty && sharedWalks.isEmpty {
+        // As in the mock-up, the Journal lists my balades; the foyer's are on the
+        // Foyer tab and in the latest-walk block of Today.
+        let sharedShown: [JournalTimelineView.SharedEntry] = []
+        if completed.isEmpty {
             List {
                 LostHouseholdNotice()
                     .listRowBackground(Color.clear)
@@ -411,9 +415,9 @@ struct StarterRootView: View {
             Spacer(minLength: 0)
             journalFilterMenu
                 .labelStyle(.iconOnly)
-                .font(.system(size: 17, weight: .medium))
+                .font(.system(size: 15, weight: .medium))
                 .foregroundStyle(Color(red: 0.2, green: 0.2, blue: 0.2))
-                .frame(width: 42, height: 42)
+                .frame(width: 34, height: 34)
                 .background(Color.black.opacity(0.05), in: Circle())
         }
     }
