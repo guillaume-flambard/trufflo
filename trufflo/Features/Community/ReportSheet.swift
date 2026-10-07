@@ -50,7 +50,7 @@ struct ReportSheet: View {
                                     .frame(minHeight: 48)
                                     .contentShape(Rectangle())
                                 }
-                                .buttonStyle(.plain)
+                                .buttonStyle(TruffloPressStyle())
                                 .accessibilityAddTraits(reason == item ? .isSelected : [])
                                 .accessibilityIdentifier("report.reason.\(item.rawValue)")
                             }

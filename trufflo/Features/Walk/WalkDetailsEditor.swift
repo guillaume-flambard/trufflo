@@ -17,6 +17,8 @@ struct WalkDetailsEditor: View {
     @State private var note: String
     @State private var picked: [PhotosPickerItem] = []
     @State private var errorMessage: String?
+    /// Photos being read and resized: the "+" tile shows it, the grid waits.
+    @State private var importing = 0
 
     init(walk: WalkRecord) {
         self.walk = walk
@@ -30,7 +32,9 @@ struct WalkDetailsEditor: View {
     var body: some View {
         NavigationStack {
             ScrollView {
-                VStack(alignment: .leading, spacing: TruffloTheme.Spacing.medium) {
+                VStack(alignment: .leading, spacing: 12) {
+                    TruffloScreenHeader(title: "Modifier la balade",
+                                        subtitle: "Ce que vous en gardez : un titre, une humeur, une note, des photos.")
                     section("Titre") {
                         TextField("Ex. Balade dans le quartier", text: $title)
                             .accessibilityIdentifier("walk.details.title")
@@ -46,30 +50,42 @@ struct WalkDetailsEditor: View {
                         LazyVGrid(columns: Array(repeating: GridItem(.flexible(), spacing: 6), count: 3), spacing: 6) {
                             ForEach(photos) { photo in
                                 TruffloDogThumbnail(name: "", photoData: photo.data, side: 100, bordered: false)
+                                    .transition(.scale(scale: 0.85).combined(with: .opacity))
                                     .overlay(alignment: .topTrailing) {
                                         Button {
-                                            try? JournalRepository(context: context).deleteWalkPhoto(photo.id)
+                                            withAnimation(.snappy) {
+                                                _ = try? JournalRepository(context: context).deleteWalkPhoto(photo.id)
+                                            }
                                         } label: {
                                             Image(systemName: "xmark.circle.fill")
                                                 .font(.title3)
                                                 .symbolRenderingMode(.palette)
                                                 .foregroundStyle(.white, .black.opacity(0.5))
                                         }
-                                        .buttonStyle(.plain)
+                                        .buttonStyle(TruffloPressStyle())
                                         .accessibilityLabel("Retirer la photo")
                                         .padding(4)
                                     }
                             }
                             PhotosPicker(selection: $picked, maxSelectionCount: 10, matching: .images) {
-                                Image(systemName: "plus")
-                                    .font(.title2)
-                                    .foregroundStyle(Color.truffloForest)
-                                    .frame(width: 100, height: 100)
-                                    .background(Color.white.opacity(0.7),
-                                                in: RoundedRectangle(cornerRadius: TruffloTheme.Radius.medium, style: .continuous))
+                                Group {
+                                    if importing > 0 {
+                                        ProgressView().tint(Color.truffloForest)
+                                    } else {
+                                        Image(systemName: "plus").font(.title2)
+                                    }
+                                }
+                                .foregroundStyle(Color.truffloForest)
+                                .frame(width: 100, height: 100)
+                                .background(Color(red: 0.95, green: 0.97, blue: 0.95),
+                                            in: RoundedRectangle(cornerRadius: TruffloTheme.Radius.medium, style: .continuous))
+                                .overlay(RoundedRectangle(cornerRadius: TruffloTheme.Radius.medium, style: .continuous)
+                                    .strokeBorder(Color.truffloForest.opacity(0.2), style: StrokeStyle(lineWidth: 1, dash: [5, 4])))
                             }
+                            .disabled(importing > 0)
                             .accessibilityLabel("Ajouter des photos")
                         }
+                        .animation(.snappy, value: photos.count)
                         Text("Les photos restent sur cet iPhone. Leur lieu de prise de vue est retiré.")
                             .font(.footnote)
                             .foregroundStyle(Color.truffloSlate)
@@ -81,12 +97,16 @@ struct WalkDetailsEditor: View {
                 .padding(.horizontal, TruffloTheme.Spacing.screen)
                 .padding(.vertical, TruffloTheme.Spacing.medium)
             }
+            .scrollDismissesKeyboard(.interactively)
+            .truffloAura()
             .background(Color.truffloSand.ignoresSafeArea())
             .navigationTitle("Modifier la balade")
             .navigationBarTitleDisplayMode(.inline)
             .tint(Color.truffloForest)
             .toolbar {
                 ToolbarItem(placement: .cancellationAction) { Button("Annuler") { dismiss() } }
+                // The head says the title; the bar does not repeat it, truncated.
+                ToolbarItem(placement: .principal) { Color.clear.frame(width: 1, height: 1) }
                 ToolbarItem(placement: .confirmationAction) {
                     Button("Enregistrer", action: save).fontWeight(.semibold)
                         .accessibilityIdentifier("walk.details.save")
@@ -99,18 +119,23 @@ struct WalkDetailsEditor: View {
     }
 
     private func section<Content: View>(_ label: String, @ViewBuilder content: () -> Content) -> some View {
-        VStack(alignment: .leading, spacing: TruffloTheme.Spacing.xSmall) {
-            Text(label).font(.system(size: 13, weight: .medium)).foregroundStyle(Color.truffloSlate)
+        VStack(alignment: .leading, spacing: 8) {
+            Text(label).font(.system(size: 13, weight: .semibold)).foregroundStyle(Color.truffloSlate)
             content()
         }
+        .truffloBoardCard(padding: 14)
     }
 
     private func importPhotos(_ items: [PhotosPickerItem]) async {
         guard !items.isEmpty else { return }
+        importing = items.count
+        defer { importing = 0 }
         for item in items {
             if let data = try? await item.loadTransferable(type: Data.self),
                let prepared = PhotoImport.prepare(data) {
-                try? JournalRepository(context: context).addWalkPhoto(walk.id, data: prepared)
+                withAnimation(.snappy) {
+                    _ = try? JournalRepository(context: context).addWalkPhoto(walk.id, data: prepared)
+                }
             }
         }
         picked = []

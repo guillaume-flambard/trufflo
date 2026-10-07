@@ -202,11 +202,13 @@ public struct ActiveWalkView: View {
                     .background(Color.black.opacity(0.55), in: Capsule())
                     .frame(maxHeight: .infinity)
                     .allowsHitTesting(false)
+                    .transition(.scale(scale: 0.9).combined(with: .opacity))
             }
 
             VStack(spacing: 10) {
                 if let banner = guideBanner {
                     banner
+                        .transition(.move(edge: .top).combined(with: .opacity))
                 } else {
                     statsBar
                 }
@@ -246,6 +248,7 @@ public struct ActiveWalkView: View {
                 Spacer(minLength: 0)
                 if let alert = proximityAlert {
                     proximityCard(meters: alert.roundedMeters, dogID: alert.dog.id)
+                        .transition(.move(edge: .bottom).combined(with: .opacity))
                 } else {
                     if guideBanner != nil { statsBar }
                     bottomControls
@@ -255,8 +258,14 @@ public struct ActiveWalkView: View {
             .padding(.top, 8)
             .padding(.bottom, 12)
 
-            if isLocked { lockScreen }
+            if isLocked { lockScreen.transition(.opacity) }
         }
+        // Every change of state of the live screen eases in rather than snaps.
+        .animation(reduceMotion ? nil : .snappy(duration: 0.3), value: viewModel.phase)
+        .animation(reduceMotion ? nil : .snappy(duration: 0.35), value: proximityAlert?.dog.id)
+        .animation(reduceMotion ? nil : .snappy(duration: 0.35), value: guideBanner == nil)
+        .animation(reduceMotion ? nil : .easeInOut(duration: 0.25), value: isLocked)
+        .sensoryFeedback(.warning, trigger: proximityAlert?.dog.id)
         .onChange(of: viewModel.distanceMeters) { _, meters in announceIfNeeded(meters) }
         .onChange(of: viewModel.trackPoints.count) { _, _ in followGuide() }
         .task { seedProximityDemo() }
@@ -340,7 +349,7 @@ public struct ActiveWalkView: View {
                         .frame(width: 32, height: 32)
                         .background(Color.white.opacity(0.15), in: Circle())
                 }
-                .buttonStyle(.plain)
+                .buttonStyle(TruffloPressStyle())
                 .accessibilityLabel("Masquer le guidage")
             }
             .foregroundStyle(.white)
@@ -405,7 +414,7 @@ public struct ActiveWalkView: View {
                     .frame(maxWidth: .infinity, minHeight: 46)
                     .background(Color(red: 0.89, green: 0.94, blue: 0.90), in: Capsule())
             }
-            .buttonStyle(.plain)
+            .buttonStyle(TruffloPressStyle())
         }
         .padding(18)
         .background(Color.white, in: RoundedRectangle(cornerRadius: 26, style: .continuous))
@@ -448,6 +457,8 @@ public struct ActiveWalkView: View {
                 .foregroundStyle(Color(red: 0.08, green: 0.08, blue: 0.08))
                 .lineLimit(1)
                 .minimumScaleFactor(0.6)
+                .contentTransition(.numericText())
+                .animation(reduceMotion ? nil : .snappy(duration: 0.3), value: value)
                 .accessibilityLabel(spoken ?? value)
                 .accessibilityIdentifier(identifier)
             Text(unit)
@@ -473,7 +484,7 @@ public struct ActiveWalkView: View {
                 .background(Color.white, in: Circle())
                 .shadow(color: .black.opacity(0.12), radius: 6, y: 2)
         }
-        .buttonStyle(.plain)
+        .buttonStyle(TruffloPressStyle())
         .accessibilityLabel(label)
         .accessibilityIdentifier(identifier)
     }
@@ -538,7 +549,7 @@ public struct ActiveWalkView: View {
                 .shadow(color: .black.opacity(0.15), radius: 8, y: 3)
                 .contentTransition(.symbolEffect(.replace))
         }
-        .buttonStyle(.plain)
+        .buttonStyle(TruffloPressStyle())
         .sensoryFeedback(.impact(weight: .medium), trigger: viewModel.phase)
         .accessibilityLabel(label)
         .accessibilityIdentifier(identifier)

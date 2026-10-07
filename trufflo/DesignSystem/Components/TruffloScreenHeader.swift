@@ -55,7 +55,7 @@ struct TruffloRoundButton: View {
                 .frame(width: 44, height: 44)
                 .glassEffect(.regular.tint(Color.white.opacity(0.7)).interactive(), in: Circle())
         }
-        .buttonStyle(.plain)
+        .buttonStyle(TruffloPressStyle())
         .accessibilityLabel(label)
         .accessibilityIdentifier(identifier ?? "")
     }
@@ -88,7 +88,7 @@ struct TruffloSectionTitle: View {
                     .font(.system(size: 14))
                     .foregroundStyle(Color.truffloSlate)
                 }
-                .buttonStyle(.plain)
+                .buttonStyle(TruffloPressStyle())
             }
         }
     }
@@ -119,6 +119,8 @@ struct TruffloFigureRow: View {
                     Text(figure.value)
                         .font(.system(size: 17, weight: .bold, design: .rounded))
                         .monospacedDigit()
+                        .contentTransition(.numericText())
+                        .animation(.snappy, value: figure.value)
                         .foregroundStyle(Color.truffloForest)
                         .lineLimit(1)
                         .minimumScaleFactor(0.7)
@@ -165,4 +167,20 @@ enum TruffloTileInk {
     static let walks = Color(red: 0.18, green: 0.42, blue: 0.31)
     static let time = Color(red: 0.85, green: 0.58, blue: 0.17)
     static let last = Color(red: 0.23, green: 0.61, blue: 0.44)
+}
+
+extension View {
+    /// The fade behind a button pinned to the bottom of a screen, so the content
+    /// scrolling under it never collides with its label.
+    func truffloBottomBarFade() -> some View {
+        background(alignment: .bottom) {
+            LinearGradient(stops: [.init(color: Color.truffloSand.opacity(0), location: 0),
+                                   .init(color: Color.truffloSand.opacity(0.92), location: 0.45),
+                                   .init(color: Color.truffloSand, location: 1)],
+                           startPoint: .top, endPoint: .bottom)
+                .padding(.top, -28)
+                .ignoresSafeArea(edges: .bottom)
+                .allowsHitTesting(false)
+        }
+    }
 }

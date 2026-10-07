@@ -17,6 +17,8 @@ struct JournalTimelineView: View {
     /// The photo head of the screen, and the chips under it (2026-10-07 mock-up).
     var hero: AnyView? = nil
     var chips: AnyView? = nil
+    /// Shown with a notice when the filter leaves nothing to list.
+    var onClearFilter: (() -> Void)? = nil
     @State private var topInset: CGFloat = 0
 
     @Environment(\.calendar) private var calendar
@@ -38,6 +40,22 @@ struct JournalTimelineView: View {
                             .font(.subheadline)
                             .foregroundStyle(Color.truffloSlate)
                     }
+                    if days.isEmpty, let onClearFilter {
+                        VStack(alignment: .leading, spacing: 8) {
+                            Label("Aucune balade pour ce filtre", systemImage: "line.3.horizontal.decrease.circle")
+                                .font(.system(size: 16, weight: .semibold, design: .rounded))
+                                .foregroundStyle(Color.truffloForest)
+                            Text("Aucune balade ne correspond au chien et à la période choisis.")
+                                .font(.system(size: 14))
+                                .foregroundStyle(Color.truffloSlate)
+                            Button("Tout afficher", action: onClearFilter)
+                                .font(.system(size: 15, weight: .semibold))
+                                .foregroundStyle(Color.truffloForest)
+                                .padding(.top, 2)
+                        }
+                        .truffloBoardCard()
+                        .transition(.opacity.combined(with: .scale(scale: 0.98)))
+                    }
                     ForEach(days, id: \.start) { day in
                         VStack(alignment: .leading, spacing: TruffloTheme.Spacing.small) {
                             TruffloSectionTitle(heading(for: day.start))
@@ -47,14 +65,14 @@ struct JournalTimelineView: View {
                                     NavigationLink(value: rowDestination(walk.id)) {
                                         JournalWalkTile(walk: walk)
                                     }
-                                    .buttonStyle(.plain)
+                                    .buttonStyle(TruffloPressStyle())
                                     .matchedTransitionSource(id: walk.id, in: zoom)
                                 case .shared(let entry):
                                     NavigationLink(value: SharedWalkRoute(id: entry.walk.id)) {
                                         SharedWalkCard(walk: entry.walk, authorName: entry.authorName,
                                                        possibleDuplicate: entry.possibleDuplicate)
                                     }
-                                    .buttonStyle(.plain)
+                                    .buttonStyle(TruffloPressStyle())
                                 }
                             }
                         }

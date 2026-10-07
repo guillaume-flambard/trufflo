@@ -156,7 +156,7 @@ struct NewWalkView: View {
             .background(isOn ? Color.truffloForest : Color.clear,
                         in: RoundedRectangle(cornerRadius: 18, style: .continuous))
         }
-        .buttonStyle(.plain)
+        .buttonStyle(TruffloPressStyle())
         .disabled(!isEnabled)
         .opacity(isEnabled ? 1 : 0.45)
         .accessibilityAddTraits(isOn ? .isSelected : [])
@@ -180,6 +180,10 @@ struct NewWalkView: View {
                             .frame(width: 5, height: 5)
                     }
                 }
+                // While searching, the dots breathe; once a fix is in, they hold.
+                .phaseAnimator([0.35, 1.0]) { dots, phase in
+                    dots.opacity(accuracy == nil ? phase : 1)
+                } animation: { _ in .easeInOut(duration: 0.8) }
                 Text(signalText).font(.system(size: 12, weight: .medium)).foregroundStyle(Color.truffloForest)
             }
             .padding(.horizontal, 10)
@@ -195,7 +199,7 @@ struct NewWalkView: View {
                     .frame(width: 40, height: 40)
                     .background(Color.white, in: Circle())
             }
-            .buttonStyle(.plain)
+            .buttonStyle(TruffloPressStyle())
             .accessibilityLabel("Recentrer la carte")
             .padding(10)
         }
@@ -280,7 +284,7 @@ struct NewWalkView: View {
                 Image(systemName: "xmark").font(.system(size: 12)).foregroundStyle(Color.truffloSlate)
                     .padding(10).contentShape(Rectangle()).padding(-10)
             }
-            .buttonStyle(.plain)
+            .buttonStyle(TruffloPressStyle())
             .accessibilityLabel("Masquer le conseil")
         }
         .padding(TruffloTheme.Spacing.medium)

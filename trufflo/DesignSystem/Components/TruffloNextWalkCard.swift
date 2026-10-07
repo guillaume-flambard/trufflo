@@ -47,7 +47,7 @@ struct TruffloNextWalkCard<StartButton: View>: View {
                 }
                 .contentShape(Rectangle())
             }
-            .buttonStyle(.plain)
+            .buttonStyle(TruffloPressStyle())
             .accessibilityIdentifier("today.plan")
             startButton()
         }

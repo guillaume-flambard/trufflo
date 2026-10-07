@@ -78,8 +78,8 @@ struct OutingDetailView: View {
     private func content(_ outing: OutingDTO) -> some View {
         let isOrganizer = outing.organizerID == model.userID
         ScrollView {
-            VStack(alignment: .leading, spacing: TruffloTheme.Spacing.large) {
-                VStack(alignment: .leading, spacing: TruffloTheme.Spacing.xSmall) {
+            VStack(alignment: .leading, spacing: 14) {
+                VStack(alignment: .leading, spacing: 8) {
                     if outing.status == .cancelled {
                         Label("Sortie annulée", systemImage: "xmark.circle")
                             .font(.subheadline.weight(.semibold))
@@ -87,18 +87,24 @@ struct OutingDetailView: View {
                             .accessibilityIdentifier("outing.cancelled")
                     }
                     Text(outing.meetingPoint)
-                        .font(.system(.largeTitle, design: .rounded, weight: .heavy))
+                        .font(.truffloScreenTitle)
                         .foregroundStyle(Color.truffloForest)
                         .fixedSize(horizontal: false, vertical: true)
-                    Text("\(OutingFormatting.day(outing.startsAt)), \(OutingFormatting.timeRange(outing))")
-                        .font(.title3)
+                    Label("\(OutingFormatting.day(outing.startsAt)), \(OutingFormatting.timeRange(outing))",
+                          systemImage: "calendar")
+                        .font(.system(size: 15, weight: .semibold))
                         .foregroundStyle(Color.truffloCharcoal)
-                    Text("\(outing.organizerName) organise, \(OutingFormatting.duration(outing.durationMinutes))")
+                    Label("\(outing.organizerName) organise, \(OutingFormatting.duration(outing.durationMinutes))",
+                          systemImage: "person")
+                        .font(.system(size: 14))
                         .foregroundStyle(Color.truffloSlate)
-                    Text(OutingFormatting.places(outing))
-                        .font(.subheadline.weight(.semibold))
+                    Label(OutingFormatting.places(outing), systemImage: "pawprint")
+                        .font(.system(size: 13, weight: .semibold))
                         .foregroundStyle(Color.truffloForest)
-                        .padding(.top, TruffloTheme.Spacing.xxSmall)
+                        .padding(.horizontal, 10)
+                        .padding(.vertical, 6)
+                        .background(Color(red: 0.89, green: 0.94, blue: 0.90), in: Capsule())
+                        .padding(.top, 2)
                 }
 
                 CommunityErrorLine()
@@ -123,8 +129,11 @@ struct OutingDetailView: View {
                         .foregroundStyle(Color.truffloSlate)
                 }
             }
-            .padding(TruffloTheme.Spacing.large)
+            .padding(.horizontal, TruffloTheme.Spacing.screen)
+            .padding(.top, 8)
+            .padding(.bottom, TruffloTheme.Spacing.large)
         }
+        .truffloAura()
         .safeAreaInset(edge: .bottom) { bottomAction(outing, isOrganizer: isOrganizer) }
         .sheet(isPresented: $showJoin) { JoinSheet(outing: outing) }
         .sheet(isPresented: $showReschedule) { OutingEditorView(mode: .reschedule(outing)) }
@@ -151,15 +160,14 @@ struct OutingDetailView: View {
             } else {
                 VStack(alignment: .leading, spacing: TruffloTheme.Spacing.xSmall) {
                     Text("Seul l'organisateur le voit.").font(.subheadline).foregroundStyle(Color.truffloSlate)
-                    HStack(spacing: TruffloTheme.Spacing.large) {
+                    HStack(spacing: 10) {
                         Button("J'y étais") { Task { await model.declareAttendance(outingID, attended: true) } }
+                            .buttonStyle(TruffloCapsuleStyle(prominent: true))
                             .accessibilityIdentifier("outing.attended.yes")
                         Button("Je n'y étais pas") { Task { await model.declareAttendance(outingID, attended: false) } }
+                            .buttonStyle(TruffloCapsuleStyle(prominent: false))
                             .accessibilityIdentifier("outing.attended.no")
                     }
-                    .font(.headline)
-                    .foregroundStyle(Color.truffloForest)
-                    .frame(minHeight: 44)
                 }
             }
         }
@@ -185,7 +193,7 @@ struct OutingDetailView: View {
         let shown = participants.filter { isOrganizer || $0.status == .accepted }
         let pending = shown.filter { $0.status == .requested }
         let accepted = shown.filter { $0.status == .accepted }
-        return VStack(alignment: .leading, spacing: TruffloTheme.Spacing.large) {
+        return VStack(alignment: .leading, spacing: 14) {
             if isOrganizer && !pending.isEmpty {
                 section("Demandes à traiter") {
                     VStack(alignment: .leading, spacing: 0) {
@@ -194,14 +202,10 @@ struct OutingDetailView: View {
                                 personLine(person)
                                 Spacer(minLength: TruffloTheme.Spacing.xSmall)
                                 Button("Refuser") { Task { await model.decide(outingID, userID: person.userID, accept: false) } }
-                                    .font(.subheadline.weight(.semibold))
-                                    .foregroundStyle(Color.truffloSlate)
-                                    .frame(minWidth: 44, minHeight: 44)
+                                    .buttonStyle(TruffloCapsuleStyle(prominent: false))
                                     .accessibilityIdentifier("outing.decline.\(person.displayName)")
                                 Button("Accepter") { Task { await model.decide(outingID, userID: person.userID, accept: true) } }
-                                    .font(.subheadline.weight(.semibold))
-                                    .foregroundStyle(Color.truffloForest)
-                                    .frame(minWidth: 44, minHeight: 44)
+                                    .buttonStyle(TruffloCapsuleStyle(prominent: true))
                                     .accessibilityIdentifier("outing.accept.\(person.displayName)")
                             }
                         }
@@ -275,7 +279,7 @@ struct OutingDetailView: View {
             }
             .padding(.horizontal, TruffloTheme.Spacing.screen)
             .padding(.vertical, TruffloTheme.Spacing.xSmall)
-            .background(Color.truffloSand.opacity(0.95))
+            .truffloBottomBarFade()
         }
     }
 
@@ -309,14 +313,15 @@ struct OutingDetailView: View {
         .frame(maxWidth: .infinity)
         .padding(.horizontal, TruffloTheme.Spacing.screen)
         .padding(.vertical, TruffloTheme.Spacing.xSmall)
-        .background(Color.truffloSand.opacity(0.95))
+        .truffloBottomBarFade()
     }
 
     private func section<Content: View>(_ title: String, @ViewBuilder content: () -> Content) -> some View {
-        VStack(alignment: .leading, spacing: TruffloTheme.Spacing.xSmall) {
-            WalkSectionTitle(title)
+        VStack(alignment: .leading, spacing: 8) {
+            TruffloSectionTitle(title)
             content()
         }
+        .truffloBoardCard()
     }
 }
 
@@ -356,7 +361,7 @@ struct JoinSheet: View {
                                 .frame(minHeight: 48)
                                 .contentShape(Rectangle())
                             }
-                            .buttonStyle(.plain)
+                            .buttonStyle(TruffloPressStyle())
                             .accessibilityAddTraits(chosen.contains(dog.id) ? .isSelected : [])
                             .accessibilityIdentifier("join.dog.\(dog.name)")
                         }

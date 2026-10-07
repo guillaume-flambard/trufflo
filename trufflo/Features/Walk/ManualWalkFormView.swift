@@ -20,7 +20,7 @@ struct ManualWalkFormView: View {
     var body: some View {
         NavigationStack {
             ScrollView {
-                VStack(alignment: .leading, spacing: TruffloTheme.Spacing.large) {
+                VStack(alignment: .leading, spacing: 12) {
                     TruffloScreenHeader(title: "Balade passée",
                                         subtitle: "Une balade faite sans l'app, ajoutée au journal.")
                     label("Qui était là ?") {
@@ -109,6 +109,7 @@ struct ManualWalkFormView: View {
                 .accessibilityIdentifier("walk.save")
                 .padding(.horizontal, TruffloTheme.Spacing.screen)
                 .padding(.bottom, TruffloTheme.Spacing.xSmall)
+                .truffloBottomBarFade()
             }
             .truffloAura()
             .background(Color.truffloSand.ignoresSafeArea())
@@ -148,18 +149,20 @@ struct ManualWalkFormView: View {
             .background(isOn ? Color.truffloForest : Color.white, in: Capsule())
             .overlay(Capsule().strokeBorder(Color.truffloForest.opacity(isOn ? 0 : 0.15), lineWidth: 1))
         }
-        .buttonStyle(.plain)
+        .buttonStyle(TruffloPressStyle())
         .truffloTap(.selection)
         .accessibilityAddTraits(isOn ? .isSelected : [])
     }
 
+    /// One field as a white card with its title inside, as on the dog form.
     private func label<Content: View>(_ text: String, @ViewBuilder content: () -> Content) -> some View {
-        VStack(alignment: .leading, spacing: TruffloTheme.Spacing.xSmall) {
+        VStack(alignment: .leading, spacing: 8) {
             Text(text)
-                .font(.footnote.weight(.semibold))
+                .font(.system(size: 13, weight: .semibold))
                 .foregroundStyle(Color.truffloSlate)
             content()
         }
+        .truffloBoardCard(padding: 14)
     }
 
     private func save() {

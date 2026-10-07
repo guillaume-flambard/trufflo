@@ -39,13 +39,12 @@ struct StarterRootView: View {
     @Environment(CommunityModel.self) private var community: CommunityModel?
     @Environment(\.scenePhase) private var scenePhase
     @State private var showHousehold = false
+    @State private var showSettings = false
+    /// `--demo-open=summary|saved|editor`: one walk screen, for captures.
+    @State private var demoScreen: DemoScreen?
     @State private var showDogForm = false
     @State private var showWalkForm = false
     @State private var activeWalkCover: ActiveWalkCover?
-    @State private var showEraseConfirmation = false
-    @State private var showDeleteAccount = false
-    @State private var accountDeleted = false
-    @State private var showDeleteAccountError = false
     @State private var storageError = false
     @AppStorage("hasCompletedOnboarding") private var hasCompletedOnboarding = false
     @State private var showOnboardingSheet = false
@@ -58,6 +57,7 @@ struct StarterRootView: View {
     /// would otherwise be two sources for the same zoom.
     @Namespace private var todayZoom
     @Namespace private var journalZoom
+    @Namespace private var dogsZoom
     @State private var journalFilter = JournalFilter()
     /// `--demo-tab=N` (UI test runs only) opens a tab directly, for screen captures.
     @State private var selectedTab = ProcessInfo.processInfo.arguments.contains("--uitesting")
@@ -83,31 +83,8 @@ struct StarterRootView: View {
                 .truffloScreen()
                 .toolbar {
                     ToolbarItem(placement: .topBarTrailing) {
-                        Menu("Réglages", systemImage: "gearshape") {
-                            Button("Foyer partagé", systemImage: "person.2") {
-                                selectedTab = 2
-                            }
-                            .accessibilityIdentifier("household.open")
-                            Button("Exporter le journal", systemImage: "square.and.arrow.up") {
-                                exportJournal()
-                            }
-                            .accessibilityIdentifier("journal.export")
-                            Button("Revoir l'introduction", systemImage: "sparkles") {
-                                showOnboardingSheet = true
-                            }
-                            if household.isSignedIn {
-                                Button("Se déconnecter", systemImage: "rectangle.portrait.and.arrow.right") {
-                                    Task { await household.signOut() }
-                                }
-                                Button("Supprimer mon compte", systemImage: "person.crop.circle.badge.xmark",
-                                       role: .destructive) {
-                                    showDeleteAccount = true
-                                }
-                            }
-                            Button("Effacer toutes les données", systemImage: "trash", role: .destructive) {
-                                showEraseConfirmation = true
-                            }
-                        }
+                        Button("Réglages", systemImage: "gearshape") { showSettings = true }
+                            .accessibilityIdentifier("settings.open")
                     }
                 }
                 .navigationDestination(for: WalkRoute.self) { WalkDetailView(walkID: $0.id).navigationTransition(.zoom(sourceID: $0.id, in: todayZoom)) }
@@ -122,17 +99,8 @@ struct StarterRootView: View {
                 .navigationTitle("Journal")
                 .truffloAura()
                 .truffloScreen()
-                // The photo head carries the title and the "+"; the bar only comes
-                // back for the empty journal, which has no head.
-                .toolbarVisibility(journalHasList ? .hidden : .automatic, for: .navigationBar)
-                .toolbar {
-                    if !journalHasList && !dogs.isEmpty && liveWalk == nil {
-                        ToolbarItem(placement: .topBarTrailing) {
-                            Button("Ajouter une balade", systemImage: "plus") { showWalkForm = true }
-                                .accessibilityIdentifier("walk.manual.add")
-                        }
-                    }
-                }
+                // The screen head carries the title and the "+", in every state.
+                .toolbarVisibility(.hidden, for: .navigationBar)
                 .navigationDestination(for: WalkRoute.self) { WalkDetailView(walkID: $0.id).navigationTransition(.zoom(sourceID: $0.id, in: journalZoom)) }
                 .navigationDestination(for: DogRoute.self) { DogDetailView(dogID: $0.id) }
                 .navigationDestination(for: SharedWalkRoute.self) { SharedWalkDetailView(walkID: $0.id) }
@@ -261,39 +229,40 @@ struct StarterRootView: View {
             #if DEBUG
             if ProcessInfo.processInfo.arguments.contains("--show-onboarding") { showOnboardingSheet = true }
             if ProcessInfo.processInfo.arguments.contains("--open-household") { showHousehold = true }
-            #endif
-        }
-        .confirmationDialog("Supprimer votre compte Trufflo ?",
-                            isPresented: $showDeleteAccount, titleVisibility: .visible) {
-            Button("Supprimer mon compte", role: .destructive) {
-                Task {
-                    accountDeleted = await household.deleteAccount()
-                    showDeleteAccountError = !accountDeleted
+            // `--demo-open=<sheet>` opens one presentation, for screen captures.
+            if let open = ProcessInfo.processInfo.arguments.first(where: { $0.hasPrefix("--demo-open=") })?
+                .dropFirst("--demo-open=".count) {
+                switch open {
+                case "settings": showSettings = true
+                case "plan": showPlan = true
+                case "newwalk": showNewWalk = true
+                case "manual": showWalkForm = true
+                case "dogform": showDogForm = true
+                case "blocked": startBlock = .permissionDenied
+                case "summary", "saved", "editor":
+                    if let walk = walks.first(where: { $0.phase == .completed && $0.source == .gps }) {
+                        demoScreen = DemoScreen(kind: String(open), walkID: walk.id)
+                    }
+                default: break
                 }
             }
-        } message: {
-            Text("Votre compte et ce que le serveur garde pour vous sont supprimés : vos balades partagées, votre nom dans le foyer. Le journal de cet iPhone reste.")
+            #endif
         }
-        .alert("Compte supprimé", isPresented: $accountDeleted) {
-            Button("OK", role: .cancel) {}
-        } message: {
-            Text("Votre compte n'existe plus. Votre journal reste sur cet iPhone.")
+        .fullScreenCover(item: $demoScreen) { screen in
+            switch screen.kind {
+            case "summary": WalkSummaryView(walkID: screen.walkID, style: .celebration) { demoScreen = nil }
+            case "saved": WalkSummaryView(walkID: screen.walkID, style: .saved) { demoScreen = nil }
+            default:
+                if let walk = walks.first(where: { $0.id == screen.walkID }) { WalkDetailsEditor(walk: walk) }
+            }
         }
-        .alert("Suppression impossible", isPresented: Binding(
-            get: { household.errorMessage != nil && showDeleteAccountError },
-            set: { if !$0 { showDeleteAccountError = false } }
-        )) {
-            Button("OK", role: .cancel) {}
-        } message: {
-            Text(household.errorMessage ?? "")
-        }
-        .confirmationDialog("Effacer le journal et les chiens de cet iPhone ?",
-                            isPresented: $showEraseConfirmation, titleVisibility: .visible) {
-            Button("Tout effacer", role: .destructive, action: eraseAll)
-        } message: {
-            Text(sharedWalks.isEmpty && dogLinks.isEmpty
-                 ? "Cette suppression locale ne peut pas être annulée."
-                 : "Cette suppression locale ne peut pas être annulée. Ce que vous avez déjà partagé avec le foyer y reste visible.")
+        .sheet(isPresented: $showSettings) {
+            SettingsView(hasSharedData: !sharedWalks.isEmpty || !dogLinks.isEmpty,
+                         onOpenFoyer: { selectedTab = 2 },
+                         // Another presentation waits for the sheet to finish leaving.
+                         onExport: { afterSheet(exportJournal) },
+                         onShowIntroduction: { afterSheet { showOnboardingSheet = true } },
+                         onErase: eraseAll)
         }
         .alert("Enregistrement impossible", isPresented: $storageError) {
             Button("Fermer", role: .cancel) {}
@@ -318,20 +287,21 @@ struct StarterRootView: View {
         let sharedShown = journalFilter.kind == .household ? sharedEntries(own: completed) : []
         if completed.isEmpty {
             ScrollView {
-                LostHouseholdNotice()
-                // "Journal (état vide)" of the 2026-10-07 board.
-                TruffloEmptyScene(picture: .journal,
-                                  title: "Aucune balade pour l'instant",
-                                  message: "Vos promenades apparaîtront ici. Commencez une balade pour créer votre premier souvenir.",
-                                  buttonTitle: "Démarrer une balade", buttonIcon: "play.fill",
-                                  buttonIdentifier: "journal.start",
-                                  action: { selectedTab = 0; startWalk() })
-                    .padding(.top, 120)
+                VStack(alignment: .leading, spacing: 14) {
+                    journalHeader
+                    LostHouseholdNotice()
+                    // "Journal (état vide)" of the 2026-10-07 board.
+                    TruffloEmptyScene(picture: .journal,
+                                      title: "Aucune balade pour l'instant",
+                                      message: "Vos promenades apparaîtront ici. Commencez une balade pour créer votre premier souvenir.",
+                                      buttonTitle: "Démarrer une balade", buttonIcon: "play.fill",
+                                      buttonIdentifier: "journal.start",
+                                      action: { selectedTab = 0; startWalk() })
+                        .padding(.top, 40)
+                }
+                .padding(.horizontal, TruffloTheme.Spacing.screen)
+                .padding(.top, 8)
             }
-        } else if shown.isEmpty && sharedShown.isEmpty {
-            TruffloNotice(title: "Aucune balade pour ce filtre",
-                          message: "Aucune balade ne correspond au chien et à la période choisis.",
-                          actionTitle: "Tout afficher") { journalFilter = JournalFilter() }
         } else {
             JournalTimelineView(walks: shown, shared: sharedShown,
                                 filterSummary: journalFilter.isActive ? filterSummary(count: shown.count + sharedShown.count) : nil,
@@ -343,16 +313,23 @@ struct StarterRootView: View {
                                 rowDestination: { WalkRoute(id: $0) },
                                 hero: nil,
                                 chips: AnyView(VStack(alignment: .leading, spacing: 14) {
-                                    TruffloScreenHeader(
-                                        title: "Journal",
-                                        subtitle: weekLine,
-                                        action: liveWalk == nil
-                                            ? .init(systemImage: "plus", label: "Ajouter une balade",
-                                                    identifier: "walk.manual.add") { showWalkForm = true }
-                                            : nil)
+                                    journalHeader
                                     journalChips
-                                }))
+                                }),
+                                // A filter with no result keeps the head and the chips, and
+                                // says so under them, with the way back.
+                                onClearFilter: { withAnimation(.snappy) { journalFilter = JournalFilter() } })
         }
+    }
+
+    private var journalHeader: some View {
+        TruffloScreenHeader(
+            title: "Journal",
+            subtitle: weekLine,
+            action: liveWalk == nil && !dogs.isEmpty
+                ? .init(systemImage: "plus", label: "Ajouter une balade",
+                        identifier: "walk.manual.add") { showWalkForm = true }
+                : nil)
     }
 
     /// Walks of the other members, under the same filter. The dog filter
@@ -390,14 +367,10 @@ struct StarterRootView: View {
         return parts.joined(separator: ", ")
     }
 
-    private var journalHasList: Bool {
-        walks.contains { $0.phase == .completed } || !sharedWalks.isEmpty
-    }
-
     /// The line under the Journal title: this week's count, as Today counts it.
     private var weekLine: String {
         switch facts.week.walkCount {
-        case 0: "Tous les souvenirs de vos balades avec \(dogNames)."
+        case 0: dogs.isEmpty ? "Vos balades apparaîtront ici." : "Tous les souvenirs de vos balades avec \(dogNames)."
         case 1: "1 balade cette semaine"
         default: "\(facts.week.walkCount) balades cette semaine"
         }
@@ -476,6 +449,7 @@ struct StarterRootView: View {
                 VStack(alignment: .leading, spacing: 14) {
                     accueilHeader
                         .padding(.bottom, 64)
+                        .truffloAppear(order: 0)
 
                     if let currentWalk = liveWalk {
                         liveWalkSection(currentWalk)
@@ -484,12 +458,14 @@ struct StarterRootView: View {
                                             onPlan: { showPlan = true }) {
                             startButton
                         }
+                        .truffloAppear(order: 1)
                     }
 
                     if completedWalks.isEmpty {
                         firstWalkPlaceholder
                     } else {
                         todayTiles(journal)
+                            .truffloAppear(order: 2)
                     }
 
                     if let line = routineLine(for: dogs[0]) {
@@ -523,12 +499,14 @@ struct StarterRootView: View {
                             NavigationLink(value: WalkRoute(id: lastWalk.id)) {
                                 TruffloLastWalkRow(walk: lastWalk)
                             }
-                            .buttonStyle(.plain)
+                            .buttonStyle(TruffloPressStyle())
                             .matchedTransitionSource(id: lastWalk.id, in: todayZoom)
                         }
+                        .truffloAppear(order: 3)
                     }
                     householdLatestWalkSection
                     TruffloDailyTip()
+                        .truffloAppear(order: 4)
                     if !completedWalks.isEmpty {
                         HouseholdPrompt(place: .today, dogName: dogNames, isSeveral: dogs.count > 1) { selectedTab = 2 }
                     }
@@ -570,7 +548,7 @@ struct StarterRootView: View {
                 }
                 .foregroundStyle(Color(red: 0.08, green: 0.08, blue: 0.08))
             }
-            .buttonStyle(.plain)
+            .buttonStyle(TruffloPressStyle())
             .accessibilityIdentifier("today.dog")
             if dogs.count == 1, !facts.isEmpty {
                 Label(facts, systemImage: "checkmark.seal.fill")
@@ -586,7 +564,7 @@ struct StarterRootView: View {
                         .font(.truffloBodyHeavy)
                         .foregroundStyle(Color.truffloForest)
                 }
-                .buttonStyle(.plain)
+                .buttonStyle(TruffloPressStyle())
                 .accessibilityIdentifier("today.addPhoto")
             }
         }
@@ -648,7 +626,8 @@ struct StarterRootView: View {
                                 TruffloDogCard(dog: dog, walkCount: journal.walkCount(for: dog.id),
                                                totalSeconds: journal.totalSeconds(for: dog.id))
                             }
-                            .buttonStyle(.plain)
+                            .buttonStyle(TruffloPressStyle())
+                            .matchedTransitionSource(id: dog.id, in: dogsZoom)
                             .accessibilityIdentifier("dog.row.\(dog.id.uuidString)")
                         }
                     }
@@ -661,7 +640,9 @@ struct StarterRootView: View {
             .toolbar(.hidden, for: .navigationBar)
             .navigationTitle("Mes chiens")
             .navigationDestination(for: WalkRoute.self) { WalkDetailView(walkID: $0.id) }
-            .navigationDestination(for: DogRoute.self) { DogDetailView(dogID: $0.id) }
+            .navigationDestination(for: DogRoute.self) {
+                DogDetailView(dogID: $0.id).navigationTransition(.zoom(sourceID: $0.id, in: dogsZoom))
+            }
         }
     }
 
@@ -682,7 +663,7 @@ struct StarterRootView: View {
                 NavigationLink(value: SharedWalkRoute(id: entry.walk.id)) {
                     SharedWalkCard(walk: entry.walk, authorName: entry.authorName, showsDay: true)
                 }
-                .buttonStyle(.plain)
+                .buttonStyle(TruffloPressStyle())
             }
             .accessibilityIdentifier("today.householdLatestWalk")
         }
@@ -835,6 +816,13 @@ struct StarterRootView: View {
 
     /// Builds the archive (a summary CSV plus one GPX per recorded route) and
     /// hands it to the share sheet, where the person chooses where it goes.
+    private func afterSheet(_ action: @escaping @MainActor () -> Void) {
+        Task { @MainActor in
+            try? await Task.sleep(for: .milliseconds(450))
+            action()
+        }
+    }
+
     private func exportJournal() {
         do {
             let walks = try JournalRepository(context: context).exportWalks()
@@ -894,4 +882,11 @@ private struct NewWalkCover: ViewModifier {
             action()
         }
     }
+}
+
+/// A walk screen opened directly by `--demo-open`, for captures (DEBUG runs).
+private struct DemoScreen: Identifiable {
+    let kind: String
+    let walkID: UUID
+    var id: String { kind }
 }

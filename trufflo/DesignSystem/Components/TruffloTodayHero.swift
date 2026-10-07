@@ -102,6 +102,9 @@ struct TruffloStatTile: View {
                 .lineLimit(1)
                 .minimumScaleFactor(0.7)
                 .frame(height: 22, alignment: .leading)
+                // A figure that changes rolls to its new value.
+                .contentTransition(.numericText())
+                .animation(.snappy, value: value)
             Text(label)
                 .font(.system(size: 12))
                 .foregroundStyle(Color(red: 0.42, green: 0.42, blue: 0.42))
@@ -133,6 +136,7 @@ struct TruffloDogThumbnail: View {
 
     @State private var image: UIImage?
     @State private var focus = FocalCrop.fallbackFocus
+    @Environment(\.accessibilityReduceMotion) private var reduceMotion
     @Environment(\.displayScale) private var displayScale
 
     var body: some View {
@@ -154,11 +158,15 @@ struct TruffloDogThumbnail: View {
         .shadow(color: .black.opacity(bordered ? 0.15 : 0), radius: 6, y: 3)
         .accessibilityLabel("Photo de \(name)")
         .task(id: photoData) {
-            let decoded = TruffloDogPortrait.downsampled(photoData, to: 900)
-            image = decoded
-            focus = await Task.detached(priority: .userInitiated) {
-                decoded?.cgImage.map(DogFocus.focus(in:)) ?? FocalCrop.fallbackFocus
+            // Decoded and aimed off the main thread, so a list of thumbnails
+            // scrolls without a hitch; the photo fades in over the mint.
+            let source = photoData
+            let (decoded, aim) = await Task.detached(priority: .userInitiated) {
+                let decoded = TruffloDogPortrait.downsampled(source, to: 900)
+                return (decoded, decoded?.cgImage.map(DogFocus.focus(in:)) ?? FocalCrop.fallbackFocus)
             }.value
+            focus = aim
+            withAnimation(reduceMotion ? nil : .easeOut(duration: 0.25)) { image = decoded }
         }
     }
 }

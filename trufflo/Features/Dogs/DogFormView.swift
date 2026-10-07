@@ -91,7 +91,7 @@ struct DogFormView: View {
                             .contentShape(Rectangle())
                             .modifier(FormFieldStyle())
                         }
-                        .buttonStyle(.plain)
+                        .buttonStyle(TruffloPressStyle())
                         .accessibilityLabel("Race : \(breedChoice.summary)")
                         .accessibilityHint("Ouvre la recherche de race")
                         .accessibilityIdentifier("dog.breed")
@@ -175,7 +175,8 @@ struct DogFormView: View {
                 .truffloTap()
                 .accessibilityIdentifier("dog.save")
                 .padding(.horizontal, TruffloTheme.Spacing.screen)
-                .padding(.bottom, -6)
+                .padding(.bottom, 4)
+                .truffloBottomBarFade()
             }
             .background(Color.truffloSand.ignoresSafeArea())
             .onChange(of: selectedPhotoItem) { _, newItem in
@@ -397,7 +398,7 @@ struct TruffloChoice: View {
                         .background(isOn ? Color(red: 0.86, green: 0.93, blue: 0.89) : Color.black.opacity(0.03),
                                     in: Capsule())
                 }
-                .buttonStyle(.plain)
+                .buttonStyle(TruffloPressStyle())
                 .accessibilityAddTraits(isOn ? .isSelected : [])
             }
         }
@@ -425,7 +426,7 @@ struct TraitChips: View {
                                     in: Capsule())
                         .overlay(Capsule().strokeBorder(isOn ? Color.truffloForest.opacity(0.4) : .clear, lineWidth: 1))
                 }
-                .buttonStyle(.plain)
+                .buttonStyle(TruffloPressStyle())
                 .accessibilityAddTraits(isOn ? .isSelected : [])
             }
         }

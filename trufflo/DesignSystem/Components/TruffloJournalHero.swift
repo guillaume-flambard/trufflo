@@ -48,7 +48,7 @@ struct TruffloJournalHero: View {
                         .frame(width: 42, height: 42)
                         .glassEffect(.regular.tint(Color.white.opacity(0.7)).interactive(), in: Circle())
                 }
-                .buttonStyle(.plain)
+                .buttonStyle(TruffloPressStyle())
                 .accessibilityLabel("Ajouter une balade")
                 .accessibilityIdentifier("walk.manual.add")
                 .padding(.trailing, TruffloTheme.Spacing.large)
@@ -125,7 +125,7 @@ struct TruffloFilterChips<Value: Hashable>: View {
                         .background(isOn ? Color.truffloForest : Color.black.opacity(0.05), in: Capsule())
                         .fixedSize()
                 }
-                .buttonStyle(.plain)
+                .buttonStyle(TruffloPressStyle())
                 .accessibilityAddTraits(isOn ? .isSelected : [])
             }
         }

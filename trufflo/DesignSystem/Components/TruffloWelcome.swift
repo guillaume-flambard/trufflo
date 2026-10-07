@@ -19,7 +19,9 @@ struct TruffloEmptyScene: View {
         VStack(spacing: 18) {
             illustration
                 .frame(height: 220)
+                .truffloFloat()
                 .accessibilityHidden(true)
+                .truffloAppear(order: 0)
             Text(title)
                 .font(.system(size: 24, weight: .heavy, design: .rounded))
                 .foregroundStyle(Color.truffloForest)
@@ -40,6 +42,7 @@ struct TruffloEmptyScene: View {
             .tint(Color.truffloForest)
             .accessibilityIdentifier(buttonIdentifier)
             .padding(.top, 6)
+            .truffloAppear(order: 2)
             if let linkTitle, let linkAction {
                 Button(linkTitle, action: linkAction)
                     .font(.system(size: 14, weight: .medium))

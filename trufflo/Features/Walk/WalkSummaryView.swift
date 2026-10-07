@@ -126,9 +126,11 @@ struct WalkSummaryView: View {
                 }
                 .padding(.vertical, 12)
                 .background(Color.white.opacity(0.9), in: RoundedRectangle(cornerRadius: 22, style: .continuous))
+                .truffloAppear(order: 2)
 
                 MoodChips(selection: $mood)
                     .frame(maxWidth: .infinity, alignment: .center)
+                    .truffloAppear(order: 3)
 
                 TextField("“ Un mot sur la balade… ”", text: $note, axis: .vertical)
                     .font(.system(size: 15).italic())
@@ -137,6 +139,7 @@ struct WalkSummaryView: View {
                     .padding(14)
                     .background(Color.white.opacity(0.7), in: RoundedRectangle(cornerRadius: 18, style: .continuous))
                     .accessibilityIdentifier("walk.summary.note")
+                    .truffloAppear(order: 4)
 
                 Text(WalkFormatting.quality(walk.quality) + (qualityHint(for: walk.quality).map { ". " + $0 } ?? ""))
                     .font(.footnote)
@@ -161,7 +164,7 @@ struct WalkSummaryView: View {
                             .frame(maxWidth: .infinity, minHeight: 48)
                             .overlay(Capsule().strokeBorder(Color.truffloForest.opacity(0.5), lineWidth: 1.5))
                     }
-                    .buttonStyle(.plain)
+                    .buttonStyle(TruffloPressStyle())
 
                     ShareLink(item: shareText(walk, shown)) {
                         Text("Partager la balade")
@@ -216,9 +219,11 @@ struct WalkSummaryView: View {
         return ScrollView {
             VStack(spacing: 0) {
                 ZStack {
-                    if let route = shown.route(maxPoints: WalkPresentation.picturePoints) {
-                        TruffloRouteMap(points: route, cacheKey: "\(walk.id.uuidString)-\(walk.revision)-summary",
-                                        isVivid: true)
+                    if let route = shown.route(), !route.isEmpty {
+                        // The live map, framed on the tracé, as on the walk page.
+                        TruffloTrackMap(points: route, isLive: false, showsMarkers: true,
+                                        isFollowing: $isFollowingTrack)
+                            .allowsHitTesting(false)
                     } else {
                         Color(red: 0.89, green: 0.94, blue: 0.90)
                     }
@@ -285,7 +290,7 @@ struct WalkSummaryView: View {
                         .frame(maxWidth: .infinity, minHeight: 52)
                         .background(Color.truffloForest, in: Capsule())
                 }
-                .buttonStyle(.plain)
+                .buttonStyle(TruffloPressStyle())
                 .accessibilityIdentifier("walk.saved.details")
 
                 Button("Fermer", action: onDone)

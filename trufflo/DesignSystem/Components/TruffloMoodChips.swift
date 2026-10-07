@@ -10,20 +10,27 @@ struct MoodChips: View {
             ForEach(WalkMood.allCases, id: \.self) { mood in
                 let isOn = selection == mood
                 Button {
-                    selection = isOn ? nil : mood
+                    withAnimation(.snappy) { selection = isOn ? nil : mood }
                 } label: {
-                    Label(mood.label, systemImage: mood.systemImage)
+                    Label {
+                        Text(mood.label)
+                    } icon: {
+                        Image(systemName: mood.systemImage)
+                            .symbolEffect(.bounce, value: isOn)
+                    }
                         .font(.system(size: 13, weight: isOn ? .semibold : .regular))
                         .foregroundStyle(isOn ? Color.truffloForest : Color.truffloCharcoal)
                         .padding(.horizontal, 12)
                         .frame(minHeight: 34)
                         .background(isOn ? Color(red: 0.86, green: 0.93, blue: 0.89) : Color.black.opacity(0.03),
                                     in: Capsule())
+                        .overlay(Capsule().strokeBorder(isOn ? Color.truffloForest.opacity(0.35) : .clear, lineWidth: 1))
                 }
-                .buttonStyle(.plain)
+                .buttonStyle(TruffloPressStyle())
                 .accessibilityAddTraits(isOn ? .isSelected : [])
             }
         }
+        .sensoryFeedback(.selection, trigger: selection)
         .accessibilityIdentifier("walk.mood")
     }
 }

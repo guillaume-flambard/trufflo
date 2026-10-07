@@ -446,7 +446,7 @@ struct HouseholdView: View {
                             Divider()
                             Button("Retirer du foyer", role: .destructive) { memberToRemove = member }
                         } label: { face }
-                        .buttonStyle(.plain)
+                        .buttonStyle(TruffloPressStyle())
                         .accessibilityHint("Changer son rôle ou le retirer du foyer")
                         .accessibilityIdentifier("household.member.\(member.userID.uuidString)")
                     } else {
@@ -470,7 +470,7 @@ struct HouseholdView: View {
                         }
                         .frame(width: 64)
                     }
-                    .buttonStyle(.plain)
+                    .buttonStyle(TruffloPressStyle())
                 }
             }
             .padding(.horizontal, TruffloTheme.Spacing.screen)
@@ -506,7 +506,7 @@ struct HouseholdView: View {
                 }
                 .contentShape(Rectangle())
             }
-            .buttonStyle(.plain)
+            .buttonStyle(TruffloPressStyle())
             if showsSyncDetails {
                 SyncStatusCard(household: household, isBusy: model.isBusy) {
                     Task { await model.syncNow() }
@@ -561,7 +561,7 @@ struct HouseholdView: View {
                                 .font(.system(size: 13))
                                 .foregroundStyle(Color.truffloSlate)
                         }
-                        .buttonStyle(.plain)
+                        .buttonStyle(TruffloPressStyle())
                     }
                 }
                 VStack(spacing: 0) {
@@ -909,7 +909,7 @@ private struct ChoiceCard: View {
                 Rectangle().fill(Color.truffloForest.opacity(0.1)).frame(height: 1)
             }
         }
-        .buttonStyle(.plain)
+        .buttonStyle(TruffloPressStyle())
         .accessibilityElement(children: .combine)
         .accessibilityAddTraits(.isButton)
     }
@@ -1048,7 +1048,7 @@ private struct SyncStatusCard: View {
                     .frame(width: 44, height: 44)
                     .background(Color.truffloMint.opacity(0.55), in: Circle())
             }
-            .buttonStyle(.plain)
+            .buttonStyle(TruffloPressStyle())
             .accessibilityLabel("Synchroniser maintenant")
             .accessibilityIdentifier("household.sync")
         }
@@ -1214,7 +1214,7 @@ private struct JoinDogsStep: View {
                 .background(isOn ? Color.truffloForest : Color.truffloSand, in: Capsule())
                 .overlay(Capsule().strokeBorder(Color.truffloForest.opacity(isOn ? 0 : 0.15), lineWidth: 1))
         }
-        .buttonStyle(.plain)
+        .buttonStyle(TruffloPressStyle())
         .accessibilityAddTraits(isOn ? .isSelected : [])
     }
 }

@@ -146,7 +146,7 @@ struct RoutineFormView: View {
                 .background(isOn ? Color.truffloForest : Color.white, in: Capsule())
                 .overlay(Capsule().strokeBorder(Color.truffloForest.opacity(isOn ? 0 : 0.15), lineWidth: 1))
         }
-        .buttonStyle(.plain)
+        .buttonStyle(TruffloPressStyle())
         .truffloTap(.selection)
         .accessibilityAddTraits(isOn ? .isSelected : [])
     }

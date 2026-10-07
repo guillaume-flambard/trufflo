@@ -47,7 +47,7 @@ struct TruffloDailyTip: View {
                 }
                 Spacer(minLength: 0)
                 Button {
-                    dismissedDay = today
+                    withAnimation(.snappy) { dismissedDay = today }
                 } label: {
                     Image(systemName: "xmark")
                         .font(.system(size: 14, weight: .regular))
@@ -65,6 +65,7 @@ struct TruffloDailyTip: View {
             .background(Color(red: 0.89, green: 0.94, blue: 0.90).opacity(0.92),
                         in: RoundedRectangle(cornerRadius: TruffloTheme.Radius.card, style: .continuous))
             .accessibilityIdentifier("today.tip")
+            .transition(.opacity.combined(with: .scale(scale: 0.96)))
         }
     }
 }

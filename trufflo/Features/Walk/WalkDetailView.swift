@@ -277,7 +277,7 @@ struct WalkDetailView: View {
                             .font(.system(size: 13))
                             .foregroundStyle(Color.truffloSlate)
                     }
-                    .buttonStyle(.plain)
+                    .buttonStyle(TruffloPressStyle())
                 }
             }
             if photos.isEmpty {
@@ -291,7 +291,7 @@ struct WalkDetailView: View {
                         .overlay(RoundedRectangle(cornerRadius: 16, style: .continuous)
                             .strokeBorder(Color.truffloForest.opacity(0.2), style: StrokeStyle(lineWidth: 1, dash: [5, 4])))
                 }
-                .buttonStyle(.plain)
+                .buttonStyle(TruffloPressStyle())
                 .accessibilityIdentifier("walk.photos.add")
             } else {
                 HStack(spacing: 6) {
@@ -308,7 +308,7 @@ struct WalkDetailView: View {
                                     }
                                 }
                         }
-                        .buttonStyle(.plain)
+                        .buttonStyle(TruffloPressStyle())
                         .accessibilityLabel("Photo \(index + 1) sur \(photos.count)")
                     }
                 }
@@ -408,7 +408,7 @@ struct WalkDetailView: View {
             .frame(minHeight: 44)
             .contentShape(Rectangle())
         }
-        .buttonStyle(.plain)
+        .buttonStyle(TruffloPressStyle())
         .truffloTap()
         .accessibilityIdentifier(identifier)
     }

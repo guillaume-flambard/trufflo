@@ -82,7 +82,7 @@ struct DogDetailView: View {
                                     .frame(width: 124, height: 124)
                                     .background(Color(red: 0.89, green: 0.94, blue: 0.90), in: Circle())
                             }
-                            .buttonStyle(.plain)
+                            .buttonStyle(TruffloPressStyle())
                             .accessibilityLabel("Ajouter une photo de \(dog.name)")
                             .accessibilityIdentifier("dog.addPhoto")
                         }
@@ -125,7 +125,7 @@ struct DogDetailView: View {
                             .padding(.top, 4)
                         ForEach(recentWalks) { walk in
                             NavigationLink(value: WalkRoute(id: walk.id)) { TruffloLastWalkRow(walk: walk) }
-                                .buttonStyle(.plain)
+                                .buttonStyle(TruffloPressStyle())
                         }
                     }
 
