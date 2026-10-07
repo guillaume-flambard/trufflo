@@ -3,7 +3,8 @@ import SwiftData
 import SwiftUI
 
 /// Plans the next balade: a moment and, if wanted, a place found by name
-/// (MapKit local search). A reminder is scheduled a little before.
+/// (MapKit local search). A reminder is scheduled a little before, unless the
+/// person turns it off.
 struct PlanWalkSheet: View {
     let current: PlannedWalkRecord?
 
@@ -13,11 +14,13 @@ struct PlanWalkSheet: View {
     @State private var query: String
     @State private var results: [MKMapItem] = []
     @State private var place: (name: String, latitude: Double, longitude: Double)?
+    @State private var remind: Bool
 
     init(current: PlannedWalkRecord?) {
         self.current = current
         _date = State(initialValue: current?.date ?? Self.nextRoundHour())
         _query = State(initialValue: current?.placeName ?? "")
+        _remind = State(initialValue: current?.remind ?? true)
         if let current, let lat = current.latitude, let lon = current.longitude {
             _place = State(initialValue: (current.placeName, lat, lon))
         }
@@ -49,6 +52,11 @@ struct PlanWalkSheet: View {
                             }
                         }
                     }
+                }
+                Section {
+                    Toggle("Me le rappeler 15 minutes avant", isOn: $remind)
+                } footer: {
+                    Text("Une notification sur cet iPhone. Si les notifications de Trufflo sont refusées, rien ne sonne : elles se réactivent dans Réglages.")
                 }
                 if current != nil {
                     Section {
@@ -87,8 +95,13 @@ struct PlanWalkSheet: View {
     private func save() {
         let name = place?.name ?? query
         try? JournalRepository(context: context).planWalk(at: date, placeName: name,
-                                                         latitude: place?.latitude, longitude: place?.longitude)
-        WalkReminder.schedule(at: date, placeName: name)
+                                                         latitude: place?.latitude, longitude: place?.longitude,
+                                                         remind: remind)
+        if remind {
+            WalkReminder.schedule(at: date, placeName: name)
+        } else {
+            WalkReminder.cancel()
+        }
         dismiss()
     }
 

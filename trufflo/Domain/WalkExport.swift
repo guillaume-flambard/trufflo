@@ -35,10 +35,18 @@ public struct ExportWalk: Equatable, Sendable {
     public let dogNames: [String]
     public let note: String
     public let points: [ExportPoint]
+    public let title: String
+    public let mood: WalkMood?
+    public let placeName: String
+    public let weather: WalkWeather?
+    public let temperatureC: Double?
+    public let photoCount: Int
 
     public init(id: UUID, startedAt: Date, endedAt: Date?, durationSeconds: Double,
                 distanceMeters: Double?, source: WalkSource, quality: WalkQuality,
-                dogNames: [String], note: String, points: [ExportPoint]) {
+                dogNames: [String], note: String, points: [ExportPoint],
+                title: String = "", mood: WalkMood? = nil, placeName: String = "",
+                weather: WalkWeather? = nil, temperatureC: Double? = nil, photoCount: Int = 0) {
         self.id = id
         self.startedAt = startedAt
         self.endedAt = endedAt
@@ -49,6 +57,12 @@ public struct ExportWalk: Equatable, Sendable {
         self.dogNames = dogNames
         self.note = note
         self.points = points
+        self.title = title
+        self.mood = mood
+        self.placeName = placeName
+        self.weather = weather
+        self.temperatureC = temperatureC
+        self.photoCount = photoCount
     }
 
     /// Only a GPS walk with at least two recorded points has a route to give.
@@ -57,10 +71,11 @@ public struct ExportWalk: Equatable, Sendable {
 
 public enum WalkExport {
     /// The columns of the summary, in order. Kept stable so a spreadsheet built
-    /// on one export keeps working on the next.
+    /// on one export keeps working on the next: new columns go at the end.
     public static let csvHeader = [
         "id", "debut", "fin", "duree_secondes", "distance_metres",
-        "origine", "qualite", "chiens", "note", "fichier_trace"
+        "origine", "qualite", "chiens", "note", "fichier_trace",
+        "titre", "humeur", "lieu", "meteo", "temperature_c", "photos"
     ]
 
     /// A comma-separated summary, one line per walk, oldest first.
@@ -81,7 +96,13 @@ public enum WalkExport {
                 walk.quality.rawValue,
                 walk.dogNames.joined(separator: " ; "),
                 walk.note,
-                walk.hasRoute ? gpxFileName(for: walk) : ""
+                walk.hasRoute ? gpxFileName(for: walk) : "",
+                walk.title,
+                walk.mood?.label ?? "",
+                walk.placeName,
+                walk.weather?.label ?? "",
+                walk.temperatureC.map { String(format: "%.0f", $0) } ?? "",
+                String(walk.photoCount)
             ]
             lines.append(fields.map(csvField).joined(separator: ","))
         }

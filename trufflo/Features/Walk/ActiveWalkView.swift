@@ -61,6 +61,8 @@ public struct ActiveWalkView: View {
     /// filled only by `--demo-proximity` for the board capture.
     @State private var nearbyDogs: [NearbyDog] = []
     @State private var acknowledgedDogs: Set<UUID> = []
+    /// "Voir sur la carte": the card goes, the paw stays on the map a minute.
+    @State private var shownDog: NearbyDog?
     private let speech = AVSpeechSynthesizer()
     private let dogIDsToStart: [UUID]
     private let walkIDToResume: UUID?
@@ -185,7 +187,7 @@ public struct ActiveWalkView: View {
                             isFollowing: $isFollowingTrack,
                             guideRoute: activeGuide?.path ?? [],
                             destination: guidePlan.flatMap(Self.destination(of:)),
-                            nearbyDog: proximityAlert.map { CLLocationCoordinate2D(latitude: $0.dog.latitude, longitude: $0.dog.longitude) })
+                            nearbyDog: (proximityAlert?.dog ?? shownDog).map { CLLocationCoordinate2D(latitude: $0.latitude, longitude: $0.longitude) })
                 .ignoresSafeArea()
                 .accessibilityIdentifier("walk.map")
 
@@ -356,8 +358,15 @@ public struct ActiveWalkView: View {
             .tint(Color.truffloForest)
             .accessibilityIdentifier("walk.nearby.ok")
             Button {
-                isFollowingTrack = false
+                // Within 50 m, the followed map already frames the dog: keep its
+                // paw shown for a minute instead of the card.
+                shownDog = nearbyDogs.first { $0.id == dogID }
                 acknowledgedDogs.insert(dogID)
+                isFollowingTrack = true
+                Task {
+                    try? await Task.sleep(for: .seconds(60))
+                    if shownDog?.id == dogID { shownDog = nil }
+                }
             } label: {
                 Text("Voir sur la carte").font(.system(size: 15, weight: .semibold, design: .rounded))
                     .foregroundStyle(Color.truffloForest)

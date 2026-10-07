@@ -1,3 +1,4 @@
+import CoreLocation
 import MapKit
 import SwiftData
 import SwiftUI
@@ -21,6 +22,8 @@ struct NewWalkView: View {
     @State private var selected: [UUID]
     @State private var camera: MapCameraPosition = .userLocation(fallback: .automatic)
     @State private var showsSafetyNote = true
+    /// The accuracy of the latest fix, in metres; nil until one arrives.
+    @State private var accuracy: Double?
 
     init(dogs: [DogRecord], onStart: @escaping ([UUID]) -> Void, onManual: @escaping () -> Void,
          onAddDog: (() -> Void)? = nil) {
@@ -125,7 +128,7 @@ struct NewWalkView: View {
         }
     }
 
-    /// GPS (chosen), manual (opens the form), GPX import (not yet).
+    /// GPS (chosen), manual (opens the form), GPX import (opens the file picker).
     private var modes: some View {
         HStack(spacing: 6) {
             modeTile("figure.walk", "Enregistrer", "avec GPS", isOn: true, isEnabled: true) {}
@@ -171,9 +174,13 @@ struct NewWalkView: View {
         .overlay(alignment: .topLeading) {
             HStack(spacing: 6) {
                 HStack(spacing: 2) {
-                    ForEach(0..<3) { _ in Circle().fill(Color.truffloSage).frame(width: 5, height: 5) }
+                    ForEach(0..<3) { index in
+                        Circle()
+                            .fill(index < signalBars ? Color.truffloSage : Color.truffloSlate.opacity(0.25))
+                            .frame(width: 5, height: 5)
+                    }
                 }
-                Text("Précision GPS").font(.system(size: 12, weight: .medium)).foregroundStyle(Color.truffloForest)
+                Text(signalText).font(.system(size: 12, weight: .medium)).foregroundStyle(Color.truffloForest)
             }
             .padding(.horizontal, 10)
             .padding(.vertical, 6)
@@ -193,6 +200,28 @@ struct NewWalkView: View {
             .padding(10)
         }
         .accessibilityHidden(true)
+        .task {
+            // Live fixes while this screen is open, for the precision pill only:
+            // nothing is recorded before "Démarrer".
+            do {
+                for try await update in CLLocationUpdate.liveUpdates() {
+                    if let location = update.location, location.horizontalAccuracy >= 0 {
+                        accuracy = location.horizontalAccuracy
+                    }
+                }
+            } catch {}
+        }
+    }
+
+    /// Three dots for a fix within 10 m, two within 30 m, one beyond.
+    private var signalBars: Int {
+        guard let accuracy else { return 0 }
+        return accuracy <= 10 ? 3 : (accuracy <= 30 ? 2 : 1)
+    }
+
+    private var signalText: String {
+        guard let accuracy else { return "Recherche du GPS…" }
+        return "Précision GPS ± \(Int(accuracy.rounded())) m"
     }
 
     private var startButton: some View {

@@ -15,6 +15,7 @@ struct HouseholdView: View {
     @Query(sort: \HouseholdMemberRecord.displayName) private var members: [HouseholdMemberRecord]
     @Query(sort: \DogRecord.createdAt) private var dogs: [DogRecord]
     @Query private var shared: [SharedWalkRecord]
+    @Query private var dogLinks: [DogLinkRecord]
     @Query(sort: \WalkPhotoRecord.createdAt, order: .reverse) private var myPhotos: [WalkPhotoRecord]
 
     @State private var rawNonce = ""
@@ -23,7 +24,9 @@ struct HouseholdView: View {
     @State private var code = ""
     @State private var path: Choice?
     @State private var joining: (household: HouseholdDTO, dogs: [RemoteDogDTO])?
-    @State private var inviteRole = HouseholdRole.contributor.rawValue
+    /// The invite asks which role the person joins with (PRD F08): contributor
+    /// or reader. The owner can still change it from their face afterwards.
+    @State private var askInviteRole = false
     @State private var invite: String?
     @State private var confirmLeave = false
     @State private var confirmDelete = false
@@ -449,7 +452,7 @@ struct HouseholdView: View {
                 }
                 if household.myRole == .owner {
                     Button {
-                        Task { invite = await model.invite(role: .contributor) }
+                        askInviteRole = true
                     } label: {
                         VStack(spacing: 4) {
                             Image(systemName: "plus")
@@ -578,9 +581,14 @@ struct HouseholdView: View {
 
     @ViewBuilder
     private func activityRow(_ item: Activity, household: HouseholdRecord) -> some View {
-        let dogPhoto = dogs.first(where: { $0.photoData != nil })?.photoData
         switch item {
         case .walk(let walk):
+            // The face of a dog that was on this walk, through the links between
+            // the household's dogs and this iPhone's; none rather than a wrong one.
+            let walkDog = dogs.first { dog in
+                dog.photoData != nil && dogLinks.contains { $0.localDogID == dog.id && walk.dogIDs.contains($0.remoteDogID) }
+            }
+            let dogPhoto = walkDog?.photoData
             let author = members.first { $0.userID == walk.authorID }
             let tint = members.firstIndex { $0.userID == walk.authorID } ?? 0
             HStack(alignment: .top, spacing: TruffloTheme.Spacing.small) {
@@ -603,7 +611,7 @@ struct HouseholdView: View {
                 }
                 Spacer(minLength: 0)
                 if let dogPhoto {
-                    TruffloDogThumbnail(name: dogs.first?.name ?? "", photoData: dogPhoto, side: 46, bordered: false)
+                    TruffloDogThumbnail(name: walkDog?.name ?? "", photoData: dogPhoto, side: 46, bordered: false)
                 }
             }
         case .photo(let photo):
@@ -625,15 +633,14 @@ struct HouseholdView: View {
     }
 
     private func inviteSection(_ household: HouseholdRecord) -> some View {
-        // Only the button, as in the mock-up. A new member joins as a
-        // contributor; the owner changes the role from their face.
+        // Only the button, as in the mock-up; the role is asked when it is tapped.
         VStack(alignment: .leading, spacing: TruffloTheme.Spacing.small) {
             if let invite {
                 InviteTicket(code: invite, householdName: household.name)
             } else {
                 VStack(spacing: TruffloTheme.Spacing.xSmall) {
                     Button {
-                        Task { invite = await model.invite(role: .contributor) }
+                        askInviteRole = true
                     } label: {
                         Label("Inviter un proche", systemImage: "link")
                             .font(.system(.headline, design: .rounded, weight: .bold))
@@ -649,7 +656,19 @@ struct HouseholdView: View {
                 }
             }
         }
-        .onChange(of: inviteRole) { invite = nil }
+        .confirmationDialog("Inviter un proche", isPresented: $askInviteRole, titleVisibility: .visible) {
+            Button("Contributeur : ajoute ses balades") {
+                Task { invite = await model.invite(role: .contributor) }
+            }
+            .accessibilityIdentifier("household.invite.contributor")
+            Button("Lecteur : regarde seulement") {
+                Task { invite = await model.invite(role: .reader) }
+            }
+            .accessibilityIdentifier("household.invite.reader")
+            Button("Annuler", role: .cancel) {}
+        } message: {
+            Text("Le lien sert une fois et expire dans 7 jours.")
+        }
     }
 }
 
@@ -1013,7 +1032,7 @@ private struct InviteTicket: View {
     /// code stays in the message for someone who types it instead.
     private var shareMessage: String {
         let link = InviteLink.url(for: code).map { "\n\($0.absoluteString)" } ?? ""
-        return "Rejoins le foyer « \(householdName) » dans Trufflo :\(link)\n\nOu, dans l'app, Réglages, Foyer partagé, J'ai un code, avec ce code : \(code)"
+        return "Rejoins le foyer « \(householdName) » dans Trufflo :\(link)\n\nOu, dans l'app, onglet Foyer, J'ai un code, avec ce code : \(code)"
     }
     let householdName: String
     @State private var copied = false

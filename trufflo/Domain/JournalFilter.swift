@@ -16,9 +16,10 @@ public struct JournalFilter: Equatable, Sendable {
         }
     }
 
-    /// Which balades: all, the suivies (recorded live), or the ajoutées.
+    /// Which balades: mine (all, suivies, ajoutées, with photos), or the
+    /// foyer's, which are listed under their own chip only.
     public enum Kind: String, CaseIterable, Sendable {
-        case all, tracked, added, photos
+        case all, tracked, added, photos, household
 
         public var label: String {
             switch self {
@@ -26,6 +27,7 @@ public struct JournalFilter: Equatable, Sendable {
             case .tracked: "Avec GPS"
             case .added: "Ajoutées"
             case .photos: "Photos"
+            case .household: "Foyer"
             }
         }
     }
@@ -50,6 +52,7 @@ public struct JournalFilter: Equatable, Sendable {
         case .tracked: isTracked
         case .added: !isTracked
         case .photos: hasPhotos
+        case .household: false
         }
     }
 

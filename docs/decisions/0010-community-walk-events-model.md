@@ -1,7 +1,15 @@
 # 0010 : le modèle des sorties collectives (lot C)
 
 Statut : **accepté le 2026-10-07** (recommandations retenues par Guillaume, qui écrit le serveur ; le client est construit contre ce contrat). Noms à fournir : zone pilote (D5), modérateur (D6), organisateurs. Point de rendez-vous en texte seul retenu. (spec
-`docs/specs/C-premiere-sortie.md`, C-REQ-01). Rien de ce document n'existe en base.
+`docs/specs/C-premiere-sortie.md`, C-REQ-01).
+
+Mise à jour du 2026-10-08 : le serveur existe. Migration `20261007210000_community_outings`
+(tables, vues, droits, 13 fonctions), testée en local (`community_outings_test.sql`, 105
+contrôles ; `community_last_place_race_test.sql`, une vraie course à deux sessions), appliquée
+en production le 2026-10-08. Zone pilote Paris (D5) en base. Table des modérateurs vide : D6
+(Guillaume) s'y inscrit à la main, une fois son identifiant de compte connu (requête en tête de
+la migration). L'onglet reste fermé (`CommunityBackend.isOpen = false`) tant que ce modérateur
+n'est pas inscrit (C-AC-09).
 
 Exigences du PRD couvertes : F09 (proposer une balade locale), F10 (participation), F11
 (modération), F13 (confidentialité).

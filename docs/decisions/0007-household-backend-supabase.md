@@ -43,4 +43,6 @@ Exposition à l'API : depuis octobre 2026, une table n'est plus exposée par dé
 2. **Se connecter avec Apple** : en flux natif (jeton d'identité), il suffit que l'identifiant de l'app `dev.memolabs.trufflo` figure dans les Client IDs ; ni Services ID, ni clé `.p8`, ni rotation (documentation Supabase, « Login with Apple », lue le 2026-10-06). Reste à activer la capacité Sign in with Apple sur l'App ID, dans le compte développeur de Guillaume.
 3. **Synchronisation côté iPhone** : écrite au chantier 3, voir l'ADR 0008.
 4. **Rapprochement des chiens** : tranché dans l'ADR 0008. En rejoignant, la personne dit quel chien local est quel chien du foyer ; rien n'est relié par ressemblance de nom.
-5. **Noms des membres** : migration `20261006180954_member_profiles` (nom choisi par chaque membre, par foyer). Testée en local, à appliquer en production.
+5. **Noms des membres** : migration `20261006180954_member_profiles` (nom choisi par chaque membre, par foyer). En production (droits relus le 2026-10-08).
+6. **Détails partagés** (2026-10-08) : `20261007220000_household_details` en production (titre, humeur et météo d'une balade ; taille, poids et caractère d'un chien ; balades prévues avec Realtime ; conseils du jour lisibles sans compte, seule exception à « rien pour anon »). Le lieu d'une balade et le sexe du chien restent sur l'iPhone.
+7. **Suppression de compte** : `20261007230000_account_deletion`, testée en local. Elle supprime des lignes, donc `tools/backend/apply-migration.sh` la refuse : à appliquer à la main, après relecture.

@@ -301,12 +301,13 @@ struct JournalRepository {
 
     /// Sets the one upcoming balade, replacing any previous plan.
     @discardableResult
-    func planWalk(at date: Date, placeName: String, latitude: Double?, longitude: Double?) throws -> PlannedWalkRecord {
+    func planWalk(at date: Date, placeName: String, latitude: Double?, longitude: Double?,
+                  remind: Bool = true) throws -> PlannedWalkRecord {
         try commit {
             for old in try all(PlannedWalkRecord.self) { context.delete(old) }
             let plan = PlannedWalkRecord(date: date,
                                          placeName: placeName.trimmingCharacters(in: .whitespacesAndNewlines),
-                                         latitude: latitude, longitude: longitude)
+                                         latitude: latitude, longitude: longitude, remind: remind)
             context.insert(plan)
             return plan
         }
@@ -475,7 +476,10 @@ struct JournalRepository {
                               durationSeconds: walk.confirmedSeconds,
                               distanceMeters: walk.recordedPathMeters,
                               source: walk.source, quality: walk.quality,
-                              dogNames: names, note: walk.note, points: route)
+                              dogNames: names, note: walk.note, points: route,
+                              title: walk.title, mood: walk.mood, placeName: walk.placeName,
+                              weather: walk.weather, temperatureC: walk.temperatureC,
+                              photoCount: try photoCount(walkID: walk.id))
         }
     }
 
@@ -486,6 +490,10 @@ struct JournalRepository {
     private func links(walkID: UUID) throws -> [WalkDogRecord] {
         try context.fetch(FetchDescriptor<WalkDogRecord>(
             predicate: #Predicate { $0.walkID == walkID }))
+    }
+
+    private func photoCount(walkID: UUID) throws -> Int {
+        try context.fetchCount(FetchDescriptor<WalkPhotoRecord>(predicate: #Predicate { $0.walkID == walkID }))
     }
 
     private func points(walkID: UUID) throws -> [TrackPointRecord] {

@@ -124,3 +124,15 @@ private func point(_ segment: Int, _ lat: Double, _ seconds: Double) -> ExportPo
     #expect(data.prefix(2) == Data([0x50, 0x4B]), "l'archive doit être un zip")
     #expect(data.count > 200)
 }
+
+@Test func theExportCarriesTitleMoodPlaceWeatherAndPhotosAtTheEnd() {
+    let walk = ExportWalk(id: UUID(), startedAt: start, endedAt: start.addingTimeInterval(1800),
+                          durationSeconds: 1800, distanceMeters: nil, source: .manual, quality: .manual,
+                          dogNames: ["Oslo"], note: "", points: [],
+                          title: "Tour du parc", mood: .calm, placeName: "Parc", weather: .sunny,
+                          temperatureC: 18, photoCount: 2)
+    let rows = WalkExport.csv([walk]).split(separator: "\r\n").map(String.init)
+    #expect(rows[0].hasPrefix("id,debut,fin,duree_secondes,distance_metres,origine,qualite,chiens,note,fichier_trace,"))
+    let cells = rows[1].split(separator: ",", omittingEmptySubsequences: false).map(String.init)
+    #expect(Array(cells.suffix(6)) == ["Tour du parc", "Balade tranquille", "Parc", "Ensoleillé", "18", "2"])
+}

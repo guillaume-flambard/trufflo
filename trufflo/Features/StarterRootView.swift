@@ -64,7 +64,6 @@ struct StarterRootView: View {
         ? ProcessInfo.processInfo.arguments.lazy.compactMap { $0.hasPrefix("--demo-tab=") ? Int($0.dropFirst(11)) : nil }.first ?? 0
         : 0
     @State private var exportError: String?
-    @Environment(\.dynamicTypeSize) private var typeSize
 
     /// The journal's counts, the week, the last and the live balade, read in one
     /// place (`JournalFacts`) so Today, the dog list and the Journal agree.
@@ -143,7 +142,10 @@ struct StarterRootView: View {
 
             // The foyer, a tab of its own (2026-10-07 mock-up) rather than a sheet
             // behind the settings.
-            HouseholdView(showsCloseButton: false, onSeeJournal: { selectedTab = 1 })
+            HouseholdView(showsCloseButton: false, onSeeJournal: {
+                journalFilter = JournalFilter(kind: .household)
+                selectedTab = 1
+            })
                 .tabItem { Label("Foyer", systemImage: "person.3.fill") }
                 .tag(2)
 
@@ -290,7 +292,7 @@ struct StarterRootView: View {
             Button("Tout effacer", role: .destructive, action: eraseAll)
         } message: {
             Text(sharedWalks.isEmpty && dogLinks.isEmpty
-                 ? "Cette suppression locale ne peut pas être annulée dans le starter."
+                 ? "Cette suppression locale ne peut pas être annulée."
                  : "Cette suppression locale ne peut pas être annulée. Ce que vous avez déjà partagé avec le foyer y reste visible.")
         }
         .alert("Enregistrement impossible", isPresented: $storageError) {
@@ -311,9 +313,9 @@ struct StarterRootView: View {
                 && journalFilter.includes(date: walk.endedAt ?? walk.startedAt,
                                           dogIDs: Set(links.filter { $0.walkID == walk.id }.map(\.dogID)))
         }
-        // As in the mock-up, the Journal lists my balades; the foyer's are on the
-        // Foyer tab and in the latest-walk block of Today.
-        let sharedShown: [JournalTimelineView.SharedEntry] = []
+        // As in the mock-up, the Journal lists my balades; the foyer's come under
+        // their own "Foyer" chip, where Foyer's "Voir tout" leads.
+        let sharedShown = journalFilter.kind == .household ? sharedEntries(own: completed) : []
         if completed.isEmpty {
             ScrollView {
                 LostHouseholdNotice()
@@ -405,7 +407,11 @@ struct StarterRootView: View {
     /// sliders, as in the mock-up.
     private var journalChips: some View {
         HStack(spacing: TruffloTheme.Spacing.xSmall) {
-            TruffloFilterChips(options: JournalFilter.Kind.allCases.map { ($0, $0.label) },
+            // "Foyer" only once there is a foyer to show.
+            // "Foyer" right after "Toutes", so it shows without scrolling.
+            TruffloFilterChips(options: ([.all, .household, .tracked, .added, .photos] as [JournalFilter.Kind])
+                                .filter { $0 != .household || !sharedWalks.isEmpty }
+                                .map { ($0, $0.label) },
                                selection: $journalFilter.kind)
             Spacer(minLength: 0)
             journalFilterMenu
@@ -588,14 +594,6 @@ struct StarterRootView: View {
         .frame(maxWidth: .infinity, alignment: .leading)
     }
 
-    /// Breed, age and sex as chips under the name: what the person declared.
-    private func heroChips(_ dog: DogRecord) -> [(icon: String?, text: String)] {
-        var chips: [(icon: String?, text: String)] = []
-        if dog.breedKind != "unknown" { chips.append(("pawprint.fill", dog.breedDescription)) }
-        if !dog.ageDescription.isEmpty { chips.append((nil, dog.ageDescription)) }
-        return chips
-    }
-
     /// Three small glass tiles: the week's count, the week's time, and how long
     /// ago the last balade ended. Facts, never a judgement about the dog.
     private func todayTiles(_ journal: JournalFacts) -> some View {
@@ -706,13 +704,6 @@ struct StarterRootView: View {
         let today = facts.todayCount(for: dog.id)
         // The widget is titled "Routine": the line starts with the rhythm itself.
         return "\(routine.summary). \(routine.today(recordedWalks: today))"
-    }
-
-    private func dogSubtitle(_ lead: DogRecord) -> String {
-        guard dogs.count == 1 else { return "\(dogs.count) chiens" }
-        let parts = [lead.breedKind != "unknown" ? lead.breedDescription : "", lead.ageDescription]
-            .filter { !$0.isEmpty }
-        return parts.isEmpty ? "Prêt pour la balade" : parts.joined(separator: ", ")
     }
 
     private var dogNames: String {
@@ -858,6 +849,8 @@ struct StarterRootView: View {
     private func eraseAll() {
         do {
             try JournalRepository(context: context).eraseAll()
+            // The planned balade went with the journal: its reminder goes too.
+            WalkReminder.cancel()
             Task { await household.forgetSession() }
         } catch { storageError = true }
     }
@@ -865,20 +858,6 @@ struct StarterRootView: View {
 
 extension LocationBlock: Identifiable {
     public var id: String { rawValue }
-}
-
-/// The start button label: icon and title, or the title alone when the text size is
-/// an accessibility one and the icon would only cost a line.
-private struct StartLabelStyle: LabelStyle {
-    let compact: Bool
-
-    func makeBody(configuration: Configuration) -> some View {
-        if compact {
-            configuration.title
-        } else {
-            Label(configuration)
-        }
-    }
 }
 
 /// Title first, icon after: "Voir tout >".

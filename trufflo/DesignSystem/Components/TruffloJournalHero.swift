@@ -106,6 +106,9 @@ struct TruffloFilterChips<Value: Hashable>: View {
     @Environment(\.accessibilityReduceMotion) private var reduceMotion
 
     var body: some View {
+        // Scrolls sideways when the chips outgrow the width: a chip keeps its
+        // whole word rather than shrinking to "Ajou…".
+        ScrollView(.horizontal, showsIndicators: false) {
         HStack(spacing: TruffloTheme.Spacing.xSmall) {
             ForEach(options, id: \.value) { option in
                 let isOn = option.value == selection
@@ -120,10 +123,12 @@ struct TruffloFilterChips<Value: Hashable>: View {
                         .padding(.horizontal, 12)
                         .frame(height: 28)
                         .background(isOn ? Color.truffloForest : Color.black.opacity(0.05), in: Capsule())
+                        .fixedSize()
                 }
                 .buttonStyle(.plain)
                 .accessibilityAddTraits(isOn ? .isSelected : [])
             }
+        }
         }
     }
 }

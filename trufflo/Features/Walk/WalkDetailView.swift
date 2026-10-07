@@ -16,6 +16,8 @@ struct WalkDetailView: View {
     @Query(sort: \DogRecord.createdAt) private var dogs: [DogRecord]
     @Query private var photos: [WalkPhotoRecord]
     @State private var showEditor = false
+    /// The photo the gallery opens on, when it is open.
+    @State private var galleryStart: GalleryStart?
 
     @State private var showDeleteConfirmation = false
     @State private var routeFile: SharedFile?
@@ -124,6 +126,9 @@ struct WalkDetailView: View {
                 try? JournalRepository(context: context).setWalkSurroundings(walk.id, placeName: name,
                                                                              weather: nil, temperatureC: nil)
             }
+        }
+        .fullScreenCover(item: $galleryStart) { start in
+            WalkPhotoGallery(walkID: start.walkID, startAt: start.id)
         }
         .sheet(isPresented: $showEditor) {
             WalkDetailsEditor(walk: walk)
@@ -244,6 +249,13 @@ struct WalkDetailView: View {
     /// The photos of the balade, a row of four with the rest counted on the last
     /// one; an invitation to add some when there are none.
     @ViewBuilder
+    private func openGallery(at photoID: UUID?) {
+        guard let photoID, let walkID = matches.first?.id else { return }
+        galleryStart = GalleryStart(id: photoID, walkID: walkID)
+    }
+
+    private var sortedPhotos: [WalkPhotoRecord] { photos.sorted { $0.createdAt < $1.createdAt } }
+
     private func photosSection(_ walk: WalkRecord) -> some View {
         VStack(alignment: .leading, spacing: TruffloTheme.Spacing.xSmall) {
             HStack {
@@ -253,7 +265,7 @@ struct WalkDetailView: View {
                     .accessibilityAddTraits(.isHeader)
                 Spacer()
                 if photos.count > 4 {
-                    Button { showEditor = true } label: {
+                    Button { openGallery(at: sortedPhotos.first?.id) } label: {
                         HStack(spacing: 4) { Text("Voir tout (\(photos.count))"); Image(systemName: "chevron.right").imageScale(.small) }
                             .font(.system(size: 13))
                             .foregroundStyle(Color.truffloSlate)
@@ -276,21 +288,24 @@ struct WalkDetailView: View {
                 .accessibilityIdentifier("walk.photos.add")
             } else {
                 HStack(spacing: 6) {
-                    ForEach(Array(photos.prefix(4).enumerated()), id: \.element.id) { index, photo in
+                    ForEach(Array(sortedPhotos.prefix(4).enumerated()), id: \.element.id) { index, photo in
                         let isLast = index == 3 && photos.count > 4
-                        TruffloDogThumbnail(name: "", photoData: photo.data, side: 72,
-                                            width: index == 0 ? 104 : (index == 3 ? 60 : 82), bordered: false)
-                            .overlay {
-                                if isLast {
-                                    RoundedRectangle(cornerRadius: TruffloTheme.Radius.medium, style: .continuous)
-                                        .fill(.black.opacity(0.35))
-                                    Text("+\(photos.count - 3)").font(.title3.bold()).foregroundStyle(.white)
+                        Button { openGallery(at: photo.id) } label: {
+                            TruffloDogThumbnail(name: "", photoData: photo.data, side: 72,
+                                                width: index == 0 ? 104 : (index == 3 ? 60 : 82), bordered: false)
+                                .overlay {
+                                    if isLast {
+                                        RoundedRectangle(cornerRadius: TruffloTheme.Radius.medium, style: .continuous)
+                                            .fill(.black.opacity(0.35))
+                                        Text("+\(photos.count - 3)").font(.title3.bold()).foregroundStyle(.white)
+                                    }
                                 }
-                            }
+                        }
+                        .buttonStyle(.plain)
+                        .accessibilityLabel("Photo \(index + 1) sur \(photos.count)")
                     }
                 }
-                .accessibilityElement(children: .ignore)
-                .accessibilityLabel("\(photos.count) photos")
+                .accessibilityIdentifier("walk.photos")
             }
         }
     }
@@ -471,4 +486,10 @@ private struct EnvironmentChipStyle: LabelStyle {
             .frame(minHeight: 30)
             .background(Color.black.opacity(0.04), in: Capsule())
     }
+}
+
+/// The photo the gallery opens on, as an identifiable item for the cover.
+private struct GalleryStart: Identifiable {
+    let id: UUID
+    let walkID: UUID
 }

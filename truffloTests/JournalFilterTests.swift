@@ -59,3 +59,10 @@ private let mirabelle = UUID()
     #expect(JournalFilter(kind: .photos).includes(isTracked: true, hasPhotos: true))
     #expect(!JournalFilter(kind: .photos).includes(isTracked: true, hasPhotos: false))
 }
+
+@Test func theFoyerChipListsNoneOfMyBalades() {
+    let foyer = JournalFilter(kind: .household)
+    #expect(!foyer.includes(isTracked: true, hasPhotos: true))
+    #expect(!foyer.includes(isTracked: false))
+    #expect(foyer.isActive)
+}
