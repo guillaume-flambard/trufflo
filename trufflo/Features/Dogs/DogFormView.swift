@@ -20,6 +20,9 @@ struct DogFormView: View {
     @State private var gender: String
     @State private var preferencesNote: String
     @State private var photoData: Data?
+    @State private var size: String
+    @State private var weightText: String
+    @State private var traits: [DogTrait]
     @State private var selectedPhotoItem: PhotosPickerItem?
     @State private var errorMessage: String?
     @State private var showBreedPicker = false
@@ -37,6 +40,11 @@ struct DogFormView: View {
         _gender = State(initialValue: profile?.gender ?? "unspecified")
         _preferencesNote = State(initialValue: profile?.preferencesNote ?? "")
         _photoData = State(initialValue: profile?.photoData)
+        _size = State(initialValue: profile?.sizeRaw ?? "")
+        _weightText = State(initialValue: profile?.weightKg.map {
+            $0.formatted(.number.precision(.fractionLength(0...1)).locale(TruffloLocale.french))
+        } ?? "")
+        _traits = State(initialValue: profile?.traits ?? [])
     }
 
     private var isEditing: Bool { dogID != nil }
@@ -98,6 +106,26 @@ struct DogFormView: View {
                             ageField
                             sexField
                         }
+                    }
+
+                    field("Taille (au garrot)") {
+                        TruffloChoice(options: DogSize.allCases.map { ($0.rawValue, $0.label) },
+                                      selection: $size, clearsTo: "")
+                            .accessibilityIdentifier("dog.size")
+                    }
+
+                    field("Poids (facultatif)") {
+                        HStack {
+                            TextField("Ex. 18 kg", text: $weightText)
+                                .keyboardType(.decimalPad)
+                                .accessibilityIdentifier("dog.weight")
+                            Text("kg").foregroundStyle(Color.truffloSlate)
+                        }
+                        .modifier(FormFieldStyle())
+                    }
+
+                    field("Caractère (facultatif)") {
+                        TraitChips(selection: $traits)
                     }
 
                     field("Préférences de balade") {
@@ -281,7 +309,10 @@ struct DogFormView: View {
                 ageDescription: ageDescription,
                 gender: gender,
                 preferencesNote: preferencesNote,
-                photoData: photoData
+                photoData: photoData,
+                size: DogSize(rawValue: size),
+                weightKg: parsedWeight,
+                traits: traits
             )
             let repository = JournalRepository(context: context)
             if let dogID { try repository.updateDog(dogID, with: input) }
@@ -293,6 +324,8 @@ struct DogFormView: View {
             announce("Renseignez la race ou sélectionnez « Race inconnue ».")
         } catch DogError.ageDescriptionTooLong {
             announce("L'âge doit contenir 50 caractères maximum.")
+        } catch DogError.invalidWeight {
+            announce("Le poids doit être compris entre 0,5 et 100 kg.")
         } catch DogError.preferencesNoteTooLong {
             announce("La note de comportement doit contenir 500 caractères maximum.")
         } catch JournalError.profileMissing {
@@ -300,6 +333,12 @@ struct DogFormView: View {
         } catch {
             announce("Les changements n'ont pas été enregistrés. Réessayez sans fermer ce formulaire.")
         }
+    }
+
+    /// "18", "18,5" or "18.5"; empty means not given.
+    private var parsedWeight: Double? {
+        let clean = weightText.trimmingCharacters(in: .whitespaces).replacingOccurrences(of: ",", with: ".")
+        return clean.isEmpty ? nil : Double(clean) ?? -1
     }
 
     private func announce(_ message: String) {
@@ -360,6 +399,64 @@ struct TruffloChoice: View {
                 .buttonStyle(.plain)
                 .accessibilityAddTraits(isOn ? .isSelected : [])
             }
+        }
+    }
+}
+
+/// Traits of character as chips, several at once, each with its symbol
+/// (2026-10-07 mock-up). Declared by the person, never inferred.
+struct TraitChips: View {
+    @Binding var selection: [DogTrait]
+
+    var body: some View {
+        WrapLayout(spacing: 8) {
+            ForEach(DogTrait.allCases, id: \.self) { trait in
+                let isOn = selection.contains(trait)
+                Button {
+                    if isOn { selection.removeAll { $0 == trait } } else { selection.append(trait) }
+                } label: {
+                    Label(trait.label, systemImage: trait.systemImage)
+                        .font(.system(size: 13, weight: isOn ? .semibold : .regular))
+                        .foregroundStyle(isOn ? Color.truffloForest : Color.truffloCharcoal)
+                        .padding(.horizontal, 12)
+                        .frame(minHeight: 34)
+                        .background(isOn ? Color(red: 0.86, green: 0.93, blue: 0.89) : Color.black.opacity(0.03),
+                                    in: Capsule())
+                        .overlay(Capsule().strokeBorder(isOn ? Color.truffloForest.opacity(0.4) : .clear, lineWidth: 1))
+                }
+                .buttonStyle(.plain)
+                .accessibilityAddTraits(isOn ? .isSelected : [])
+            }
+        }
+        .accessibilityIdentifier("dog.traits")
+    }
+}
+
+/// Lays children out in rows, wrapping to the next row when one is full.
+struct WrapLayout: Layout {
+    var spacing: CGFloat = 8
+
+    func sizeThatFits(proposal: ProposedViewSize, subviews: Subviews, cache: inout ()) -> CGSize {
+        let width = proposal.width ?? .infinity
+        var x: CGFloat = 0, y: CGFloat = 0, rowHeight: CGFloat = 0, maxX: CGFloat = 0
+        for view in subviews {
+            let size = view.sizeThatFits(.unspecified)
+            if x > 0 && x + size.width > width { x = 0; y += rowHeight + spacing; rowHeight = 0 }
+            x += size.width + spacing
+            maxX = max(maxX, x - spacing)
+            rowHeight = max(rowHeight, size.height)
+        }
+        return CGSize(width: min(maxX, width), height: y + rowHeight)
+    }
+
+    func placeSubviews(in bounds: CGRect, proposal: ProposedViewSize, subviews: Subviews, cache: inout ()) {
+        var x = bounds.minX, y = bounds.minY, rowHeight: CGFloat = 0
+        for view in subviews {
+            let size = view.sizeThatFits(.unspecified)
+            if x > bounds.minX && x + size.width > bounds.maxX { x = bounds.minX; y += rowHeight + spacing; rowHeight = 0 }
+            view.place(at: CGPoint(x: x, y: y), proposal: ProposedViewSize(size))
+            x += size.width + spacing
+            rowHeight = max(rowHeight, size.height)
         }
     }
 }

@@ -15,6 +15,7 @@ struct HouseholdView: View {
     @Query(sort: \HouseholdMemberRecord.displayName) private var members: [HouseholdMemberRecord]
     @Query(sort: \DogRecord.createdAt) private var dogs: [DogRecord]
     @Query private var shared: [SharedWalkRecord]
+    @Query(sort: \WalkPhotoRecord.createdAt, order: .reverse) private var myPhotos: [WalkPhotoRecord]
 
     @State private var rawNonce = ""
     @State private var displayName = ""
@@ -514,10 +515,32 @@ struct HouseholdView: View {
                     in: RoundedRectangle(cornerRadius: TruffloTheme.Radius.card, style: .continuous))
     }
 
-    /// The last balades the others shared, newest first.
+    /// What happened lately in the foyer, newest first: the balades the others
+    /// shared and the photos I added (2026-10-07 mock-up). My photos stay on this
+    /// iPhone; only I see this line.
+    private enum Activity: Identifiable {
+        case walk(SharedWalkRecord)
+        case photo(WalkPhotoRecord)
+
+        var id: UUID {
+            switch self {
+            case .walk(let walk): walk.id
+            case .photo(let photo): photo.id
+            }
+        }
+
+        var date: Date {
+            switch self {
+            case .walk(let walk): walk.endedAt
+            case .photo(let photo): photo.createdAt
+            }
+        }
+    }
+
     @ViewBuilder
     private func recentActivity(_ household: HouseholdRecord) -> some View {
-        let recent = shared.sorted { $0.endedAt > $1.endedAt }.prefix(3)
+        let all = shared.map(Activity.walk) + myPhotos.prefix(3).map(Activity.photo)
+        let recent = Array(all.sorted { $0.date > $1.date }.prefix(3))
         if !recent.isEmpty {
             VStack(alignment: .leading, spacing: TruffloTheme.Spacing.small) {
                 HStack(alignment: .firstTextBaseline) {
@@ -536,33 +559,9 @@ struct HouseholdView: View {
                     }
                 }
                 VStack(spacing: 0) {
-                    ForEach(Array(recent.enumerated()), id: \.element.id) { index, walk in
-                        let author = members.first { $0.userID == walk.authorID }
-                        let tint = members.firstIndex { $0.userID == walk.authorID } ?? 0
-                        HStack(alignment: .top, spacing: TruffloTheme.Spacing.small) {
-                            PersonDisc(name: author?.displayName ?? "?", diameter: 36, tintIndex: tint)
-                            VStack(alignment: .leading, spacing: 3) {
-                                (Text(author?.displayName ?? "Un membre").bold() + Text(" a enregistré une balade"))
-                                    .font(.system(size: 13))
-                                    .foregroundStyle(Color.truffloCharcoal)
-                                Text("\(WalkFormatting.relativeDay(walk.endedAt).capitalizedFirst) · \(WalkFormatting.time(walk.endedAt))")
-                                    .font(.system(size: 12))
-                                    .foregroundStyle(Color.truffloSlate)
-                                HStack(spacing: TruffloTheme.Spacing.small) {
-                                    Label(WalkFormatting.minutes(walk.confirmedSeconds), systemImage: "clock")
-                                    if let meters = walk.recordedPathMeters {
-                                        Label(WalkFormatting.distance(meters), systemImage: "point.topleft.down.to.point.bottomright.curvepath")
-                                    }
-                                }
-                                .font(.system(size: 12))
-                                .foregroundStyle(Color.truffloCharcoal)
-                            }
-                            Spacer(minLength: 0)
-                            if let photo = dogs.first(where: { $0.photoData != nil })?.photoData {
-                                TruffloDogThumbnail(name: dogs.first?.name ?? "", photoData: photo, side: 52, bordered: false)
-                            }
-                        }
-                        .padding(.vertical, TruffloTheme.Spacing.small)
+                    ForEach(Array(recent.enumerated()), id: \.element.id) { index, item in
+                        activityRow(item, household: household)
+                            .padding(.vertical, TruffloTheme.Spacing.small)
                         if index < recent.count - 1 {
                             Rectangle().fill(Color.truffloForest.opacity(0.08)).frame(height: 1)
                         }
@@ -573,6 +572,54 @@ struct HouseholdView: View {
                 .background(Color.white.opacity(0.92),
                             in: RoundedRectangle(cornerRadius: TruffloTheme.Radius.card, style: .continuous))
                 .shadow(color: Color.black.opacity(0.04), radius: 10, y: 4)
+            }
+        }
+    }
+
+    @ViewBuilder
+    private func activityRow(_ item: Activity, household: HouseholdRecord) -> some View {
+        let dogPhoto = dogs.first(where: { $0.photoData != nil })?.photoData
+        switch item {
+        case .walk(let walk):
+            let author = members.first { $0.userID == walk.authorID }
+            let tint = members.firstIndex { $0.userID == walk.authorID } ?? 0
+            HStack(alignment: .top, spacing: TruffloTheme.Spacing.small) {
+                PersonDisc(name: author?.displayName ?? "?", diameter: 36, tintIndex: tint)
+                VStack(alignment: .leading, spacing: 3) {
+                    (Text(author?.displayName ?? "Un membre").bold() + Text(" a enregistré une balade"))
+                        .font(.system(size: 13))
+                        .foregroundStyle(Color.truffloCharcoal)
+                    Text("\(WalkFormatting.relativeDay(walk.endedAt).capitalizedFirst) · \(WalkFormatting.time(walk.endedAt))")
+                        .font(.system(size: 12))
+                        .foregroundStyle(Color.truffloSlate)
+                    HStack(spacing: TruffloTheme.Spacing.small) {
+                        Label(WalkFormatting.minutes(walk.confirmedSeconds), systemImage: "clock")
+                        if let meters = walk.recordedPathMeters {
+                            Label(WalkFormatting.distance(meters), systemImage: "point.topleft.down.to.point.bottomright.curvepath")
+                        }
+                    }
+                    .font(.system(size: 12))
+                    .foregroundStyle(Color.truffloCharcoal)
+                }
+                Spacer(minLength: 0)
+                if let dogPhoto {
+                    TruffloDogThumbnail(name: dogs.first?.name ?? "", photoData: dogPhoto, side: 52, bordered: false)
+                }
+            }
+        case .photo(let photo):
+            let meIndex = members.firstIndex { $0.userID == household.myUserID } ?? 0
+            HStack(alignment: .top, spacing: TruffloTheme.Spacing.small) {
+                PersonDisc(name: household.myDisplayName, diameter: 36, tintIndex: meIndex)
+                VStack(alignment: .leading, spacing: 3) {
+                    (Text("Vous").bold() + Text(" avez ajouté une photo"))
+                        .font(.system(size: 13))
+                        .foregroundStyle(Color.truffloCharcoal)
+                    Text("\(WalkFormatting.relativeDay(photo.createdAt).capitalizedFirst) · \(WalkFormatting.time(photo.createdAt))")
+                        .font(.system(size: 12))
+                        .foregroundStyle(Color.truffloSlate)
+                }
+                Spacer(minLength: 0)
+                TruffloDogThumbnail(name: "", photoData: photo.data, side: 52, bordered: false)
             }
         }
     }

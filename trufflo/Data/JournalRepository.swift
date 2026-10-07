@@ -295,6 +295,15 @@ struct JournalRepository {
         try commit { context.insert(WalkPhotoRecord(walkID: walkID, data: data)) }
     }
 
+    func deleteWalkPhoto(_ id: UUID) throws {
+        let photoID = id
+        try commit {
+            for photo in try context.fetch(FetchDescriptor<WalkPhotoRecord>(predicate: #Predicate { $0.id == photoID })) {
+                context.delete(photo)
+            }
+        }
+    }
+
     /// Where a balade suivie took place and the weather at its end.
     func setWalkSurroundings(_ id: UUID, placeName: String?, weather: WalkWeather?, temperatureC: Double?) throws {
         guard let walk = requireWalk(id) else { throw JournalError.walkMissing }

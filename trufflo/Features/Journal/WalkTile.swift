@@ -70,7 +70,7 @@ private struct WalkCard: View {
                         .font(.footnote)
                         .foregroundStyle(Color.truffloSlate)
                         .lineLimit(1)
-                    Text(shown.title)
+                    Text(shown.heading)
                         .font(.system(.headline, design: .rounded, weight: .bold))
                         .foregroundStyle(Color(red: 0.1, green: 0.1, blue: 0.1))
                         .lineLimit(1)
@@ -145,10 +145,12 @@ struct JournalWalkTile: View {
     @Query private var participants: [WalkDogRecord]
     @Query private var points: [TrackPointRecord]
     @Query(sort: \DogRecord.createdAt) private var dogs: [DogRecord]
+    @Query private var photos: [WalkPhotoRecord]
 
     init(walk: WalkRecord) {
         self.walk = walk
         let walkID = walk.id
+        _photos = Query(filter: #Predicate<WalkPhotoRecord> { $0.walkID == walkID }, sort: \.createdAt)
         _participants = Query(filter: #Predicate<WalkDogRecord> { $0.walkID == walkID })
         _points = Query(filter: #Predicate<TrackPointRecord> { $0.walkID == walkID },
                         sort: \.sequence, order: .forward)
@@ -157,7 +159,8 @@ struct JournalWalkTile: View {
     var body: some View {
         JournalWalkCard(walk: walk,
                         shown: WalkPresentation(walk: walk, participants: participants, dogs: dogs, points: points),
-                        pointCount: points.count)
+                        pointCount: points.count,
+                        firstPhoto: photos.first?.data)
     }
 }
 
@@ -165,6 +168,7 @@ private struct JournalWalkCard: View {
     let walk: WalkRecord
     let shown: WalkPresentation
     let pointCount: Int
+    let firstPhoto: Data?
 
     private let shape = RoundedRectangle(cornerRadius: TruffloTheme.Radius.card, style: .continuous)
     private let pictureShape = RoundedRectangle(cornerRadius: 16, style: .continuous)
@@ -188,7 +192,7 @@ private struct JournalWalkCard: View {
                     }
                     .font(.system(size: 13))
                     .foregroundStyle(Color.truffloSlate)
-                    Text(shown.title)
+                    Text(shown.heading)
                         .font(.system(size: 16, weight: .bold, design: .rounded))
                         .foregroundStyle(Color(red: 0.08, green: 0.08, blue: 0.08))
                         .lineLimit(1)
@@ -203,7 +207,7 @@ private struct JournalWalkCard: View {
                 Spacer(minLength: 0)
                 picture
             }
-            HStack(alignment: .top, spacing: TruffloTheme.Spacing.medium) {
+            HStack(alignment: .center, spacing: TruffloTheme.Spacing.medium) {
                 ForEach(Array(stats.enumerated()), id: \.offset) { index, item in
                     if index > 0 {
                         Rectangle().fill(Color.truffloForest.opacity(0.15)).frame(width: 1, height: 34)
@@ -217,6 +221,13 @@ private struct JournalWalkCard: View {
                             .font(.system(size: 11))
                             .foregroundStyle(Color.truffloSlate)
                     }
+                }
+                Spacer(minLength: 0)
+                if let mood = walk.mood {
+                    Label(mood.label, systemImage: mood.systemImage)
+                        .font(.system(size: 12))
+                        .foregroundStyle(Color.truffloCharcoal)
+                        .labelStyle(MoodLabelStyle())
                 }
             }
         }
@@ -246,7 +257,7 @@ private struct JournalWalkCard: View {
                             .padding(6)
                     }
                 }
-        } else if let photo = shown.leadPhoto {
+        } else if let photo = firstPhoto ?? shown.leadPhoto {
             TruffloDogThumbnail(name: shown.leadName ?? "", photoData: photo, side: 92, width: 118, bordered: false)
         }
     }
@@ -258,5 +269,15 @@ private struct JournalWalkCard: View {
         parts.append(contentsOf: stats.map(\.value))
         if !walk.note.isEmpty { parts.append(walk.note) }
         return parts.joined(separator: ", ")
+    }
+}
+
+/// The mood at the corner of a journal card: its symbol in forest, its words.
+private struct MoodLabelStyle: LabelStyle {
+    func makeBody(configuration: Configuration) -> some View {
+        HStack(spacing: 6) {
+            configuration.icon.font(.system(size: 18)).foregroundStyle(Color.truffloForest)
+            configuration.title
+        }
     }
 }

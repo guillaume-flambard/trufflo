@@ -17,6 +17,8 @@ struct WalkSummaryView: View {
     @Query(sort: \DogRecord.createdAt) private var dogs: [DogRecord]
 
     @State private var note = ""
+    @State private var title = ""
+    @State private var mood: WalkMood?
     @State private var hasLoadedNote = false
     @State private var saveError: String?
     /// A finished walk is framed once and never chases the camera afterwards.
@@ -107,7 +109,15 @@ struct WalkSummaryView: View {
                     }
 
                     VStack(alignment: .leading, spacing: TruffloTheme.Spacing.xSmall) {
+                        WalkSectionTitle("Titre")
+                        TextField("Ex. Balade dans le quartier", text: $title)
+                            .accessibilityIdentifier("walk.summary.title")
+                            .modifier(FormFieldStyle())
+                        WalkSectionTitle("Humeur")
+                            .padding(.top, TruffloTheme.Spacing.xSmall)
+                        MoodChips(selection: $mood)
                         WalkSectionTitle("Note")
+                            .padding(.top, TruffloTheme.Spacing.xSmall)
                         TextField("Comment s'est passée la balade ?", text: $note, axis: .vertical)
                             .font(.body)
                             .lineLimit(3...8)
@@ -146,6 +156,8 @@ struct WalkSummaryView: View {
             // Read once: a resumed summary must not overwrite what is being typed.
             guard !hasLoadedNote else { return }
             note = walk.note
+            title = walk.title
+            mood = walk.mood
             hasLoadedNote = true
         }
     }
@@ -201,13 +213,16 @@ struct WalkSummaryView: View {
             return
         }
         let trimmed = note.trimmingCharacters(in: .whitespacesAndNewlines)
-        if trimmed == walk.note {
+        let cleanTitle = title.trimmingCharacters(in: .whitespacesAndNewlines)
+        if trimmed == walk.note && cleanTitle == walk.title && mood == walk.mood {
             onDone()
             return
         }
         do {
-            try JournalRepository(context: context).updateWalkNote(walk.id, note: note)
+            try JournalRepository(context: context).updateWalkDetails(walk.id, title: title, mood: mood, note: note)
             onDone()
+        } catch WalkError.titleTooLong {
+            saveError = "Le titre doit contenir au maximum 80 caractères."
         } catch WalkError.noteTooLong {
             saveError = "La note doit contenir au maximum 500 caractères."
         } catch {

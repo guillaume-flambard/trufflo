@@ -8,6 +8,7 @@ extension WalkPresentation {
                   startedAt: walk.startedAt, endedAt: walk.endedAt,
                   participants: participants.map { .init(dogID: $0.dogID, name: $0.dogNameSnapshot) },
                   dogs: dogs.map { .init(id: $0.id, photo: $0.photoData) },
-                  points: points.map { .init(segment: $0.segment, latitude: $0.latitude, longitude: $0.longitude) })
+                  points: points.map { .init(segment: $0.segment, latitude: $0.latitude, longitude: $0.longitude) },
+                  walkTitle: walk.title)
     }
 }

@@ -11,6 +11,8 @@ struct ManualWalkFormView: View {
     @State private var minutesText = ""
     @State private var endedAt = Date()
     @State private var note = ""
+    @State private var title = ""
+    @State private var mood: WalkMood?
     @State private var errorMessage: String?
     @State private var didSave = false
     @Environment(\.accessibilityReduceMotion) private var reduceMotion
@@ -51,6 +53,16 @@ struct ManualWalkFormView: View {
                             .datePickerStyle(.compact)
                             .tint(Color.truffloForest)
                             .environment(\.locale, TruffloLocale.french)
+                    }
+
+                    label("Titre (facultatif)") {
+                        TextField("Ex. Tour du parc", text: $title)
+                            .accessibilityIdentifier("walk.title.field")
+                            .modifier(FormFieldStyle())
+                    }
+
+                    label("Humeur (facultatif)") {
+                        MoodChips(selection: $mood)
                     }
 
                     label("Note") {
@@ -155,12 +167,18 @@ struct ManualWalkFormView: View {
         do {
             let input = try ManualWalkInput(dogIDs: Array(selectedDogs),
                                             durationSeconds: minutes * 60, note: note)
-            try JournalRepository(context: context).addManualWalk(input, endedAt: endedAt)
+            let repository = JournalRepository(context: context)
+            let walk = try repository.addManualWalk(input, endedAt: endedAt)
+            if !title.trimmingCharacters(in: .whitespaces).isEmpty || mood != nil {
+                try repository.updateWalkDetails(walk.id, title: title, mood: mood, note: walk.note)
+            }
             confirmAndDismiss()
         } catch WalkError.missingDog {
             errorMessage = "Sélectionnez au moins un chien."
         } catch WalkError.noteTooLong {
             errorMessage = "La note doit contenir au maximum 500 caractères."
+        } catch WalkError.titleTooLong {
+            errorMessage = "Le titre doit contenir au maximum 80 caractères."
         } catch JournalError.profileMissing {
             errorMessage = "Un chien a changé. Rouvrez ce formulaire."
         } catch JournalError.persistence {

@@ -14,6 +14,8 @@ struct WalkDetailView: View {
     @Query private var participants: [WalkDogRecord]
     @Query private var points: [TrackPointRecord]
     @Query(sort: \DogRecord.createdAt) private var dogs: [DogRecord]
+    @Query private var photos: [WalkPhotoRecord]
+    @State private var showEditor = false
 
     @State private var showDeleteConfirmation = false
     @State private var routeFile: SharedFile?
@@ -27,6 +29,8 @@ struct WalkDetailView: View {
         _participants = Query(filter: #Predicate<WalkDogRecord> { $0.walkID == walkID })
         _points = Query(filter: #Predicate<TrackPointRecord> { $0.walkID == walkID },
                         sort: \.sequence, order: .forward)
+        _photos = Query(filter: #Predicate<WalkPhotoRecord> { $0.walkID == walkID },
+                        sort: \.createdAt)
     }
 
     var body: some View {
@@ -76,7 +80,9 @@ struct WalkDetailView: View {
                     }
                     header(walk, shown)
                     statsBlock(walk, shown)
-                    if !walk.note.isEmpty { noteCard(walk) }
+                    photosSection(walk)
+                    noteCard(walk)
+                    if walk.weather != nil || walk.temperatureC != nil { environmentCard(walk) }
                     measureCard(walk)
                     actionsCard(walk, hasMap: hasMap)
                 }
@@ -110,6 +116,17 @@ struct WalkDetailView: View {
         // title, as on the profile, so both kinds of walk open the same way.
         .toolbarBackgroundVisibility(.hidden, for: .navigationBar)
         .navigationTitle("")
+        .task(id: walk.id) {
+            // The place is looked up once, then kept: older balades get theirs too.
+            guard walk.source != .manual, walk.placeName.isEmpty, trackCoordinates.count >= 2 else { return }
+            if let name = await WalkPlaceResolver.placeName(for: trackCoordinates) {
+                try? JournalRepository(context: context).setWalkSurroundings(walk.id, placeName: name,
+                                                                             weather: nil, temperatureC: nil)
+            }
+        }
+        .sheet(isPresented: $showEditor) {
+            WalkDetailsEditor(walk: walk)
+        }
         .sheet(isPresented: $showCorrection) {
             WalkCorrectionView(walk: walk, participants: participants,
                                existingDogIDs: Set(dogs.map(\.id)))
@@ -140,6 +157,12 @@ struct WalkDetailView: View {
                 Text(WalkFormatting.relativeDayAndTime(shown.date).capitalizedFirst)
                     .font(.system(size: 14))
                     .foregroundStyle(Color.truffloSlate)
+                if !walk.placeName.isEmpty {
+                    Label(walk.placeName, systemImage: "mappin.and.ellipse")
+                        .font(.system(size: 13))
+                        .foregroundStyle(Color.truffloSlate)
+                        .accessibilityIdentifier("walk.detail.place")
+                }
                 if shown.names.isEmpty {
                     Text("Aucun chien associé à cette balade.")
                         .font(.subheadline)
@@ -152,7 +175,8 @@ struct WalkDetailView: View {
                 if let photo = shown.leadPhoto {
                     TruffloDogPortrait(name: shown.leadName ?? "", photoData: photo, diameter: 56, aimsAtAnimal: true)
                 }
-                Label(shown.isTracked ? "Balade suivie" : "Balade ajoutée", systemImage: "figure.walk")
+                Label(walk.mood?.label ?? (shown.isTracked ? "Balade suivie" : "Balade ajoutée"),
+                      systemImage: walk.mood?.systemImage ?? "figure.walk")
                     .font(.system(size: 12, weight: .medium))
                     .foregroundStyle(Color.truffloForest)
                     .padding(.horizontal, 10)
@@ -175,6 +199,11 @@ struct WalkDetailView: View {
                 let text = kmh.formatted(.number.precision(.fractionLength(1)).locale(TruffloLocale.french))
                 items.append(("gauge.with.needle", "\(text) km/h", "Allure moyenne"))
             }
+        }
+        let lead = dogs.first { dog in participants.contains { $0.dogID == dog.id } }
+        if shown.isTracked, let kcal = CalorieEstimate.kcal(weightKg: lead?.weightKg,
+                                                            meters: walk.recordedPathMeters, size: lead?.size) {
+            items.append(("flame", "\(kcal) kcal", "Estimation"))
         }
         return HStack(spacing: 0) {
             ForEach(Array(items.enumerated()), id: \.offset) { index, item in
@@ -213,15 +242,95 @@ struct WalkDetailView: View {
                     .foregroundStyle(Color.truffloSlate)
                 Spacer()
                 if walk.phase == .completed {
-                    Button("Modifier") { showCorrection = true }
+                    Button("Modifier") { showEditor = true }
+                        .accessibilityIdentifier("walk.details.edit")
                         .font(.system(size: 12, weight: .medium))
                         .foregroundStyle(Color.truffloForest)
                 }
             }
-            Text(walk.note)
+            Text(walk.note.isEmpty ? "Aucune note pour cette balade." : walk.note)
                 .font(.system(size: 13))
-                .foregroundStyle(Color.truffloCharcoal)
+                .foregroundStyle(walk.note.isEmpty ? Color.truffloSlate : Color.truffloCharcoal)
                 .fixedSize(horizontal: false, vertical: true)
+        }
+        .padding(TruffloTheme.Spacing.medium)
+        .frame(maxWidth: .infinity, alignment: .leading)
+        .background(Color.white, in: RoundedRectangle(cornerRadius: TruffloTheme.Radius.card, style: .continuous))
+    }
+
+    /// The photos of the balade, a row of four with the rest counted on the last
+    /// one; an invitation to add some when there are none.
+    @ViewBuilder
+    private func photosSection(_ walk: WalkRecord) -> some View {
+        VStack(alignment: .leading, spacing: TruffloTheme.Spacing.xSmall) {
+            HStack {
+                Text("Photos")
+                    .font(.system(size: 18, weight: .bold, design: .rounded))
+                    .foregroundStyle(Color.truffloForest)
+                    .accessibilityAddTraits(.isHeader)
+                Spacer()
+                if photos.count > 4 {
+                    Button { showEditor = true } label: {
+                        HStack(spacing: 4) { Text("Voir tout (\(photos.count))"); Image(systemName: "chevron.right").imageScale(.small) }
+                            .font(.system(size: 13))
+                            .foregroundStyle(Color.truffloSlate)
+                    }
+                    .buttonStyle(.plain)
+                }
+            }
+            if photos.isEmpty {
+                Button { showEditor = true } label: {
+                    Label("Ajouter des photos", systemImage: "photo.badge.plus")
+                        .font(.system(size: 14, weight: .medium))
+                        .foregroundStyle(Color.truffloForest)
+                        .frame(maxWidth: .infinity, minHeight: 64)
+                        .background(Color.white.opacity(0.7),
+                                    in: RoundedRectangle(cornerRadius: 16, style: .continuous))
+                        .overlay(RoundedRectangle(cornerRadius: 16, style: .continuous)
+                            .strokeBorder(Color.truffloForest.opacity(0.2), style: StrokeStyle(lineWidth: 1, dash: [5, 4])))
+                }
+                .buttonStyle(.plain)
+                .accessibilityIdentifier("walk.photos.add")
+            } else {
+                HStack(spacing: 6) {
+                    ForEach(Array(photos.prefix(4).enumerated()), id: \.element.id) { index, photo in
+                        let isLast = index == 3 && photos.count > 4
+                        TruffloDogThumbnail(name: "", photoData: photo.data, side: 80,
+                                            width: index == 0 ? 100 : nil, bordered: false)
+                            .overlay {
+                                if isLast {
+                                    RoundedRectangle(cornerRadius: TruffloTheme.Radius.medium, style: .continuous)
+                                        .fill(.black.opacity(0.35))
+                                    Text("+\(photos.count - 3)").font(.title3.bold()).foregroundStyle(.white)
+                                }
+                            }
+                    }
+                }
+                .accessibilityElement(children: .ignore)
+                .accessibilityLabel("\(photos.count) photos")
+            }
+        }
+    }
+
+    /// The weather at the end of the balade, when the service answered.
+    private func environmentCard(_ walk: WalkRecord) -> some View {
+        VStack(alignment: .leading, spacing: TruffloTheme.Spacing.xSmall) {
+            Label("Environnement", systemImage: "leaf")
+                .font(.system(size: 12, weight: .medium))
+                .foregroundStyle(Color.truffloSlate)
+            HStack(spacing: 8) {
+                if let weather = walk.weather {
+                    Label(weather.label, systemImage: weather.systemImage)
+                        .symbolRenderingMode(.multicolor)
+                }
+                if let temperature = walk.temperatureC {
+                    Label("\(Int(temperature.rounded())) °C", systemImage: "thermometer.medium")
+                        .symbolRenderingMode(.multicolor)
+                }
+            }
+            .font(.system(size: 13))
+            .foregroundStyle(Color.truffloCharcoal)
+            .labelStyle(EnvironmentChipStyle())
         }
         .padding(TruffloTheme.Spacing.medium)
         .frame(maxWidth: .infinity, alignment: .leading)
@@ -368,5 +477,14 @@ struct WalkFactRow: View {
         .overlay(alignment: .bottom) {
             Rectangle().fill(Color.truffloForest.opacity(0.1)).frame(height: 1)
         }
+    }
+}
+
+private struct EnvironmentChipStyle: LabelStyle {
+    func makeBody(configuration: Configuration) -> some View {
+        HStack(spacing: 6) { configuration.icon; configuration.title }
+            .padding(.horizontal, 12)
+            .frame(minHeight: 34)
+            .background(Color.black.opacity(0.04), in: Capsule())
     }
 }

@@ -43,8 +43,13 @@ public struct WalkPresentation: Sendable {
     public let date: Date
     private let points: [TrackCoordinate]
 
+    /// The title the person gave the balade; empty when none.
+    public let walkTitle: String
+
     public init(isTracked: Bool, startedAt: Date, endedAt: Date?,
-                participants: [Participant], dogs: [Dog], points: [TrackCoordinate]) {
+                participants: [Participant], dogs: [Dog], points: [TrackCoordinate],
+                walkTitle: String = "") {
+        self.walkTitle = walkTitle
         self.isTracked = isTracked
         date = endedAt ?? startedAt
         self.points = points
@@ -54,6 +59,9 @@ public struct WalkPresentation: Sendable {
         leadPhoto = lead?.photo
         leadName = lead.flatMap { dog in participants.first { $0.dogID == dog.id }?.name }
     }
+
+    /// What a card calls the balade: its own title, or else its dogs.
+    public var heading: String { walkTitle.isEmpty ? title : walkTitle }
 
     /// "Oslo et Pixel", or "Balade" when no chien is left on it.
     public var title: String {
