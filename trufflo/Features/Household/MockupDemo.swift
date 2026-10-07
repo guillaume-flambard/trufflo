@@ -1,12 +1,14 @@
 #if DEBUG
 import Foundation
 import SwiftData
+import UIKit
 
 /// `--uitesting --demo-mockup`: the data of the 2026-10-07 mock-ups, so a capture
 /// of the app can be laid over a mock-up and compared (chantier 8, M08). Oslo,
 /// a balade in the Buttes-Chaumont, the others' balades in the foyer.
-/// `TRUFFLO_DEMO_PHOTO` gives Oslo and the walk photos their picture. Never
-/// compiled into a release build.
+/// Oslo and the walk photos use a real dog photo (`DemoDog`, a development
+/// asset under `Preview Content`, left out of an archive); `TRUFFLO_DEMO_PHOTO`
+/// replaces it with another file. Never compiled into a release build.
 enum MockupDemo {
     static var isRequested: Bool { ProcessInfo.processInfo.arguments.contains("--demo-mockup") }
 
@@ -14,6 +16,7 @@ enum MockupDemo {
     static func seed(_ context: ModelContext) throws {
         let photo = ProcessInfo.processInfo.environment["TRUFFLO_DEMO_PHOTO"]
             .flatMap { FileManager.default.contents(atPath: $0) }
+            ?? NSDataAsset(name: "DemoDog")?.data
         let repository = JournalRepository(context: context)
         let calendar = Calendar.current
         func today(_ hour: Int, _ minute: Int, daysAgo: Int = 0) -> Date {

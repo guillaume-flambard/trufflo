@@ -34,11 +34,14 @@ struct TruffloTodayBackdrop: View {
             // the dog on the right of the head. A pale veil rises towards the bottom
             // so the cards stay readable, and a lighter one sits behind the greeting.
             GeometryReader { screen in
-                let frame = screen.size
+                // The photo covers the top of the screen (not its whole height, which
+                // blew a dog's face up past the cards), then melts into the sand
+                // behind the cards below.
+                let frame = CGSize(width: screen.size.width, height: min(screen.size.height, 400))
                 let scale = max(frame.width / image.size.width, frame.height / image.size.height)
                 let size = CGSize(width: image.size.width * scale, height: image.size.height * scale)
                 let x = min(0, max(frame.width - size.width, frame.width * 0.68 - focus.x * size.width))
-                let y = min(0, max(frame.height - size.height, frame.height * 0.2 - focus.y * size.height))
+                let y = min(0, max(frame.height - size.height, frame.height * 0.3 - focus.y * size.height))
                 Image(uiImage: image)
                     .resizable()
                     .frame(width: size.width, height: size.height)
@@ -50,12 +53,14 @@ struct TruffloTodayBackdrop: View {
                                                .init(color: .clear, location: 0.45)],
                                        startPoint: .leading, endPoint: .trailing)
                     }
-                    .overlay {
-                        LinearGradient(stops: [.init(color: .clear, location: 0.3),
-                                               .init(color: Color.truffloSand.opacity(0.55), location: 0.5),
-                                               .init(color: Color.truffloSand.opacity(0.75), location: 1)],
+                    .mask {
+                        LinearGradient(stops: [.init(color: .black, location: 0),
+                                               .init(color: .black, location: 0.55),
+                                               .init(color: .clear, location: 1)],
                                        startPoint: .top, endPoint: .bottom)
                     }
+                    .frame(maxHeight: .infinity, alignment: .top)
+                    .background(Color.truffloSand)
             }
             .ignoresSafeArea()
             .accessibilityLabel("Photo de \(name)")
