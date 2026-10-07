@@ -1,6 +1,7 @@
 import Foundation
 import SwiftData
 import Testing
+import WeatherKit
 @testable import trufflo
 
 /// The data the 2026-10-07 mock-ups show (chantier 8): dog size, weight and
@@ -91,4 +92,21 @@ struct MockupDataTests {
         try repo.eraseAll()
         #expect(try context.fetch(FetchDescriptor<PlannedWalkRecord>()).isEmpty)
     }
+}
+
+@Test func weatherKitConditionsMapToTheJournalsSixWordsOrNone() {
+    #expect(WalkWeather(conditionName: "mostlyClear") == .sunny)
+    #expect(WalkWeather(conditionName: "partlyCloudy") == .cloudy)
+    #expect(WalkWeather(conditionName: "drizzle") == .rainy)
+    #expect(WalkWeather(conditionName: "flurries") == .snowy)
+    #expect(WalkWeather(conditionName: "breezy") == .windy)
+    #expect(WalkWeather(conditionName: "haze") == .foggy)
+    #expect(WalkWeather(conditionName: "somethingNew") == nil)
+}
+
+@Test func everyWeatherKitConditionHasItsCaseName() {
+    for condition in WeatherCondition.allCases {
+        #expect(!WalkWeatherResolver.caseName(condition).isEmpty, "\(condition.rawValue)")
+    }
+    #expect(WalkWeatherResolver.caseName(.mostlyClear) == "mostlyClear")
 }

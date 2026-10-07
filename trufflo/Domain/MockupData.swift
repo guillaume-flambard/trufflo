@@ -80,6 +80,24 @@ public enum WalkMood: String, CaseIterable, Sendable {
 public enum WalkWeather: String, CaseIterable, Sendable {
     case sunny, cloudy, rainy, snowy, windy, foggy
 
+    /// The six kinds the journal shows, from the name of a WeatherKit
+    /// condition (`WeatherCondition`, iOS 27 SDK). Nil for a condition this
+    /// list does not cover, rather than a wrong word.
+    public init?(conditionName: String) {
+        switch conditionName {
+        case "clear", "mostlyClear", "hot", "frigid": self = .sunny
+        case "cloudy", "mostlyCloudy", "partlyCloudy": self = .cloudy
+        case "rain", "drizzle", "heavyRain", "freezingRain", "freezingDrizzle", "sunShowers",
+             "thunderstorms", "isolatedThunderstorms", "scatteredThunderstorms", "strongStorms",
+             "tropicalStorm", "hurricane", "hail": self = .rainy
+        case "snow", "flurries", "heavySnow", "blizzard", "blowingSnow", "sleet", "sunFlurries",
+             "wintryMix": self = .snowy
+        case "windy", "breezy": self = .windy
+        case "foggy", "haze", "smoky", "blowingDust": self = .foggy
+        default: return nil
+        }
+    }
+
     public var label: String {
         switch self {
         case .sunny: "Ensoleillé"

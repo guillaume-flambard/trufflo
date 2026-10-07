@@ -120,11 +120,18 @@ struct WalkDetailView: View {
         // A page to read, as in the mock-up: the tab bar steps aside.
         .toolbarVisibility(.hidden, for: .tabBar)
         .task(id: walk.id) {
-            // The place is looked up once, then kept: older balades get theirs too.
-            guard walk.source != .manual, walk.placeName.isEmpty, trackCoordinates.count >= 2 else { return }
-            if let name = await WalkPlaceResolver.placeName(for: trackCoordinates) {
+            // The place and the weather are looked up once, then kept: older
+            // balades get theirs too.
+            guard walk.source != .manual, trackCoordinates.count >= 2 else { return }
+            if walk.placeName.isEmpty, let name = await WalkPlaceResolver.placeName(for: trackCoordinates) {
                 try? JournalRepository(context: context).setWalkSurroundings(walk.id, placeName: name,
                                                                              weather: nil, temperatureC: nil)
+            }
+            if walk.weather == nil, let end = walk.endedAt,
+               let (weather, celsius) = await WalkWeatherResolver.weather(at: trackCoordinates[trackCoordinates.count / 2],
+                                                                           endedAt: end) {
+                try? JournalRepository(context: context).setWalkSurroundings(walk.id, placeName: nil,
+                                                                             weather: weather, temperatureC: celsius)
             }
         }
         .fullScreenCover(item: $galleryStart) { start in
@@ -339,6 +346,7 @@ struct WalkDetailView: View {
             .font(.system(size: 12))
             .foregroundStyle(Color.truffloCharcoal)
             .labelStyle(EnvironmentChipStyle())
+            if walk.weather != nil { AppleWeatherAttribution() }
             // The hours, under the chips: when it began and ended for a balade
             // suivie, when it ended for one added afterwards (AC-003).
             Group {
@@ -492,4 +500,28 @@ private struct EnvironmentChipStyle: LabelStyle {
 private struct GalleryStart: Identifiable {
     let id: UUID
     let walkID: UUID
+}
+
+/// Apple Weather's mark and the link to its data sources, required next to
+/// any weather WeatherKit gave.
+private struct AppleWeatherAttribution: View {
+    @State private var attribution: (mark: URL, legal: URL)?
+
+    var body: some View {
+        HStack(spacing: 8) {
+            if let attribution {
+                AsyncImage(url: attribution.mark) { image in
+                    image.resizable().scaledToFit()
+                } placeholder: {
+                    Text("Météo").font(.system(size: 11, weight: .semibold))
+                }
+                .frame(height: 12)
+                .accessibilityLabel("Apple Météo")
+                Link("Sources des données", destination: attribution.legal)
+                    .font(.system(size: 11))
+            }
+        }
+        .foregroundStyle(Color.truffloSlate)
+        .task { attribution = await WalkWeatherResolver.attribution() }
+    }
 }
