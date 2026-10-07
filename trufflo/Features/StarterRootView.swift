@@ -98,7 +98,6 @@ struct StarterRootView: View {
                 .navigationDestination(for: SharedWalkRoute.self) { SharedWalkDetailView(walkID: $0.id) }
             }
             .tabItem { Label("Aujourd'hui", systemImage: "house.fill") }
-            .toolbarVisibility(.hidden, for: .tabBar)
             .tag(0)
 
             NavigationStack {
@@ -116,14 +115,12 @@ struct StarterRootView: View {
                 .navigationDestination(for: SharedWalkRoute.self) { SharedWalkDetailView(walkID: $0.id) }
             }
             .tabItem { Label("Journal", systemImage: "book.fill") }
-            .toolbarVisibility(.hidden, for: .tabBar)
             .tag(1)
 
             // The foyer, a tab of its own (2026-10-07 mock-up) rather than a sheet
             // behind the settings.
             HouseholdView(showsCloseButton: false)
                 .tabItem { Label("Foyer", systemImage: "person.3.fill") }
-                .toolbarVisibility(.hidden, for: .tabBar)
                 .tag(2)
 
             NavigationStack {
@@ -167,7 +164,6 @@ struct StarterRootView: View {
                 .navigationDestination(for: DogRoute.self) { DogDetailView(dogID: $0.id) }
             }
             .tabItem { Label("Chiens", systemImage: "pawprint.fill") }
-            .toolbarVisibility(.hidden, for: .tabBar)
             .tag(3)
 
             if let community {
@@ -176,15 +172,13 @@ struct StarterRootView: View {
                 }
                 .environment(community)
                 .tabItem { Label("Sorties", systemImage: "figure.walk") }
-                .toolbarVisibility(.hidden, for: .tabBar)
                 .tag(4)
             }
         }
         .tint(Color.truffloForest)
-        // The mock-up's own bar replaces the system one (hidden in every tab).
-        .safeAreaInset(edge: .bottom, spacing: 0) {
-            TruffloTabBar(selection: $selectedTab, items: tabItems)
-        }
+        // The system tab bar: Liquid Glass, its own animations, and it folds away
+        // while a long screen scrolls (Apple, *Adopting Liquid Glass*).
+        .tabBarMinimizeBehavior(.onScrollDown)
         .sheet(isPresented: $showDogForm) { DogFormView() }
         .sheet(isPresented: $showHousehold) { HouseholdView() }
         // https://trufflo.memolabs.dev/rejoindre/<code> (B-REQ-02, ADR 0009).
@@ -528,19 +522,6 @@ struct StarterRootView: View {
         }
         .fixedSize(horizontal: false, vertical: true)
         .accessibilityIdentifier("today.week")
-    }
-
-    private var tabItems: [TruffloTabBar.Item] {
-        var items: [TruffloTabBar.Item] = [
-            .init(tag: 0, title: "Aujourd'hui", systemImage: "house.fill", identifier: "tab.today"),
-            .init(tag: 1, title: "Journal", systemImage: "book.fill", identifier: "tab.journal"),
-            .init(tag: 2, title: "Foyer", systemImage: "person.3.fill", identifier: "tab.household"),
-            .init(tag: 3, title: "Chiens", systemImage: "pawprint.fill", identifier: "tab.dogs"),
-        ]
-        if community != nil {
-            items.append(.init(tag: 4, title: "Sorties", systemImage: "figure.walk", identifier: "tab.outings"))
-        }
-        return items
     }
 
     private var completedWalks: [WalkRecord] { walks.filter { $0.phase == .completed } }
