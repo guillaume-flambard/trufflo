@@ -38,7 +38,7 @@ struct StartBlockedSheet: View {
                 .foregroundStyle(Color.truffloForest)
                 .frame(width: 64, height: 64)
                 .background(Color.truffloMint.opacity(0.45),
-                            in: RoundedRectangle(cornerRadius: 20, style: .continuous))
+                            in: RoundedRectangle(cornerRadius: TruffloTheme.Radius.card, style: .continuous))
                 .accessibilityHidden(true)
             Text(title)
                 .font(.system(.title2, design: .rounded, weight: .heavy))
@@ -58,6 +58,7 @@ struct StartBlockedSheet: View {
                     }
                     .buttonStyle(.glassProminent)
                     .tint(Color.truffloForest)
+                    .truffloTap()
                     .accessibilityIdentifier("walk.blocked.settings")
 
                     Button(action: addManually) {
@@ -67,6 +68,7 @@ struct StartBlockedSheet: View {
                             .frame(maxWidth: .infinity, minHeight: 52)
                     }
                     .buttonStyle(.glass)
+                    .truffloTap()
                     .accessibilityIdentifier("walk.blocked.manual")
                 } else {
                     Button(action: addManually) {
@@ -76,17 +78,19 @@ struct StartBlockedSheet: View {
                     }
                     .buttonStyle(.glassProminent)
                     .tint(Color.truffloForest)
+                    .truffloTap()
                     .accessibilityIdentifier("walk.blocked.manual")
                 }
                 Button("Plus tard", action: dismiss)
                     .font(.body.weight(.semibold))
                     .foregroundStyle(Color.truffloSlate)
                     .frame(maxWidth: .infinity, minHeight: 44)
+                    .truffloTap()
                     .accessibilityIdentifier("walk.blocked.dismiss")
             }
             .padding(.top, TruffloTheme.Spacing.xSmall)
         }
-        .padding(.horizontal, TruffloTheme.Spacing.large)
+        .padding(.horizontal, TruffloTheme.Spacing.screen)
         .padding(.top, TruffloTheme.Spacing.large)
         .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .topLeading)
         .presentationDetents([.height(560), .large])

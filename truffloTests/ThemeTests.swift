@@ -83,7 +83,8 @@ struct ThemeTests {
         for index in 1..<scale.count {
             #expect(scale[index] > scale[index - 1])
         }
-        #expect(TruffloTheme.Radius.card == 20)
+        // 24 since the 2026-10-07 radius audit (Theme.swift, "Corner Radius Tokens").
+        #expect(TruffloTheme.Radius.card == 24)
         #expect(TruffloTheme.Radius.pill > TruffloTheme.Radius.card)
         #expect(TruffloTheme.Radius.small > 0)
     }

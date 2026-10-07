@@ -35,15 +35,17 @@ public struct TruffloGPSIndicator: View {
         var dotColor: Color {
             switch self {
             case .strong: return .truffloSage
-            case .searching: return .white.opacity(0.6)
-            case .weak: return .truffloPeach
-            case .paused: return .white.opacity(0.6)
-            case .interrupted: return .truffloPeach
+            case .searching: return .truffloSlate
+            case .weak: return .truffloAmber
+            case .paused: return .truffloSlate
+            case .interrupted: return .truffloDanger
             }
         }
     }
 
     private let state: State
+
+    @Environment(\.accessibilityReduceMotion) private var reduceMotion
 
     public init(_ state: State) {
         self.state = state
@@ -56,9 +58,11 @@ public struct TruffloGPSIndicator: View {
                 .frame(width: 8, height: 8)
             Text(state.label)
                 .font(.system(size: 13, weight: .semibold, design: .rounded))
-                .foregroundStyle(.white.opacity(0.92))
+                .foregroundStyle(Color.truffloForest)
                 .lineLimit(1)
+                .contentTransition(.opacity)
         }
+        .animation(TruffloTheme.Motion.selection(reduceMotion: reduceMotion), value: state)
         .accessibilityElement(children: .ignore)
         .accessibilityLabel("Signal GPS : \(state.label)")
         .accessibilityValue(state.label)
@@ -89,7 +93,7 @@ public struct TruffloWalkMetrics: View {
         HStack(alignment: .firstTextBaseline, spacing: TruffloTheme.Spacing.medium) {
             metric(value: durationText, caption: "Durée", identifier: "walk.timer", dimmed: false)
             Rectangle()
-                .fill(.white.opacity(0.26))
+                .fill(Color.truffloForest.opacity(0.18))
                 .frame(width: 1, height: 36)
                 .accessibilityHidden(true)
             metric(value: distanceText, caption: "Distance", identifier: "walk.distance",
@@ -103,7 +107,7 @@ public struct TruffloWalkMetrics: View {
                 .font(.truffloFigure(.largeTitle))
                 // Tabular figures, or the row jitters on every tick.
                 .monospacedDigit()
-                .foregroundStyle(dimmed ? .white.opacity(0.72) : .white)
+                .foregroundStyle(dimmed ? Color.truffloSlate : Color.truffloForest)
                 .lineLimit(1)
                 .minimumScaleFactor(0.55)
                 // No `accessibilityElement(children: .ignore)` here: on a Text it
@@ -114,7 +118,7 @@ public struct TruffloWalkMetrics: View {
                 .accessibilityAddTraits(.updatesFrequently)
             Text(caption)
                 .font(.footnote)
-                .foregroundStyle(.white.opacity(0.72))
+                .foregroundStyle(Color.truffloSlate)
                 .accessibilityHidden(true)
         }
         .frame(maxWidth: .infinity, alignment: .leading)

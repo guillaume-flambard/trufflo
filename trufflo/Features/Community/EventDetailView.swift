@@ -252,7 +252,7 @@ struct EventDetailView: View {
                             .frame(maxWidth: .infinity, minHeight: 56)
                     }
                     .buttonStyle(.glassProminent)
-                    .buttonBorderShape(.roundedRectangle(radius: TruffloTheme.Radius.medium))
+                    .buttonBorderShape(.capsule)
                     .tint(Color.truffloForest)
                     .accessibilityIdentifier("event.request")
                 } else if event.myStatus == .requested || event.myStatus == .accepted,
@@ -273,7 +273,7 @@ struct EventDetailView: View {
                     Text("Cette sortie est complète").font(.headline).foregroundStyle(Color.truffloSlate)
                 }
             }
-            .padding(.horizontal, TruffloTheme.Spacing.large)
+            .padding(.horizontal, TruffloTheme.Spacing.screen)
             .padding(.vertical, TruffloTheme.Spacing.xSmall)
             .background(Color.truffloSand.opacity(0.95))
         }
@@ -289,7 +289,7 @@ struct EventDetailView: View {
                         .frame(maxWidth: .infinity, minHeight: 56)
                 }
                 .buttonStyle(.glassProminent)
-                .buttonBorderShape(.roundedRectangle(radius: TruffloTheme.Radius.medium))
+                .buttonBorderShape(.capsule)
                 .tint(Color.truffloForest)
                 .accessibilityIdentifier("event.repropose")
             } else {
@@ -307,7 +307,7 @@ struct EventDetailView: View {
             }
         }
         .frame(maxWidth: .infinity)
-        .padding(.horizontal, TruffloTheme.Spacing.large)
+        .padding(.horizontal, TruffloTheme.Spacing.screen)
         .padding(.vertical, TruffloTheme.Spacing.xSmall)
         .background(Color.truffloSand.opacity(0.95))
     }
@@ -393,7 +393,7 @@ struct JoinSheet: View {
                             .frame(maxWidth: .infinity, minHeight: 56)
                     }
                     .buttonStyle(.glassProminent)
-                    .buttonBorderShape(.roundedRectangle(radius: TruffloTheme.Radius.medium))
+                    .buttonBorderShape(.capsule)
                     .tint(Color.truffloForest)
                     .disabled(model.isBusy)
                     .accessibilityIdentifier("join.send")

@@ -11,6 +11,8 @@ public struct TruffloButtonStyle: ButtonStyle {
     public let variant: Variant
     public let isFullWidth: Bool
 
+    @Environment(\.accessibilityReduceMotion) private var reduceMotion
+
     public init(variant: Variant = .primary, isFullWidth: Bool = true) {
         self.variant = variant
         self.isFullWidth = isFullWidth
@@ -29,8 +31,9 @@ public struct TruffloButtonStyle: ButtonStyle {
                 Capsule()
                     .stroke(borderColor, lineWidth: variant == .outline ? 1.5 : 0)
             )
-            .scaleEffect(configuration.isPressed ? 0.98 : 1.0)
-            .animation(.snappy(duration: 0.15), value: configuration.isPressed)
+            .scaleEffect(configuration.isPressed ? TruffloTheme.Motion.pressScale : 1.0)
+            .animation(TruffloTheme.Motion.press(reduceMotion: reduceMotion), value: configuration.isPressed)
+            .sensoryFeedback(.impact(weight: .light), trigger: configuration.isPressed) { _, isPressed in isPressed }
     }
 
     private func backgroundColor(isPressed: Bool) -> Color {

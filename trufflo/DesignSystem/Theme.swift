@@ -47,15 +47,59 @@ public enum TruffloTheme {
         public static let large: CGFloat = 24
         public static let xLarge: CGFloat = 32
         public static let xxLarge: CGFloat = 48
+        /// The side gutter of every screen. The system's large titles ("Journal",
+        /// "Mes chiens") and the anchored start button sit 16 pt from the edge; content
+        /// set at 24 next to them read as a second grid (2026-10-07 review). One gutter,
+        /// everywhere a screen lays out its own content.
+        public static let screen: CGFloat = 16
     }
 
     // MARK: - Corner Radius Tokens
+    // Three roles, no other value (ART-DIRECTION §3.3, tightened 2026-10-07 after an
+    // audit found fourteen different radii in the code):
+    //   - controls (buttons, chips): a capsule, never a radius;
+    //   - objects (a card, a tile, a panel): `card`;
+    //   - what sits inside an object (a thumbnail, a field): `medium`, which is
+    //     `card` minus the padding that separates them, so the curves stay concentric.
     public enum Radius {
         public static let small: CGFloat = 8
         public static let medium: CGFloat = 12
         public static let large: CGFloat = 16
-        public static let card: CGFloat = 20
+        public static let card: CGFloat = 24
         public static let pill: CGFloat = 999
+    }
+
+    // MARK: - Motion Tokens
+    // Spring-based, one curve per intent, so no component hardcodes its own
+    // duration (an audit of 2026-10-07 found two components doing exactly that,
+    // with two different values for the same "press" feeling). HIG Motion: brief,
+    // precise, tied to what changes — never a decorative loop. Every curve takes
+    // `reduceMotion` explicitly instead of reading the environment itself, so a
+    // component applies it at its own call site.
+    public enum Motion {
+        /// A tap's feedback: a button, a chip, a clear-field control. Disabled
+        /// outright under Reduce Motion since it carries no information.
+        public static func press(reduceMotion: Bool) -> Animation? {
+            reduceMotion ? nil : .spring(response: 0.28, dampingFraction: 0.7)
+        }
+        /// How far a pressed control shrinks. 0.98 measured as imperceptible in
+        /// practice (2026-10-07 device check): a 358pt button only loses ~7px,
+        /// well under what a thumb registers. 0.94 is the first value that reads
+        /// as a clear depress without looking like a bounce.
+        public static let pressScale: CGFloat = 0.94
+        /// A state change that is information, not decoration: a selection that
+        /// moves, a signal word that changes, an icon that replaces another.
+        /// Reduced to an instant fade rather than removed, because the change
+        /// itself still needs to read.
+        public static func selection(reduceMotion: Bool) -> Animation? {
+            reduceMotion ? .linear(duration: 0.05) : .spring(response: 0.35, dampingFraction: 0.82)
+        }
+        /// Content arriving for the first time: a photo once it decodes, a
+        /// control appearing. Disabled under Reduce Motion; the content is just
+        /// there on the next frame.
+        public static func appear(reduceMotion: Bool) -> Animation? {
+            reduceMotion ? nil : .spring(response: 0.4, dampingFraction: 0.85)
+        }
     }
 }
 
@@ -86,6 +130,23 @@ public extension Font {
     static var truffloCaption: Font { .system(.footnote, design: .rounded, weight: .regular) }
 }
 
+// MARK: - The type scale of Today
+// Four sizes and two weights, no more: the figure, the title, the body and the meta;
+// heavy for what names or leads, regular for what explains. A screen with ten sizes has
+// no hierarchy, only noise (mobile-app-ui-design skill, step 3; audit of 2026-10-07
+// counted ten sizes and five weights on Today). The figure (the week's number) is the
+// one size set by its own component, scaled with Dynamic Type.
+public extension Font {
+    /// A name or a figure that leads: the dog, a walk's duration, the welcome line.
+    static var truffloTitleHeavy: Font { .system(.title, design: .rounded, weight: .heavy) }
+    /// A heading of a block, a label that names, a button.
+    static var truffloBodyHeavy: Font { .system(.body, design: .rounded, weight: .heavy) }
+    /// A sentence: a note, an explanation, a secondary line.
+    static var truffloBodyRegular: Font { .system(.body) }
+    /// A hour, a day, a source: what is read in passing.
+    static var truffloMeta: Font { .system(.footnote) }
+}
+
 // MARK: - Screen chrome
 public extension View {
     /// The one background and tint every list or form screen shares, so that
@@ -102,6 +163,30 @@ public extension View {
         self.font(.truffloCaption).foregroundStyle(Color.truffloSlate)
     }
 
+    /// Haptic feedback for a tap, without owning the button's visual style.
+    ///
+    /// For native-styled buttons (`.glassProminent`, `.glass`, `.bordered`…) that
+    /// already get the system's own press visuals but no haptic: a
+    /// `simultaneousGesture` fires alongside the button's own tap handling
+    /// instead of replacing it, so this attaches to any `Button` with no change
+    /// to its action closure or appearance.
+    func truffloTap(_ feedback: SensoryFeedback = .impact(weight: .light)) -> some View {
+        modifier(TruffloTactileTap(feedback: feedback))
+    }
+}
+
+private struct TruffloTactileTap: ViewModifier {
+    let feedback: SensoryFeedback
+    @State private var tick = false
+
+    func body(content: Content) -> some View {
+        content
+            .simultaneousGesture(TapGesture().onEnded { tick.toggle() })
+            .sensoryFeedback(feedback, trigger: tick)
+    }
+}
+
+public extension View {
     /// Error text: always readable (5:1 on sand) and never colour alone, the
     /// caller supplies the explicit sentence.
     func truffloErrorText() -> some View {

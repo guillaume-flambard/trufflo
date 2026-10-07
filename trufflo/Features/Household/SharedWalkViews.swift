@@ -88,7 +88,7 @@ struct SharedWalkDetailView: View {
                     Text("Le tracé et la note restent sur l'iPhone de \(author). Seule cette personne peut corriger la balade.")
                         .truffloSecondaryText()
                 }
-                .padding(.horizontal, TruffloTheme.Spacing.large)
+                .padding(.horizontal, TruffloTheme.Spacing.screen)
                 .padding(.vertical, TruffloTheme.Spacing.medium)
             } else {
                 TruffloNotice(title: "Balade introuvable",

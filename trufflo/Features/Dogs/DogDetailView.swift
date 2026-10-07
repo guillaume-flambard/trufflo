@@ -47,6 +47,7 @@ struct DogDetailView: View {
                 ToolbarItem(placement: .topBarTrailing) {
                     Button("Modifier") { showEdit = true }
                         .fontWeight(.semibold)
+                        .truffloTap()
                         .accessibilityIdentifier("dog.edit")
                 }
             }
@@ -73,14 +74,14 @@ struct DogDetailView: View {
                         Button {
                             showEdit = true
                         } label: {
-                            Label("Ajouter une photo", systemImage: "camera")
-                                .font(.subheadline.weight(.semibold))
-                                .padding(.horizontal, TruffloTheme.Spacing.medium)
+                            // Same link as on Today, so the invitation reads the same twice.
+                            Label("Ajouter une photo de \(dog.name)", systemImage: "camera")
+                                .font(.truffloBodyHeavy)
                                 .frame(minHeight: 44)
-                                .background(Color.white.opacity(0.7), in: Capsule())
                         }
                         .buttonStyle(.plain)
                         .foregroundStyle(Color.truffloForest)
+                        .truffloTap()
                         .accessibilityIdentifier("dog.addPhoto")
                     }
                 }
@@ -122,6 +123,7 @@ struct DogDetailView: View {
                                 .foregroundStyle(Color.truffloDanger)
                                 .frame(minHeight: 44, alignment: .leading)
                         }
+                        .truffloTap(.impact(weight: .medium))
                         .accessibilityIdentifier("dog.delete")
                         .accessibilityLabel("Supprimer le profil de \(dog.name)")
                         Text("La suppression retire le profil de cet appareil. Vos balades déjà enregistrées gardent le nom de votre chien.")
@@ -130,7 +132,7 @@ struct DogDetailView: View {
                     }
                     .padding(.top, TruffloTheme.Spacing.small)
                 }
-                .padding(.horizontal, TruffloTheme.Spacing.large)
+                .padding(.horizontal, TruffloTheme.Spacing.screen)
                 .padding(.top, TruffloTheme.Spacing.medium)
                 .padding(.bottom, TruffloTheme.Spacing.xLarge)
             }
@@ -179,10 +181,12 @@ struct DogDetailView: View {
                 }
                 HStack(spacing: TruffloTheme.Spacing.large) {
                     Button("Modifier") { showRoutine = true }
+                        .truffloTap()
                         .accessibilityIdentifier("routine.edit")
                     Button(record.isPaused ? "Reprendre" : "Mettre en pause") {
                         try? JournalRepository(context: context).setRoutinePaused(!record.isPaused, for: dog.id)
                     }
+                    .truffloTap(.selection)
                     .accessibilityIdentifier("routine.pause")
                 }
                 .font(.subheadline.weight(.semibold))
@@ -196,6 +200,7 @@ struct DogDetailView: View {
                     .font(.subheadline.weight(.semibold))
                     .foregroundStyle(Color.truffloForest)
                     .frame(minHeight: 44)
+                    .truffloTap()
                     .accessibilityIdentifier("routine.create")
             }
         }

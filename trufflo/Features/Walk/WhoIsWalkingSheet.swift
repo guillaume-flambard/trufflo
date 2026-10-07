@@ -41,15 +41,17 @@ struct WhoIsWalkingSheet: View {
                 .buttonStyle(.glassProminent)
                 .tint(Color.truffloForest)
                 .disabled(selected.isEmpty)
+                .truffloTap()
                 .accessibilityIdentifier("walk.who.start")
 
                 Button("Annuler", action: cancel)
                     .font(.body.weight(.semibold))
                     .foregroundStyle(Color.truffloSlate)
                     .frame(maxWidth: .infinity, minHeight: 44)
+                    .truffloTap()
             }
         }
-        .padding(.horizontal, TruffloTheme.Spacing.large)
+        .padding(.horizontal, TruffloTheme.Spacing.screen)
         .padding(.top, TruffloTheme.Spacing.large)
         .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .topLeading)
         .presentationDetents([.height(380)])
@@ -80,13 +82,14 @@ struct WhoIsWalkingSheet: View {
                         .foregroundStyle(isOn ? Color.white : Color.truffloForest)
                         .frame(width: 90, height: 76)
                         .background(isOn ? Color.truffloForest : Color.truffloForest.opacity(0.08),
-                                    in: RoundedRectangle(cornerRadius: 22, style: .continuous))
+                                    in: RoundedRectangle(cornerRadius: TruffloTheme.Radius.card, style: .continuous))
                         .overlay(alignment: .topTrailing) { check(isOn).offset(x: 6, y: -6) }
                 }
             }
             .frame(width: 90)
         }
         .buttonStyle(.plain)
+        .truffloTap(.selection)
         .accessibilityLabel(dog.name)
         .accessibilityAddTraits(isOn ? [.isButton, .isSelected] : .isButton)
     }

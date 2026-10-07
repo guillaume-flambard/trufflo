@@ -15,19 +15,34 @@ public struct TruffloDogPortrait: View {
     private let name: String
     private let photoData: Data?
     private let diameter: CGFloat
+    /// Aim the crop at the animal (`FocalCrop`) instead of the middle of the photo:
+    /// a portrait photo of a dog has the head high, and a centred square cuts it.
+    private let aimsAtAnimal: Bool
 
     @State private var image: UIImage?
+    @State private var focus = FocalCrop.fallbackFocus
     @Environment(\.displayScale) private var displayScale
+    @Environment(\.accessibilityReduceMotion) private var reduceMotion
 
-    public init(name: String, photoData: Data?, diameter: CGFloat = 132) {
+    public init(name: String, photoData: Data?, diameter: CGFloat = 132, aimsAtAnimal: Bool = false) {
         self.name = name
         self.photoData = photoData
         self.diameter = diameter
+        self.aimsAtAnimal = aimsAtAnimal
     }
 
     public var body: some View {
         ZStack {
-            if let image {
+            if let image, aimsAtAnimal {
+                let crop = FocalCrop.layout(imageSize: image.size,
+                                            frame: CGSize(width: diameter, height: diameter),
+                                            focus: focus)
+                Image(uiImage: image)
+                    .resizable()
+                    .frame(width: crop.size.width, height: crop.size.height)
+                    .offset(x: crop.offset.x, y: crop.offset.y)
+                    .frame(width: diameter, height: diameter, alignment: .topLeading)
+            } else if let image {
                 Image(uiImage: image)
                     .resizable()
                     .scaledToFill()
@@ -46,7 +61,18 @@ public struct TruffloDogPortrait: View {
         .accessibilityElement(children: .ignore)
         .accessibilityLabel(image == nil ? "Portrait de \(name)" : "Photo de \(name)")
         .task(id: photoData) {
-            image = photoData.flatMap { Self.downsampled($0, to: diameter * displayScale) }
+            // A cover crop needs the short side to reach the frame, so aiming at the
+            // animal decodes a little larger than the disc.
+            let target = diameter * displayScale * (aimsAtAnimal ? 2 : 1)
+            let decoded = photoData.flatMap { Self.downsampled($0, to: target) }
+            withAnimation(TruffloTheme.Motion.appear(reduceMotion: reduceMotion)) {
+                image = decoded
+            }
+            guard aimsAtAnimal else { return }
+            // Off the main thread: Vision is synchronous.
+            focus = await Task.detached(priority: .userInitiated) { [image] in
+                image?.cgImage.map(DogFocus.focus(in:)) ?? FocalCrop.fallbackFocus
+            }.value
         }
     }
 
@@ -56,7 +82,7 @@ public struct TruffloDogPortrait: View {
 
     /// Decodes at most `maxPixel` on the long side, without ever materialising the
     /// full-size bitmap.
-    static func downsampled(_ data: Data, to maxPixel: CGFloat) -> UIImage? {
+    nonisolated static func downsampled(_ data: Data, to maxPixel: CGFloat) -> UIImage? {
         let sourceOptions = [kCGImageSourceShouldCache: false] as CFDictionary
         guard let source = CGImageSourceCreateWithData(data as CFData, sourceOptions) else { return nil }
         let options = [

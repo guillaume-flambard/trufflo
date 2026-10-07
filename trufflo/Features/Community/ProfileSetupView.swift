@@ -74,7 +74,7 @@ struct ProfileSetupView: View {
                         .frame(maxWidth: .infinity, minHeight: 56)
                 }
                 .buttonStyle(.glassProminent)
-                .buttonBorderShape(.roundedRectangle(radius: TruffloTheme.Radius.medium))
+                .buttonBorderShape(.capsule)
                 .tint(Color.truffloForest)
                 .disabled(!canSave || model.isBusy)
                 .accessibilityIdentifier("community.createProfile")

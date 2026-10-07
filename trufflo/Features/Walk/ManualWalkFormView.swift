@@ -12,6 +12,8 @@ struct ManualWalkFormView: View {
     @State private var endedAt = Date()
     @State private var note = ""
     @State private var errorMessage: String?
+    @State private var didSave = false
+    @Environment(\.accessibilityReduceMotion) private var reduceMotion
 
     var body: some View {
         NavigationStack {
@@ -68,20 +70,30 @@ struct ManualWalkFormView: View {
                         .font(.footnote)
                         .foregroundStyle(Color.truffloSlate)
                 }
-                .padding(.horizontal, TruffloTheme.Spacing.large)
+                .padding(.horizontal, TruffloTheme.Spacing.screen)
                 .padding(.vertical, TruffloTheme.Spacing.medium)
             }
             .scrollDismissesKeyboard(.interactively)
             .safeAreaInset(edge: .bottom) {
                 Button(action: save) {
-                    Text("Ajouter au journal")
-                        .font(.headline)
-                        .frame(maxWidth: .infinity, minHeight: 56)
+                    HStack(spacing: TruffloTheme.Spacing.xSmall) {
+                        if didSave {
+                            Image(systemName: "checkmark")
+                                .font(.headline)
+                                .transition(.scale.combined(with: .opacity))
+                        }
+                        Text(didSave ? "Ajoutée" : "Ajouter au journal")
+                            .font(.headline)
+                            .contentTransition(.opacity)
+                    }
+                    .frame(maxWidth: .infinity, minHeight: 56)
                 }
                 .buttonStyle(.glassProminent)
                 .tint(Color.truffloForest)
+                .disabled(didSave)
+                .truffloTap()
                 .accessibilityIdentifier("walk.save")
-                .padding(.horizontal, TruffloTheme.Spacing.large)
+                .padding(.horizontal, TruffloTheme.Spacing.screen)
                 .padding(.bottom, TruffloTheme.Spacing.xSmall)
             }
             .background(Color.truffloSand.ignoresSafeArea())
@@ -120,6 +132,7 @@ struct ManualWalkFormView: View {
             .overlay(Capsule().strokeBorder(Color.truffloForest.opacity(isOn ? 0 : 0.15), lineWidth: 1))
         }
         .buttonStyle(.plain)
+        .truffloTap(.selection)
         .accessibilityAddTraits(isOn ? .isSelected : [])
     }
 
@@ -143,7 +156,7 @@ struct ManualWalkFormView: View {
             let input = try ManualWalkInput(dogIDs: Array(selectedDogs),
                                             durationSeconds: minutes * 60, note: note)
             try JournalRepository(context: context).addManualWalk(input, endedAt: endedAt)
-            dismiss()
+            confirmAndDismiss()
         } catch WalkError.missingDog {
             errorMessage = "Sélectionnez au moins un chien."
         } catch WalkError.noteTooLong {
@@ -154,6 +167,18 @@ struct ManualWalkFormView: View {
             errorMessage = "La balade n'a pas été enregistrée. Les valeurs saisies restent disponibles."
         } catch {
             errorMessage = "La durée doit être positive, finie et ne pas dépasser 24 heures."
+        }
+    }
+
+    /// The write already happened: this is not a wait for it to finish, only a
+    /// beat long enough for "Ajoutée" to register before the sheet closes,
+    /// instead of vanishing the instant the write completes.
+    private func confirmAndDismiss() {
+        guard !reduceMotion else { dismiss(); return }
+        withAnimation(TruffloTheme.Motion.selection(reduceMotion: reduceMotion)) { didSave = true }
+        Task {
+            try? await Task.sleep(for: .milliseconds(450))
+            dismiss()
         }
     }
 }

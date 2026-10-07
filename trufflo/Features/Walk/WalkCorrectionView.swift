@@ -93,7 +93,7 @@ struct WalkCorrectionView: View {
                         .font(.footnote)
                         .foregroundStyle(Color.truffloSlate)
                 }
-                .padding(.horizontal, TruffloTheme.Spacing.large)
+                .padding(.horizontal, TruffloTheme.Spacing.screen)
                 .padding(.vertical, TruffloTheme.Spacing.medium)
             }
             .scrollDismissesKeyboard(.interactively)
@@ -105,8 +105,9 @@ struct WalkCorrectionView: View {
                 }
                 .buttonStyle(.glassProminent)
                 .tint(Color.truffloForest)
+                .truffloTap()
                 .accessibilityIdentifier("walk.correct.save")
-                .padding(.horizontal, TruffloTheme.Spacing.large)
+                .padding(.horizontal, TruffloTheme.Spacing.screen)
                 .padding(.bottom, TruffloTheme.Spacing.xSmall)
             }
             .background(Color.truffloSand.ignoresSafeArea())
@@ -142,6 +143,7 @@ struct WalkCorrectionView: View {
             .overlay(Capsule().strokeBorder(Color.truffloForest.opacity(isOn ? 0 : 0.15), lineWidth: 1))
         }
         .buttonStyle(.plain)
+        .truffloTap(.selection)
         .accessibilityAddTraits(isOn ? .isSelected : [])
     }
 

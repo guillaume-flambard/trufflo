@@ -77,10 +77,11 @@ struct RoutineFormView: View {
                             .font(.subheadline.weight(.semibold))
                             .foregroundStyle(Color.truffloDanger)
                             .frame(minHeight: 44)
+                            .truffloTap(.impact(weight: .medium))
                             .accessibilityIdentifier("routine.delete")
                     }
                 }
-                .padding(.horizontal, TruffloTheme.Spacing.large)
+                .padding(.horizontal, TruffloTheme.Spacing.screen)
                 .padding(.vertical, TruffloTheme.Spacing.medium)
             }
             .safeAreaInset(edge: .bottom) {
@@ -91,8 +92,9 @@ struct RoutineFormView: View {
                 }
                 .buttonStyle(.glassProminent)
                 .tint(Color.truffloForest)
+                .truffloTap()
                 .accessibilityIdentifier("routine.save")
-                .padding(.horizontal, TruffloTheme.Spacing.large)
+                .padding(.horizontal, TruffloTheme.Spacing.screen)
                 .padding(.bottom, TruffloTheme.Spacing.xSmall)
             }
             .background(Color.truffloSand.ignoresSafeArea())
@@ -124,8 +126,8 @@ struct RoutineFormView: View {
             if isOn.wrappedValue { content() }
         }
         .padding(TruffloTheme.Spacing.medium)
-        .background(Color.white, in: RoundedRectangle(cornerRadius: 16, style: .continuous))
-        .overlay(RoundedRectangle(cornerRadius: 16, style: .continuous)
+        .background(Color.white, in: RoundedRectangle(cornerRadius: TruffloTheme.Radius.card, style: .continuous))
+        .overlay(RoundedRectangle(cornerRadius: TruffloTheme.Radius.card, style: .continuous)
             .strokeBorder(Color.truffloForest.opacity(0.08), lineWidth: 1))
     }
 
@@ -145,6 +147,7 @@ struct RoutineFormView: View {
                 .overlay(Capsule().strokeBorder(Color.truffloForest.opacity(isOn ? 0 : 0.15), lineWidth: 1))
         }
         .buttonStyle(.plain)
+        .truffloTap(.selection)
         .accessibilityAddTraits(isOn ? .isSelected : [])
     }
 

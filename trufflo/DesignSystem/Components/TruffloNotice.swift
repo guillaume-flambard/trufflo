@@ -29,7 +29,7 @@ public struct TruffloNotice: View {
                     .foregroundStyle(Color.truffloForest)
                     .frame(width: 76, height: 76)
                     .background(Color.truffloMint.opacity(0.45),
-                                in: RoundedRectangle(cornerRadius: 24, style: .continuous))
+                                in: RoundedRectangle(cornerRadius: TruffloTheme.Radius.card, style: .continuous))
                     .padding(.bottom, TruffloTheme.Spacing.xSmall)
                     .accessibilityHidden(true)
             }
@@ -50,16 +50,30 @@ public struct TruffloNotice: View {
             if let actionTitle, let action {
                 Button(actionTitle, action: action)
                     .font(.headline)
-                    .foregroundStyle(Color.truffloForest)
-                    .padding(.horizontal, TruffloTheme.Spacing.large)
-                    .frame(minHeight: 50)
-                    .background(Color.truffloForest.opacity(0.08),
-                                in: RoundedRectangle(cornerRadius: 16, style: .continuous))
+                    .buttonStyle(TruffloNoticeActionStyle())
                     .padding(.top, TruffloTheme.Spacing.xSmall)
             }
         }
         .padding(.horizontal, TruffloTheme.Spacing.large + 4)
         .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .leading)
         .background(Color.truffloSand.ignoresSafeArea())
+    }
+}
+
+/// Press feedback for `TruffloNotice`'s inline action: same proportions as
+/// before, just no longer silent under a tap.
+private struct TruffloNoticeActionStyle: ButtonStyle {
+    @Environment(\.accessibilityReduceMotion) private var reduceMotion
+
+    func makeBody(configuration: Configuration) -> some View {
+        configuration.label
+            .foregroundStyle(Color.truffloForest)
+            .padding(.horizontal, TruffloTheme.Spacing.large)
+            .frame(minHeight: 50)
+            .background(Color.truffloForest.opacity(configuration.isPressed ? 0.16 : 0.08),
+                        in: RoundedRectangle(cornerRadius: TruffloTheme.Radius.card, style: .continuous))
+            .scaleEffect(configuration.isPressed ? TruffloTheme.Motion.pressScale : 1.0)
+            .animation(TruffloTheme.Motion.press(reduceMotion: reduceMotion), value: configuration.isPressed)
+            .sensoryFeedback(.impact(weight: .light), trigger: configuration.isPressed) { _, isPressed in isPressed }
     }
 }

@@ -10,6 +10,8 @@ struct JournalTimelineView: View {
     var shared: [SharedEntry] = []
     /// Shown instead of the week sentence when the list is filtered.
     var filterSummary: String? = nil
+    /// The namespace of the zoom from a row to its walk.
+    let zoom: Namespace.ID
     let rowDestination: (UUID) -> WalkRoute
 
     @Environment(\.calendar) private var calendar
@@ -39,6 +41,7 @@ struct JournalTimelineView: View {
                                     WalkActivityCard(walk: walk, showsDay: false)
                                 }
                                 .buttonStyle(.plain)
+                                .matchedTransitionSource(id: walk.id, in: zoom)
                             case .shared(let entry):
                                 NavigationLink(value: SharedWalkRoute(id: entry.walk.id)) {
                                     SharedWalkCard(walk: entry.walk, authorName: entry.authorName,
@@ -50,7 +53,7 @@ struct JournalTimelineView: View {
                     }
                 }
             }
-            .padding(.horizontal, TruffloTheme.Spacing.large)
+            .padding(.horizontal, TruffloTheme.Spacing.screen)
             .padding(.vertical, TruffloTheme.Spacing.small)
         }
     }

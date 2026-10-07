@@ -14,6 +14,7 @@ public struct TruffloDogHero: View {
 
     @State private var image: UIImage?
     @Environment(\.displayScale) private var displayScale
+    @Environment(\.accessibilityReduceMotion) private var reduceMotion
 
     public init(name: String, photoData: Data?, height: CGFloat = 340) {
         self.name = name
@@ -51,8 +52,11 @@ public struct TruffloDogHero: View {
         .accessibilityLabel(image == nil ? "Portrait de \(name)" : "Photo de \(name)")
         .task(id: photoData) {
             // Decoded for the width of a phone, not for the stored resolution.
-            image = photoData.flatMap {
+            let decoded = photoData.flatMap {
                 TruffloDogPortrait.downsampled($0, to: 430 * displayScale)
+            }
+            withAnimation(TruffloTheme.Motion.appear(reduceMotion: reduceMotion)) {
+                image = decoded
             }
         }
     }
@@ -70,7 +74,7 @@ public struct TruffloDogHero: View {
             .foregroundStyle(color)
             .lineLimit(2)
             .minimumScaleFactor(0.7)
-            .padding(.horizontal, TruffloTheme.Spacing.large)
+            .padding(.horizontal, TruffloTheme.Spacing.screen)
             .padding(.bottom, TruffloTheme.Spacing.medium)
             .accessibilityHidden(true)
     }

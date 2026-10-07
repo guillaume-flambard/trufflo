@@ -43,7 +43,22 @@ En M0, les couleurs système suffisent. Introduire les couleurs adaptatives via 
 
 Police système et styles dynamiques. Titre d’écran natif ; grand indicateur de durée seulement pendant l’enregistrement. Espacement sur base 4/8 points, marges de 16–20 points comme hypothèse de départ. Cibles tactiles de 48 points visées. Aucun texte tronqué dans les tailles d’accessibilité retenues.
 
-Pendant l’enregistrement, la carte est la surface de l’écran, pas un cadre à l’intérieur d’un empilement : les mesures et les commandes restent lisibles au-dessus, sur une seule surface en verre teinté forêt (opaque sous Réduire la transparence), et l’action primaire demeure atteignable d’une main. Le fond cartographique n’est jamais une condition à l’usage hors réseau : une tuile absente laisse les mesures et les contrôles intacts.
+Pendant l’enregistrement, la carte est la surface de l’écran, pas un cadre à l’intérieur d’un empilement : les mesures et les commandes restent lisibles au-dessus, sur une seule surface en verre clair teinté sable, chiffres en forêt (sable opaque sous Réduire la transparence), et l’action primaire demeure atteignable d’une main. Le fond cartographique n’est jamais une condition à l’usage hors réseau : une tuile absente laisse les mesures et les contrôles intacts.
+
+## Cohérence entre écrans (passe du 2026-10-07)
+
+Constat : passer d'un écran à l'autre donnait l'impression de changer d'app. Quatre fonds différents (dégradé menthe sur Aujourd'hui, bloc menthe plein avec une initiale géante sur le profil, sable uni ailleurs, verre forêt sombre sur la balade), trois marges latérales (16, 20 et 24 pt), deux écritures de la durée d'une même balade (« 00:10 » au bilan, « 42 min » au journal).
+
+Règles retenues, à tenir sur tout nouvel écran :
+
+1. **Un seul jour, pas de nuit.** Fond sable partout. Aucun écran ni bandeau en aplat forêt avec texte blanc. Seuls l'action principale (capsule forêt) et un objet réel (le ticket d'invitation) portent du blanc sur forêt.
+2. **Le halo menthe marque la tête des écrans du chien** (`TruffloDogAura`) : Aujourd'hui, profil sans photo, foyer, introduction, accueil sans chien, bilan et fiche d'une balade sans tracé. Avec une photo, le halo prend les couleurs de la photo (Aujourd'hui) ou la photo occupe la tête (profil).
+3. **Aucun visage de remplacement.** Ni initiale sur disque ni lettre géante quand il n'y a pas de photo. Une liste dont aucun chien n'a de photo ne réserve pas de colonne vide.
+4. **Une marge d'écran** : `TruffloTheme.Spacing.screen` (16 pt), celle des grands titres système et du bouton Démarrer.
+5. **Verre clair.** Les contrôles posés sur la carte de balade sont en verre clair teinté sable, comme la barre d'onglets ; les chiffres y sont en forêt.
+6. **Une même carte partout.** La carte de balade en direct, les fiches et les vignettes utilisent le style atténué (`.muted`, parcs seuls). Les vignettes du journal sont la même image que la tuile d'Aujourd'hui, à taille réduite, avec un trait proportionné.
+7. **Une seule écriture de la durée d'une balade terminée** : `WalkFormatting.minutes`. L'horloge `mm:ss` reste réservée à la balade en cours.
+8. **Un même en-tête de balade** : le nom des chiens en titre, puis le moment, au bilan comme sur la fiche. La barre de navigation n'y dessine pas de titre.
 
 ## Écran de balade : une surface, une action
 

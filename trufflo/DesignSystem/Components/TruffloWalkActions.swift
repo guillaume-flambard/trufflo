@@ -12,6 +12,9 @@ public struct TruffloPrimaryAction: View {
     private let identifier: String
     private let action: () -> Void
 
+    @Environment(\.accessibilityReduceMotion) private var reduceMotion
+    @State private var tapTick = false
+
     public init(_ title: String,
                 systemImage: String,
                 accessibilityLabel: String,
@@ -25,27 +28,34 @@ public struct TruffloPrimaryAction: View {
     }
 
     public var body: some View {
-        Button(action: action) {
+        Button {
+            tapTick.toggle()
+            action()
+        } label: {
             HStack(spacing: TruffloTheme.Spacing.xSmall) {
                 Image(systemName: systemImage)
                     .font(.system(size: 17, weight: .bold))
+                    .contentTransition(.symbolEffect(.replace))
                 Text(title)
                     .font(.system(size: 17, weight: .bold, design: .rounded))
+                    .contentTransition(.opacity)
             }
             .foregroundStyle(.white)
             .frame(maxWidth: .infinity)
             .frame(minHeight: 56)
+            .animation(TruffloTheme.Motion.selection(reduceMotion: reduceMotion), value: systemImage)
         }
         .buttonStyle(.glassProminent)
-        .buttonBorderShape(.roundedRectangle(radius: TruffloTheme.Radius.medium))
+        .buttonBorderShape(.capsule)
         .tint(Color.truffloForest)
+        .sensoryFeedback(.impact(weight: .medium), trigger: tapTick)
         .accessibilityLabel(accessibilityLabel)
         .accessibilityIdentifier(identifier)
     }
 }
 
-/// A quiet secondary action: a plain glass button beside the forest primary, so
-/// it reads as the smaller of the two choices.
+/// A quiet secondary action: a plain light glass button beside the forest primary,
+/// so it reads as the smaller of the two choices.
 ///
 /// Used for ending a walk. The intent is terminal rather than destructive, since
 /// the walk is saved, so it carries no red: the confirmation sheet that follows
@@ -57,6 +67,8 @@ public struct TruffloQuietAction: View {
     private let identifier: String
     private let action: () -> Void
 
+    @State private var tapTick = false
+
     public init(_ title: String,
                 systemImage: String,
                 accessibilityLabel: String,
@@ -70,14 +82,17 @@ public struct TruffloQuietAction: View {
     }
 
     public var body: some View {
-        Button(action: action) {
+        Button {
+            tapTick.toggle()
+            action()
+        } label: {
             HStack(spacing: TruffloTheme.Spacing.xSmall) {
                 Image(systemName: systemImage)
                     .font(.system(size: 15, weight: .semibold))
                 Text(title)
                     .font(.system(size: 16, weight: .semibold, design: .rounded))
             }
-            .foregroundStyle(.white)
+            .foregroundStyle(Color.truffloForest)
             .padding(.horizontal, TruffloTheme.Spacing.small)
             // 70, not 56: the glass-prominent primary beside it adds its own
             // padding around a 56 pt label, and the two must share a height.
@@ -85,6 +100,7 @@ public struct TruffloQuietAction: View {
             .truffloGlassControl(strength: .strong, interactive: true)
         }
         .buttonStyle(.plain)
+        .sensoryFeedback(.impact(weight: .light), trigger: tapTick)
         .accessibilityLabel(accessibilityLabel)
         .accessibilityIdentifier(identifier)
     }
@@ -99,10 +115,12 @@ public struct TruffloRoundAction: View {
     private let tint: Color
     private let action: () -> Void
 
+    @State private var tapTick = false
+
     public init(systemImage: String,
                 label: String,
                 identifier: String,
-                tint: Color = .white,
+                tint: Color = .truffloForest,
                 action: @escaping () -> Void) {
         self.systemImage = systemImage
         self.label = label
@@ -112,7 +130,10 @@ public struct TruffloRoundAction: View {
     }
 
     public var body: some View {
-        Button(action: action) {
+        Button {
+            tapTick.toggle()
+            action()
+        } label: {
             Image(systemName: systemImage)
                 .font(.system(size: 16, weight: .semibold))
                 .foregroundStyle(tint)
@@ -120,6 +141,7 @@ public struct TruffloRoundAction: View {
                 .truffloGlassCircle(strength: .strong, interactive: true)
         }
         .buttonStyle(.plain)
+        .sensoryFeedback(.impact(weight: .light), trigger: tapTick)
         .accessibilityLabel(label)
         .accessibilityIdentifier(identifier)
     }

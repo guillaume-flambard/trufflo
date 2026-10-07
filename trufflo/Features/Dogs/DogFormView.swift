@@ -23,6 +23,8 @@ struct DogFormView: View {
     @State private var selectedPhotoItem: PhotosPickerItem?
     @State private var errorMessage: String?
     @State private var showBreedPicker = false
+    @State private var didSave = false
+    @Environment(\.accessibilityReduceMotion) private var reduceMotion
 
     private var breedChoice: BreedChoice { BreedChoice(kind: breedKind, label: breedLabel) }
 
@@ -102,20 +104,30 @@ struct DogFormView: View {
                         .font(.footnote)
                         .foregroundStyle(Color.truffloSlate)
                 }
-                .padding(.horizontal, TruffloTheme.Spacing.large)
+                .padding(.horizontal, TruffloTheme.Spacing.screen)
                 .padding(.vertical, TruffloTheme.Spacing.medium)
             }
             .scrollDismissesKeyboard(.interactively)
             .safeAreaInset(edge: .bottom) {
                 Button(action: save) {
-                    Text("Enregistrer")
-                        .font(.headline)
-                        .frame(maxWidth: .infinity, minHeight: 56)
+                    HStack(spacing: TruffloTheme.Spacing.xSmall) {
+                        if didSave {
+                            Image(systemName: "checkmark")
+                                .font(.headline)
+                                .transition(.scale.combined(with: .opacity))
+                        }
+                        Text(didSave ? "Enregistré" : "Enregistrer")
+                            .font(.headline)
+                            .contentTransition(.opacity)
+                    }
+                    .frame(maxWidth: .infinity, minHeight: 56)
                 }
                 .buttonStyle(.glassProminent)
                 .tint(Color.truffloForest)
+                .disabled(didSave)
+                .truffloTap()
                 .accessibilityIdentifier("dog.save")
-                .padding(.horizontal, TruffloTheme.Spacing.large)
+                .padding(.horizontal, TruffloTheme.Spacing.screen)
                 .padding(.bottom, TruffloTheme.Spacing.xSmall)
             }
             .background(Color.truffloSand.ignoresSafeArea())
@@ -179,6 +191,7 @@ struct DogFormView: View {
                     }
                     .font(.subheadline.weight(.semibold))
                     .foregroundStyle(Color.truffloDanger)
+                    .truffloTap()
                 }
             }
         }
@@ -223,7 +236,7 @@ struct DogFormView: View {
             let repository = JournalRepository(context: context)
             if let dogID { try repository.updateDog(dogID, with: input) }
             else { try repository.addDog(input) }
-            dismiss()
+            confirmAndDismiss()
         } catch DogError.invalidName {
             announce("Saisissez un nom de 1 à 80 caractères.")
         } catch DogError.invalidBreedLabel {
@@ -243,6 +256,18 @@ struct DogFormView: View {
         errorMessage = message
         AccessibilityNotification.Announcement(message).post()
     }
+
+    /// The write already happened: this is not a wait for it to finish, only a
+    /// beat long enough for "Enregistré" to register before the sheet closes,
+    /// instead of vanishing the instant the write completes.
+    private func confirmAndDismiss() {
+        guard !reduceMotion else { dismiss(); return }
+        withAnimation(TruffloTheme.Motion.selection(reduceMotion: reduceMotion)) { didSave = true }
+        Task {
+            try? await Task.sleep(for: .milliseconds(450))
+            dismiss()
+        }
+    }
 }
 
 /// A plain white field on sand, the same in both forms.
@@ -252,8 +277,8 @@ struct FormFieldStyle: ViewModifier {
             .font(.body)
             .padding(.horizontal, 14)
             .padding(.vertical, 14)
-            .background(Color.white, in: RoundedRectangle(cornerRadius: 14, style: .continuous))
-            .overlay(RoundedRectangle(cornerRadius: 14, style: .continuous)
+            .background(Color.white, in: RoundedRectangle(cornerRadius: TruffloTheme.Radius.card, style: .continuous))
+            .overlay(RoundedRectangle(cornerRadius: TruffloTheme.Radius.card, style: .continuous)
                 .strokeBorder(Color.truffloForest.opacity(0.1), lineWidth: 1))
     }
 }
@@ -278,7 +303,7 @@ struct TruffloChoice: View {
                         .foregroundStyle(isOn ? Color.truffloForest : Color.truffloCharcoal)
                         .frame(maxWidth: .infinity, minHeight: 42)
                         .background(isOn ? Color.white : Color.clear,
-                                    in: RoundedRectangle(cornerRadius: 11, style: .continuous))
+                                    in: RoundedRectangle(cornerRadius: TruffloTheme.Radius.medium, style: .continuous))
                         .shadow(color: isOn ? Color.truffloForestDeep.opacity(0.12) : .clear, radius: 2, y: 1)
                 }
                 .buttonStyle(.plain)
@@ -286,6 +311,6 @@ struct TruffloChoice: View {
             }
         }
         .padding(3)
-        .background(Color.truffloForest.opacity(0.07), in: RoundedRectangle(cornerRadius: 14, style: .continuous))
+        .background(Color.truffloForest.opacity(0.07), in: RoundedRectangle(cornerRadius: TruffloTheme.Radius.card, style: .continuous))
     }
 }

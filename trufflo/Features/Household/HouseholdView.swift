@@ -41,24 +41,29 @@ struct HouseholdView: View {
                 }
             }
             .scrollBounceBehavior(.basedOnSize)
+            // The band's aura sits behind the scroll view, so it runs up under the
+            // bar as on Today and the profile.
+            .background(alignment: .top) {
+                TruffloDogAura(photoData: nil)
+                    .frame(height: 420)
+                    .ignoresSafeArea(edges: .top)
+            }
             .background(Color.truffloSand.ignoresSafeArea())
             .safeAreaInset(edge: .bottom) { bottomAction }
             .toolbar {
                 ToolbarItem(placement: .topBarTrailing) {
                     Button("Fermer", systemImage: "xmark") { dismiss() }
-                        .tint(.white)
                 }
                 if path != nil, joining == nil, household == nil {
                     ToolbarItem(placement: .topBarLeading) {
                         Button("Retour", systemImage: "chevron.left") { withAnimation { path = nil } }
-                            .tint(.white)
                     }
                 }
             }
-            // The band runs up under the bar: one forest field, no sand seam.
-            .toolbarBackground(Color.truffloForest, for: .navigationBar)
-            .toolbarBackground(.visible, for: .navigationBar)
-            .toolbarColorScheme(.dark, for: .navigationBar)
+            // The band runs up under the bar, on the same light aura as Today and the
+            // profile: a forest field here made the sheet the one dark screen of the app.
+            .toolbarBackground(.hidden, for: .navigationBar)
+            .tint(Color.truffloForest)
             .task {
                 #if DEBUG
                 if ProcessInfo.processInfo.arguments.contains("--demo-join") {
@@ -153,14 +158,14 @@ struct HouseholdView: View {
                 }
                 .signInWithAppleButtonStyle(.black)
                 .frame(height: 54)
-                .clipShape(RoundedRectangle(cornerRadius: 18, style: .continuous))
+                .clipShape(RoundedRectangle(cornerRadius: TruffloTheme.Radius.card, style: .continuous))
                 .accessibilityIdentifier("household.signin")
                 Text("Tant que vous ne créez ni ne rejoignez de foyer, rien ne quitte cet iPhone.")
                     .font(.footnote)
                     .foregroundStyle(Color.truffloSlate)
                     .multilineTextAlignment(.center)
             }
-            .padding(.horizontal, TruffloTheme.Spacing.large)
+            .padding(.horizontal, TruffloTheme.Spacing.screen)
             .padding(.bottom, TruffloTheme.Spacing.xSmall)
         } else if path == .create {
             primaryButton("Créer et partager mon journal", id: "household.create",
@@ -192,7 +197,7 @@ struct HouseholdView: View {
         .tint(Color.truffloForest)
         .disabled(!enabled)
         .accessibilityIdentifier(id)
-        .padding(.horizontal, TruffloTheme.Spacing.large)
+        .padding(.horizontal, TruffloTheme.Spacing.screen)
         .padding(.bottom, TruffloTheme.Spacing.xSmall)
     }
 
@@ -219,7 +224,7 @@ struct HouseholdView: View {
             Label(error, systemImage: "exclamationmark.circle")
                 .font(.subheadline.weight(.semibold))
                 .foregroundStyle(Color.truffloDanger)
-                .padding(.horizontal, TruffloTheme.Spacing.large)
+                .padding(.horizontal, TruffloTheme.Spacing.screen)
                 .padding(.top, TruffloTheme.Spacing.medium)
                 .accessibilityIdentifier("household.error")
         }
@@ -233,7 +238,7 @@ struct HouseholdView: View {
                           subtitle: "Celles et ceux qui sortent vos chiens voient leurs balades, et vous les leurs.",
                           faces: dogFaces)
             SharingTerms()
-                .padding(.horizontal, TruffloTheme.Spacing.large)
+                .padding(.horizontal, TruffloTheme.Spacing.screen)
                 .padding(.top, TruffloTheme.Spacing.large)
         }
     }
@@ -270,7 +275,7 @@ struct HouseholdView: View {
                     .foregroundStyle(Color.truffloSlate)
                     .frame(minHeight: 44)
             }
-            .padding(.horizontal, TruffloTheme.Spacing.large)
+            .padding(.horizontal, TruffloTheme.Spacing.screen)
             .padding(.top, TruffloTheme.Spacing.large)
         }
     }
@@ -298,7 +303,7 @@ struct HouseholdView: View {
                 nameField
                 SharingTerms(compact: true)
             }
-            .padding(.horizontal, TruffloTheme.Spacing.large)
+            .padding(.horizontal, TruffloTheme.Spacing.screen)
             .padding(.top, TruffloTheme.Spacing.large)
         }
     }
@@ -319,7 +324,7 @@ struct HouseholdView: View {
                 nameField
                 SharingTerms(compact: true)
             }
-            .padding(.horizontal, TruffloTheme.Spacing.large)
+            .padding(.horizontal, TruffloTheme.Spacing.screen)
             .padding(.top, TruffloTheme.Spacing.large)
         }
     }
@@ -401,7 +406,7 @@ struct HouseholdView: View {
                     Text("Ses nouvelles balades ne vous parviendront plus, et son iPhone oubliera le foyer à sa prochaine connexion. Ce qu'il a déjà vu reste vu.")
                 }
             }
-            .padding(.horizontal, TruffloTheme.Spacing.large)
+            .padding(.horizontal, TruffloTheme.Spacing.screen)
             .padding(.top, TruffloTheme.Spacing.large)
             .padding(.bottom, TruffloTheme.Spacing.xLarge)
         }
@@ -440,8 +445,8 @@ struct HouseholdView: View {
 
 // MARK: - Pieces
 
-/// The forest band at the top of every state: who is in the picture, then
-/// the one sentence of the state. Faces overlap, the way people stand
+/// The band at the top of every state, on the mint aura the dog screens share:
+/// who is in the picture, then the one sentence of the state. Faces overlap, the way people stand
 /// together, and a dashed peach line joins dogs and people.
 struct HouseholdBand: View {
     enum Face: Hashable {
@@ -471,23 +476,22 @@ struct HouseholdBand: View {
                         .foregroundStyle(Color.truffloForest)
                         .padding(.horizontal, 10)
                         .padding(.vertical, 4)
-                        .background(Color.truffloMint, in: Capsule())
+                        .background(Color.white, in: Capsule())
                 }
                 Text(title)
                     .font(.system(.largeTitle, design: .rounded, weight: .heavy))
-                    .foregroundStyle(.white)
+                    .foregroundStyle(Color.truffloForest)
                     .fixedSize(horizontal: false, vertical: true)
                     .accessibilityAddTraits(.isHeader)
                 Text(subtitle)
                     .font(.body)
-                    .foregroundStyle(Color.truffloMint)
+                    .foregroundStyle(Color.truffloSlate)
                     .fixedSize(horizontal: false, vertical: true)
             }
         }
-        .padding(.horizontal, TruffloTheme.Spacing.large)
+        .padding(.horizontal, TruffloTheme.Spacing.screen)
         .padding(.bottom, TruffloTheme.Spacing.large)
         .frame(maxWidth: .infinity, alignment: .leading)
-        .background(Color.truffloForest.ignoresSafeArea(edges: .top))
     }
 
     private var faceRow: some View {
@@ -516,7 +520,7 @@ struct HouseholdBand: View {
                         PersonDisc(name: name, diameter: 60, tintIndex: index)
                     }
                 }
-                .overlay(Circle().strokeBorder(Color.truffloForest, lineWidth: 3))
+                .overlay(Circle().strokeBorder(Color.truffloSand, lineWidth: 3))
                 .zIndex(Double(10 - index))
             }
         }
@@ -768,7 +772,7 @@ private struct SyncStatusCard: View {
             .accessibilityIdentifier("household.sync")
         }
         .padding(TruffloTheme.Spacing.medium)
-        .background(Color.white, in: RoundedRectangle(cornerRadius: 20, style: .continuous))
+        .background(Color.white, in: RoundedRectangle(cornerRadius: TruffloTheme.Radius.card, style: .continuous))
         .accessibilityElement(children: .contain)
     }
 
@@ -849,7 +853,7 @@ private struct InviteTicket: View {
             }
         }
         .padding(TruffloTheme.Spacing.medium)
-        .background(Color.truffloForest, in: RoundedRectangle(cornerRadius: 20, style: .continuous))
+        .background(Color.truffloForest, in: RoundedRectangle(cornerRadius: TruffloTheme.Radius.card, style: .continuous))
         .overlay(alignment: .topTrailing) {
             Circle().fill(Color.truffloSand).frame(width: 22, height: 22).offset(x: 11, y: 54)
         }
@@ -908,7 +912,7 @@ private struct JoinDogsStep: View {
                         .font(.subheadline).foregroundStyle(Color.truffloSlate)
                 }
             }
-            .padding(.horizontal, TruffloTheme.Spacing.large)
+            .padding(.horizontal, TruffloTheme.Spacing.screen)
             .padding(.top, TruffloTheme.Spacing.large)
         }
     }

@@ -137,6 +137,7 @@ struct WalkDetailView: View {
                                 .foregroundStyle(Color.truffloForest)
                                 .frame(minHeight: 44, alignment: .leading)
                         }
+                        .truffloTap()
                         .accessibilityIdentifier("walk.correct")
                     }
 
@@ -149,6 +150,7 @@ struct WalkDetailView: View {
                                 .foregroundStyle(Color.truffloForest)
                                 .frame(minHeight: 44, alignment: .leading)
                         }
+                        .truffloTap()
                         .accessibilityIdentifier("walk.export.gpx")
                     }
 
@@ -161,6 +163,7 @@ struct WalkDetailView: View {
                                 .foregroundStyle(Color.truffloDanger)
                                 .frame(minHeight: 44, alignment: .leading)
                         }
+                        .truffloTap(.impact(weight: .medium))
                         .accessibilityIdentifier("walk.delete")
                         .accessibilityLabel(accessibilityDeleteLabel(for: walk))
                         Text("La balade, les chiens qui y figurent et les points enregistrés sont retirés de cet appareil.")
@@ -168,15 +171,26 @@ struct WalkDetailView: View {
                             .foregroundStyle(Color.truffloSlate)
                     }
                 }
-                .padding(.horizontal, TruffloTheme.Spacing.medium)
+                .padding(.horizontal, TruffloTheme.Spacing.screen)
                 .padding(.top, TruffloTheme.Spacing.large)
                 .padding(.bottom, TruffloTheme.Spacing.xLarge)
             }
         }
         // The route runs under the bar, edge to edge; the back button floats in glass.
         .ignoresSafeArea(edges: hasMap ? .top : [])
-        .toolbarBackgroundVisibility(hasMap ? .hidden : .automatic, for: .navigationBar)
-        .navigationTitle(hasMap ? "" : "Balade")
+        // A walk declared by hand has no route to open on: the page takes the same
+        // mint aura as the dog's screens instead of a bare sand head.
+        .background(alignment: .top) {
+            if !hasMap {
+                TruffloDogAura(photoData: nil)
+                    .frame(height: 360)
+                    .ignoresSafeArea(edges: .top)
+            }
+        }
+        // The bar never draws a title or a band: the dogs' names below are the
+        // title, as on the profile, so both kinds of walk open the same way.
+        .toolbarBackgroundVisibility(.hidden, for: .navigationBar)
+        .navigationTitle("")
         .sheet(isPresented: $showCorrection) {
             WalkCorrectionView(walk: walk, participants: participants,
                                existingDogIDs: Set(dogs.map(\.id)))

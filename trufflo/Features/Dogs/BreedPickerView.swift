@@ -51,6 +51,7 @@ struct BreedPickerView: View {
                         } label: {
                             row("Autre race", selected: current.kind == "known" && BreedCatalog.entry(named: current.label) == nil)
                         }
+                        .truffloTap()
                         .accessibilityIdentifier("breed.other")
                         if typingOther {
                             HStack {
@@ -61,6 +62,7 @@ struct BreedPickerView: View {
                                     .accessibilityIdentifier("dog.breedLabel")
                                 Button("Utiliser", action: useOther)
                                     .disabled(otherLabel.trimmingCharacters(in: .whitespaces).isEmpty)
+                                    .truffloTap(.selection)
                             }
                         }
                     }
@@ -73,6 +75,7 @@ struct BreedPickerView: View {
                         } label: {
                             row(breed.name, selected: current.kind == "known" && current.label == breed.name)
                         }
+                        .truffloTap(.selection)
                         .accessibilityIdentifier("breed.\(breed.id)")
                     }
                     if results.isEmpty {
@@ -82,6 +85,7 @@ struct BreedPickerView: View {
                         } label: {
                             row("Utiliser « \(query.trimmingCharacters(in: .whitespaces)) »", selected: false)
                         }
+                        .truffloTap(.selection)
                         .accessibilityIdentifier("breed.useTyped")
                     }
                 }
@@ -107,6 +111,7 @@ struct BreedPickerView: View {
 
     private func quickRow(_ title: String, choice: BreedChoice, id: String) -> some View {
         Button { pick(choice) } label: { row(title, selected: current == choice) }
+            .truffloTap(.selection)
             .accessibilityIdentifier(id)
     }
 

@@ -47,6 +47,11 @@ struct StarterRootView: View {
     @State private var startBlock: LocationBlock?
     @State private var exportFile: SharedFile?
     @State private var showWhoIsWalking = false
+    @State private var startTaps = 0
+    /// One namespace per stack: a walk shown on Today and in the Journal at once
+    /// would otherwise be two sources for the same zoom.
+    @Namespace private var todayZoom
+    @Namespace private var journalZoom
     @State private var journalFilter = JournalFilter()
     @State private var exportError: String?
     @Environment(\.dynamicTypeSize) private var typeSize
@@ -83,7 +88,7 @@ struct StarterRootView: View {
                         }
                     }
                 }
-                .navigationDestination(for: WalkRoute.self) { WalkDetailView(walkID: $0.id) }
+                .navigationDestination(for: WalkRoute.self) { WalkDetailView(walkID: $0.id).navigationTransition(.zoom(sourceID: $0.id, in: todayZoom)) }
                 .navigationDestination(for: DogRoute.self) { DogDetailView(dogID: $0.id) }
                 .navigationDestination(for: SharedWalkRoute.self) { SharedWalkDetailView(walkID: $0.id) }
             }
@@ -98,7 +103,7 @@ struct StarterRootView: View {
                         ToolbarItem(placement: .topBarTrailing) { journalFilterMenu }
                     }
                 }
-                .navigationDestination(for: WalkRoute.self) { WalkDetailView(walkID: $0.id) }
+                .navigationDestination(for: WalkRoute.self) { WalkDetailView(walkID: $0.id).navigationTransition(.zoom(sourceID: $0.id, in: journalZoom)) }
                 .navigationDestination(for: DogRoute.self) { DogDetailView(dogID: $0.id) }
                 .navigationDestination(for: SharedWalkRoute.self) { SharedWalkDetailView(walkID: $0.id) }
             }
@@ -126,7 +131,7 @@ struct StarterRootView: View {
                             .listRowBackground(Color.clear)
                             .listRowSeparatorTint(Color.truffloForest.opacity(0.12))
                             .listSectionSeparator(.hidden, edges: .top)
-                            .listRowInsets(EdgeInsets(top: 12, leading: 24, bottom: 12, trailing: 24))
+                            .listRowInsets(EdgeInsets(top: 12, leading: TruffloTheme.Spacing.screen, bottom: 12, trailing: TruffloTheme.Spacing.screen))
                         }
                     }
                 }
@@ -153,6 +158,9 @@ struct StarterRootView: View {
             }
         }
         .tint(Color.truffloForest)
+        // The tab bar folds away while a long screen scrolls and comes back on the way
+        // up (Apple, *Adopting Liquid Glass*: `tabBarMinimizeBehavior`, iOS 26 and later).
+        .tabBarMinimizeBehavior(.onScrollDown)
         .sheet(isPresented: $showDogForm) { DogFormView() }
         .sheet(isPresented: $showHousehold) { HouseholdView() }
         // https://trufflo.memolabs.dev/rejoindre/<code> (B-REQ-02, ADR 0009).
@@ -298,6 +306,7 @@ struct StarterRootView: View {
         } else {
             JournalTimelineView(walks: shown, shared: sharedShown,
                                 filterSummary: journalFilter.isActive ? filterSummary(count: shown.count + sharedShown.count) : nil,
+                                zoom: journalZoom,
                                 rowDestination: { WalkRoute(id: $0) })
         }
     }
@@ -367,45 +376,44 @@ struct StarterRootView: View {
     @ViewBuilder
     private var todayContent: some View {
         if dogs.isEmpty {
-            List {
-                Section {
-                    TruffloEmptyStateView(
-                        imageName: "EmptyDog",
-                        title: "Bienvenue dans Trufflo",
-                        description: "Ajoutez votre chien pour commencer votre journal de balades.",
-                        buttonTitle: "Ajouter mon chien",
-                        action: { showDogForm = true }
-                    )
-                    .accessibilityIdentifier("dog.add")
-                    .listRowBackground(Color.clear)
-                    .listRowSeparator(.hidden)
-                }
+            ScrollView {
+                TruffloWelcome { showDogForm = true }
             }
+            // The introduction closes onto this screen: same aura, so it continues
+            // rather than cuts.
+            .background(alignment: .top) {
+                TruffloDogAura(photoData: nil)
+                    .frame(height: 560)
+                    .ignoresSafeArea(edges: .top)
+            }
+            .safeAreaInset(edge: .bottom) { addDogButton }
         } else {
             ScrollView {
-                VStack(alignment: .leading, spacing: 0) {
-                    dogHero
-                    VStack(alignment: .leading, spacing: TruffloTheme.Spacing.large) {
+                VStack(alignment: .leading, spacing: TruffloTheme.Spacing.large) {
+                    dogHeader
+                    VStack(alignment: .leading, spacing: TruffloTheme.Spacing.xLarge) {
                         if let line = routineLine(for: dogs[0]) {
                             Text(line)
-                                .font(.subheadline)
+                                .font(.truffloBodyRegular)
                                 .foregroundStyle(Color.truffloForest)
                                 .accessibilityIdentifier("today.routine")
                         }
                         if let currentWalk = liveWalk {
                             liveWalkSection(currentWalk)
                         }
-                        weekSection
                         if completedWalks.isEmpty {
                             firstWalkPlaceholder
+                        } else {
+                            weekFigure
                         }
                         if let lastWalk = completedWalks.first {
                             VStack(alignment: .leading, spacing: TruffloTheme.Spacing.small) {
                                 sectionTitle("Dernière balade")
                                 NavigationLink(value: WalkRoute(id: lastWalk.id)) {
-                                    WalkActivityCard(walk: lastWalk)
+                                    WalkTile(walk: lastWalk)
                                 }
                                 .buttonStyle(.plain)
+                                .matchedTransitionSource(id: lastWalk.id, in: todayZoom)
                             }
                         }
                         householdOutingSection
@@ -414,13 +422,19 @@ struct StarterRootView: View {
                             HouseholdPrompt(place: .today, dogName: dogNames, isSeveral: dogs.count > 1) { showHousehold = true }
                         }
                     }
-                    .padding(.horizontal, TruffloTheme.Spacing.medium)
-                    .padding(.top, TruffloTheme.Spacing.large)
-                    .padding(.bottom, TruffloTheme.Spacing.large)
                 }
+                .padding(.horizontal, TruffloTheme.Spacing.screen)
+                .padding(.top, TruffloTheme.Spacing.small)
+                .padding(.bottom, TruffloTheme.Spacing.large)
             }
-            .ignoresSafeArea(edges: .top)
-            .scrollEdgeEffectHidden(true, for: .top)
+            // The dog's own colours behind the head of the screen, under the status bar
+            // and the navigation bar too. Behind the scroll view, so it stays put while
+            // the content moves over it, the way a now-playing backdrop does.
+            .background(alignment: .top) {
+                TruffloDogAura(photoData: dogs[0].photoData)
+                    .frame(height: 560)
+                    .ignoresSafeArea(edges: .top)
+            }
             .safeAreaInset(edge: .bottom) {
                 if liveWalk == nil { startButton }
             }
@@ -459,8 +473,12 @@ struct StarterRootView: View {
             } else {
                 HStack(spacing: TruffloTheme.Spacing.medium) {
                     // Without a photo the name keeps the column of the dogs that have one,
-                    // so a list of three reads as one list, not as three alignments.
-                    if let portrait { portrait } else { Color.clear.frame(width: 56, height: 56) }
+                    // so a list of three reads as one list, not as three alignments. When
+                    // no dog has a photo there is no column to keep, and an empty indent
+                    // would read as a missing picture.
+                    if let portrait { portrait } else if dogs.contains(where: { $0.photoData != nil }) {
+                        Color.clear.frame(width: 56, height: 56)
+                    }
                     nameAndFacts
                     Spacer(minLength: 0)
                     VStack(alignment: .trailing, spacing: 0) {
@@ -513,20 +531,20 @@ struct StarterRootView: View {
 
     private func sectionTitle(_ text: String) -> some View {
         Text(text)
-            .font(.system(.title3, design: .rounded, weight: .bold))
+            .font(.truffloBodyHeavy)
             .foregroundStyle(Color.truffloForest)
             .accessibilityAddTraits(.isHeader)
     }
 
-    /// The dog leads, full width (ART-DIRECTION.md, TODAY A). Without a photo the
-    /// hero stays quiet and offers the one thing that would change it.
-    private var dogHero: some View {
+    /// The dog at the head of the screen, as a portrait (A2-REQ-05). Without a photo
+    /// nothing stands in for it and the header offers the one thing that would change that.
+    private var dogHeader: some View {
         let lead = dogs[0]
-        return TruffloDogPortraitHero(name: dogNames, photoData: lead.photoData, subtitle: dogSubtitle(lead)) {
+        return TruffloDogHeader(name: dogNames, photoData: lead.photoData, subtitle: dogSubtitle(lead)) {
             if lead.photoData == nil {
                 NavigationLink(value: DogRoute(id: lead.id)) {
                     Label("Ajouter une photo de \(lead.name)", systemImage: "camera")
-                        .font(.subheadline.weight(.semibold))
+                        .font(.truffloBodyHeavy)
                         .foregroundStyle(Color.truffloForest)
                 }
                 .buttonStyle(.plain)
@@ -559,53 +577,38 @@ struct StarterRootView: View {
         dogs.map(\.name).formatted(.list(type: .and).locale(TruffloLocale.french))
     }
 
-    /// Descriptive facts over the last seven days, never a target, set as a
-    /// sentence rather than a statistics block. Distance is not summed, because
-    /// declared walks have none. Hidden when the week is empty rather than
-    /// showing zeros. Only this person's own walks count, which the sentence says.
-    @ViewBuilder
-    private var weekSection: some View {
-        let weekAgo = Date().addingTimeInterval(-7 * 24 * 3600)
-        let week = completedWalks.filter { ($0.endedAt ?? $0.startedAt) >= weekAgo }
-        if !week.isEmpty {
-            VStack(alignment: .leading, spacing: TruffloTheme.Spacing.xxSmall) {
-                Text(String(localized: "Vous avez enregistré \(week.count) balades cette semaine"))
-                    .font(.system(.title3, design: .rounded, weight: .bold))
-                    .foregroundStyle(Color.truffloForest)
-                    .fixedSize(horizontal: false, vertical: true)
-                let total = WalkFormatting.minutes(week.map(\.confirmedSeconds).reduce(0, +))
-                Text(lastOutingAgo.map { "\(total) en tout. Dernière sortie \($0)." } ?? "\(total) en tout.")
-                    .font(.subheadline)
-                    .foregroundStyle(Color.truffloSlate)
-            }
-        }
-    }
-
-    private var lastOutingAgo: String? {
-        guard let endedAt = completedWalks.first?.endedAt else { return nil }
-        if Date().timeIntervalSince(endedAt) < 60 { return "à l'instant" }
-        let formatter = RelativeDateTimeFormatter()
-        formatter.locale = TruffloLocale.french
-        formatter.unitsStyle = .full
-        return formatter.localizedString(for: endedAt, relativeTo: Date())
+    /// The calendar week of this person's own walks (`WeekSummary`, A2-REQ-01):
+    /// the figure, the seven days, and the time in one line. Descriptive, never a
+    /// target. Distance is not summed, because declared walks have none.
+    private var weekFigure: some View {
+        let week = WeekSummary.make(
+            walks: completedWalks.map { .init(endedAt: $0.endedAt ?? $0.startedAt, seconds: $0.confirmedSeconds) },
+            now: .now,
+            calendar: TruffloLocale.calendar)
+        let total = week.isEmpty ? nil : "\(WalkFormatting.minutes(week.totalSeconds)) en tout"
+        return TruffloWeekFigure(week: week, totalLine: total)
     }
 
     /// A walk in progress takes the place of the start button, so a second one
     /// cannot be started by mistake. The time keeps running on screen: the
     /// stored duration covers the last checkpoint, and while recording the
     /// seconds since that checkpoint are added on top.
+    ///
+    /// Drawn as the same white tile as the last walk, with the same ink: a dark
+    /// forest block here made Today read as two apps (2026-10-07 review).
     private func liveWalkSection(_ walk: WalkRecord) -> some View {
         let isInterrupted = walk.phase == .interrupted
         let isRecording = walk.phase == .recording
+        let shape = RoundedRectangle(cornerRadius: TruffloTheme.Radius.card, style: .continuous)
         return VStack(alignment: .leading, spacing: TruffloTheme.Spacing.small) {
             HStack(spacing: TruffloTheme.Spacing.xSmall) {
                 Circle()
-                    .fill(isInterrupted ? Color.truffloPeach : isRecording ? Color(red: 0.5, green: 0.83, blue: 0.65) : Color.white.opacity(0.7))
+                    .fill(isInterrupted ? Color.truffloDanger : isRecording ? Color.truffloSage : Color.truffloSlate)
                     .frame(width: 9, height: 9)
                     .accessibilityHidden(true)
                 Text(isInterrupted ? "Balade interrompue" : isRecording ? "Balade en cours" : "Balade en pause")
-                    .font(.subheadline.weight(.semibold))
-                    .foregroundStyle(Color.truffloMint)
+                    .font(.truffloBodyHeavy)
+                    .foregroundStyle(Color.truffloForest)
             }
             TimelineView(.periodic(from: .now, by: 1)) { context in
                 let seconds = walk.confirmedSeconds
@@ -617,34 +620,37 @@ struct StarterRootView: View {
             }
             if isInterrupted {
                 Text("Données enregistrées jusqu'au dernier point.")
-                    .font(.footnote)
-                    .foregroundStyle(Color.truffloMint)
+                    .font(.truffloMeta)
+                    .foregroundStyle(Color.truffloSlate)
             }
             Button {
                 activeWalkCover = .resume(walk.id)
             } label: {
                 Text("Revenir à la balade")
-                    .font(.headline)
-                    .foregroundStyle(Color.truffloForest)
+                    .font(.truffloBodyHeavy)
                     .frame(maxWidth: .infinity, minHeight: 50)
-                    .background(Color.white, in: RoundedRectangle(cornerRadius: 14, style: .continuous))
             }
-            .buttonStyle(.plain)
+            .buttonStyle(.glassProminent)
+            .buttonBorderShape(.capsule)
+            .tint(Color.truffloForest)
+            .truffloTap()
         }
         .padding(TruffloTheme.Spacing.medium)
         .frame(maxWidth: .infinity, alignment: .leading)
-        .background(Color.truffloForest, in: RoundedRectangle(cornerRadius: TruffloTheme.Radius.card, style: .continuous))
+        .background(Color.white, in: shape)
+        .shadow(color: Color.truffloForest.opacity(0.10), radius: 18, x: 0, y: 8)
+        .shadow(color: Color.truffloForest.opacity(0.05), radius: 2, x: 0, y: 1)
         .accessibilityElement(children: .contain)
         .accessibilityIdentifier("walk.live.banner")
     }
 
     private func liveFigure(_ label: String, _ value: String) -> some View {
         VStack(alignment: .leading, spacing: 2) {
-            Text(label).font(.footnote).foregroundStyle(Color.truffloMint)
+            Text(label).font(.truffloMeta).foregroundStyle(Color.truffloSlate)
             Text(value)
                 .font(.truffloFigure(.title))
                 .monospacedDigit()
-                .foregroundStyle(.white)
+                .foregroundStyle(Color.truffloForest)
         }
     }
 
@@ -691,22 +697,44 @@ struct StarterRootView: View {
 
     /// The one action of the screen, anchored where the thumb rests.
     private var startButton: some View {
-        Button(action: startWalk) {
+        Button {
+            startTaps += 1
+            startWalk()
+        } label: {
             // At accessibility sizes the icon and the title size would wrap the label
             // to three lines and swallow the screen: the words alone, one size down.
             Label("Démarrer une balade", systemImage: "location.fill")
                 .labelStyle(StartLabelStyle(compact: typeSize.isAccessibilitySize))
-                .font(typeSize.isAccessibilitySize
-                      ? .system(.headline, design: .rounded, weight: .bold)
-                      : .system(.title3, design: .rounded, weight: .bold))
+                .font(.truffloBodyHeavy)
                 .multilineTextAlignment(.center)
                 .lineLimit(2)
                 .frame(maxWidth: .infinity, minHeight: 56)
         }
         .buttonStyle(.glassProminent)
-        .buttonBorderShape(.roundedRectangle(radius: TruffloTheme.Radius.medium))
+        .buttonBorderShape(.capsule)
         .tint(Color.truffloForest)
-        .padding(.horizontal, TruffloTheme.Spacing.medium)
+        .sensoryFeedback(.impact(weight: .light), trigger: startTaps)
+        .padding(.horizontal, TruffloTheme.Spacing.screen)
+        .padding(.bottom, TruffloTheme.Spacing.xSmall)
+    }
+
+    /// The one action of the welcome screen, anchored like the start button.
+    private var addDogButton: some View {
+        Button {
+            showDogForm = true
+        } label: {
+            Text("Ajouter mon chien")
+                .font(.truffloBodyHeavy)
+                .multilineTextAlignment(.center)
+                .lineLimit(2)
+                .frame(maxWidth: .infinity, minHeight: 56)
+        }
+        .buttonStyle(.glassProminent)
+        .buttonBorderShape(.capsule)
+        .tint(Color.truffloForest)
+        .truffloTap()
+        .accessibilityIdentifier("dog.add")
+        .padding(.horizontal, TruffloTheme.Spacing.screen)
         .padding(.bottom, TruffloTheme.Spacing.xSmall)
     }
 
@@ -715,10 +743,11 @@ struct StarterRootView: View {
             showWalkForm = true
         } label: {
             Label("Ajouter une balade passée", systemImage: "plus")
-                .font(.subheadline.weight(.semibold))
+                .font(.truffloBodyHeavy)
                 .foregroundStyle(Color.truffloForest)
                 .frame(minHeight: 44)
         }
+        .truffloTap()
         .accessibilityIdentifier("walk.manual.add")
     }
 

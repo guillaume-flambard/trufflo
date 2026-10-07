@@ -55,6 +55,7 @@ struct WalkSummaryView: View {
                 ToolbarItem(placement: .confirmationAction) {
                     Button("Terminé", action: saveAndClose)
                         .fontWeight(.semibold)
+                        .truffloTap()
                         .accessibilityIdentifier("walk.summary.done")
                 }
             }
@@ -83,21 +84,23 @@ struct WalkSummaryView: View {
 
                 VStack(alignment: .leading, spacing: TruffloTheme.Spacing.large) {
                     VStack(alignment: .leading, spacing: TruffloTheme.Spacing.xxSmall) {
-                        Text("Balade terminée")
-                            .font(.subheadline.weight(.semibold))
-                            .foregroundStyle(Color.truffloSage)
+                        // Laid out like the walk's own page (WalkDetailView): the dogs
+                        // as the title, then when. Closing the summary lands on that page's
+                        // twin in the journal, so the two must not look like two apps.
                         Text(title)
                             .font(.system(.title, design: .rounded, weight: .heavy))
                             .foregroundStyle(Color.truffloForest)
                         if let endedAt = walk.endedAt {
-                            Text(WalkFormatting.dayAndTime(endedAt))
-                                .font(.footnote)
+                            Text("Balade terminée \(WalkFormatting.relativeDayAndTime(endedAt))")
+                                .font(.subheadline)
                                 .foregroundStyle(Color.truffloSlate)
                         }
                     }
 
                     TruffloStatRow {
-                        TruffloStat("Durée", value: WalkFormatting.clock(walk.confirmedSeconds))
+                        // Minutes, as on the walk page and in the journal: the
+                        // second-accurate clock belongs to the walk still running.
+                        TruffloStat("Durée", value: WalkFormatting.minutes(walk.confirmedSeconds))
                         if let meters = walk.recordedPathMeters {
                             TruffloStat("Distance", value: WalkFormatting.distance(meters))
                         }
@@ -109,8 +112,8 @@ struct WalkSummaryView: View {
                             .font(.body)
                             .lineLimit(3...8)
                             .padding(TruffloTheme.Spacing.small)
-                            .background(Color.white, in: RoundedRectangle(cornerRadius: 16, style: .continuous))
-                            .overlay(RoundedRectangle(cornerRadius: 16, style: .continuous)
+                            .background(Color.white, in: RoundedRectangle(cornerRadius: TruffloTheme.Radius.card, style: .continuous))
+                            .overlay(RoundedRectangle(cornerRadius: TruffloTheme.Radius.card, style: .continuous)
                                 .strokeBorder(Color.truffloForest.opacity(0.1), lineWidth: 1))
                             .accessibilityIdentifier("walk.summary.note")
                     }
@@ -132,7 +135,7 @@ struct WalkSummaryView: View {
                         }
                     }
                 }
-                .padding(.horizontal, TruffloTheme.Spacing.large)
+                .padding(.horizontal, TruffloTheme.Spacing.screen)
                 .padding(.top, TruffloTheme.Spacing.large)
                 .padding(.bottom, TruffloTheme.Spacing.xLarge)
             }
@@ -160,8 +163,15 @@ struct WalkSummaryView: View {
             let name = dogNames.first ?? "Balade"
             TruffloDogHero(name: name, photoData: photo, height: 340)
         } else {
-            // No route and no photo: no stand-in. The page opens on the words.
-            Color.clear.frame(height: TruffloTheme.Spacing.large)
+            // No route and no photo: no stand-in. The page opens on the words, below
+            // the bar that carries "Terminé" (the scroll view runs under it), on the
+            // same mint aura as the dog's other screens.
+            Color.clear.frame(height: 96)
+                .background(alignment: .top) {
+                    TruffloDogAura(photoData: nil)
+                        .frame(height: 360)
+                        .allowsHitTesting(false)
+                }
         }
     }
 

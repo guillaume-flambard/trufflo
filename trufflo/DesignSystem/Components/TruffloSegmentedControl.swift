@@ -5,6 +5,9 @@ public struct TruffloSegmentedControl<T: Hashable>: View {
     @Binding private var selection: T
     private let titleKeyPath: KeyPath<T, String>
 
+    @Namespace private var namespace
+    @Environment(\.accessibilityReduceMotion) private var reduceMotion
+
     public init(
         items: [T],
         selection: Binding<T>,
@@ -20,7 +23,7 @@ public struct TruffloSegmentedControl<T: Hashable>: View {
             ForEach(items, id: \.self) { item in
                 let isSelected = selection == item
                 Button {
-                    withAnimation(.snappy(duration: 0.2)) {
+                    withAnimation(TruffloTheme.Motion.selection(reduceMotion: reduceMotion)) {
                         selection = item
                     }
                 } label: {
@@ -30,7 +33,13 @@ public struct TruffloSegmentedControl<T: Hashable>: View {
                         .foregroundStyle(isSelected ? Color.white : Color.truffloForest)
                         .padding(.vertical, TruffloTheme.Spacing.small)
                         .frame(maxWidth: .infinity)
-                        .background(isSelected ? Color.truffloForest : Color.clear)
+                        .background {
+                            if isSelected {
+                                Capsule()
+                                    .fill(Color.truffloForest)
+                                    .matchedGeometryEffect(id: "selection", in: namespace)
+                            }
+                        }
                         .clipShape(Capsule())
                 }
             }
@@ -38,5 +47,6 @@ public struct TruffloSegmentedControl<T: Hashable>: View {
         .padding(4)
         .background(Color.truffloSand)
         .clipShape(Capsule())
+        .sensoryFeedback(.selection, trigger: selection)
     }
 }

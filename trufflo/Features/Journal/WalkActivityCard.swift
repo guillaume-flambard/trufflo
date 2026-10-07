@@ -64,7 +64,8 @@ struct WalkActivityCard: View {
             figures: figures,
             note: walk.note.isEmpty ? nil : walk.note,
             photo: leadPhoto,
-            route: isGPS && coordinates.count >= 2 ? coordinates : nil)
+            route: isGPS && coordinates.count >= 2 ? coordinates : nil,
+            routeKey: "\(walk.id.uuidString)-\(walk.revision)-\(points.count)")
         .accessibilityElement(children: .ignore)
         .accessibilityLabel(spokenLabel)
         .accessibilityAddTraits(.isButton)
@@ -98,6 +99,8 @@ struct TimelineRow: View {
     var note: String? = nil
     var photo: Data? = nil
     var route: [TrackCoordinate]? = nil
+    /// Identifies the route's map picture in the cache, the way the Today tile does.
+    var routeKey: String? = nil
     var flag: String? = nil
 
     @Environment(\.dynamicTypeSize) private var typeSize
@@ -128,9 +131,17 @@ struct TimelineRow: View {
                     }
                     Spacer(minLength: 0)
                     if let route {
-                        TruffloRouteSilhouette(points: route)
+                        // The same map picture as the Today tile, at thumbnail size, so a
+                        // walk looks like itself on both screens.
+                        Group {
+                            if let routeKey {
+                                TruffloRouteMap(points: route, cacheKey: routeKey)
+                            } else {
+                                TruffloRouteSilhouette(points: route)
+                            }
+                        }
                             .frame(width: 64, height: 64)
-                            .clipShape(RoundedRectangle(cornerRadius: 10, style: .continuous))
+                            .clipShape(RoundedRectangle(cornerRadius: TruffloTheme.Radius.medium, style: .continuous))
                     } else if let photo {
                         TruffloDogPortrait(name: title, photoData: photo, diameter: 44)
                     }

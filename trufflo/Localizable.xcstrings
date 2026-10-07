@@ -1,21 +1,80 @@
 {
-  "sourceLanguage": "fr",
-  "strings": {
-    "%lld balades": {
-      "localizations": {
-        "fr": {
-          "variations": {
-            "plural": {
-              "one": {
-                "stringUnit": {
-                  "state": "translated",
-                  "value": "%lld balade"
+  "sourceLanguage" : "fr",
+  "strings" : {
+    "" : {
+
+    },
+    "%@ en tout." : {
+
+    },
+    "%@ organise, %@" : {
+      "localizations" : {
+        "fr" : {
+          "stringUnit" : {
+            "state" : "new",
+            "value" : "%1$@ organise, %2$@"
+          }
+        }
+      }
+    },
+    "%@, %@" : {
+      "localizations" : {
+        "fr" : {
+          "stringUnit" : {
+            "state" : "new",
+            "value" : "%1$@, %2$@"
+          }
+        }
+      }
+    },
+    "%@, par %@" : {
+      "localizations" : {
+        "fr" : {
+          "stringUnit" : {
+            "state" : "new",
+            "value" : "%1$@, par %2$@"
+          }
+        }
+      }
+    },
+    "%@%@ organise, %@" : {
+      "localizations" : {
+        "fr" : {
+          "stringUnit" : {
+            "state" : "new",
+            "value" : "%1$@%2$@ organise, %3$@"
+          }
+        }
+      }
+    },
+    "%lld" : {
+
+    },
+    "%lld %@" : {
+      "localizations" : {
+        "fr" : {
+          "stringUnit" : {
+            "state" : "new",
+            "value" : "%1$lld %2$@"
+          }
+        }
+      }
+    },
+    "%lld balades" : {
+      "localizations" : {
+        "fr" : {
+          "variations" : {
+            "plural" : {
+              "one" : {
+                "stringUnit" : {
+                  "state" : "translated",
+                  "value" : "%lld balade"
                 }
               },
-              "other": {
-                "stringUnit": {
-                  "state": "translated",
-                  "value": "%lld balades"
+              "other" : {
+                "stringUnit" : {
+                  "state" : "translated",
+                  "value" : "%lld balades"
                 }
               }
             }
@@ -23,21 +82,21 @@
         }
       }
     },
-    "%lld balades reçues": {
-      "localizations": {
-        "fr": {
-          "variations": {
-            "plural": {
-              "one": {
-                "stringUnit": {
-                  "state": "translated",
-                  "value": "%lld balade reçue"
+    "%lld balades enregistrées" : {
+      "localizations" : {
+        "fr" : {
+          "variations" : {
+            "plural" : {
+              "one" : {
+                "stringUnit" : {
+                  "state" : "translated",
+                  "value" : "%lld balade enregistrée"
                 }
               },
-              "other": {
-                "stringUnit": {
-                  "state": "translated",
-                  "value": "%lld balades reçues"
+              "other" : {
+                "stringUnit" : {
+                  "state" : "translated",
+                  "value" : "%lld balades enregistrées"
                 }
               }
             }
@@ -45,21 +104,21 @@
         }
       }
     },
-    "%lld membres": {
-      "localizations": {
-        "fr": {
-          "variations": {
-            "plural": {
-              "one": {
-                "stringUnit": {
-                  "state": "translated",
-                  "value": "%lld membre"
+    "%lld balades reçues" : {
+      "localizations" : {
+        "fr" : {
+          "variations" : {
+            "plural" : {
+              "one" : {
+                "stringUnit" : {
+                  "state" : "translated",
+                  "value" : "%lld balade reçue"
                 }
               },
-              "other": {
-                "stringUnit": {
-                  "state": "translated",
-                  "value": "%lld membres"
+              "other" : {
+                "stringUnit" : {
+                  "state" : "translated",
+                  "value" : "%lld balades reçues"
                 }
               }
             }
@@ -67,43 +126,21 @@
         }
       }
     },
-    "walks_noun_one": {
-      "comment": "Noun under the walk count on a dog row; Xcode forbids a plural variant that omits the number.",
-      "localizations": {
-        "fr": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "balade"
-          }
-        }
-      }
-    },
-    "walks_noun_other": {
-      "comment": "Noun under the walk count on a dog row; Xcode forbids a plural variant that omits the number.",
-      "localizations": {
-        "fr": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "balades"
-          }
-        }
-      }
-    },
-    "Vous avez enregistré %lld balades cette semaine": {
-      "localizations": {
-        "fr": {
-          "variations": {
-            "plural": {
-              "one": {
-                "stringUnit": {
-                  "state": "translated",
-                  "value": "Vous avez enregistré %lld balade cette semaine"
+    "%lld membres" : {
+      "localizations" : {
+        "fr" : {
+          "variations" : {
+            "plural" : {
+              "one" : {
+                "stringUnit" : {
+                  "state" : "translated",
+                  "value" : "%lld membre"
                 }
               },
-              "other": {
-                "stringUnit": {
-                  "state": "translated",
-                  "value": "Vous avez enregistré %lld balades cette semaine"
+              "other" : {
+                "stringUnit" : {
+                  "state" : "translated",
+                  "value" : "%lld membres"
                 }
               }
             }
@@ -111,28 +148,823 @@
         }
       }
     },
-    "%lld balades enregistrées": {
-      "localizations": {
-        "fr": {
-          "variations": {
-            "plural": {
-              "one": {
-                "stringUnit": {
-                  "state": "translated",
-                  "value": "%lld balade enregistrée"
+    "%lld sorties" : {
+
+    },
+    "0" : {
+
+    },
+    "1 sortie" : {
+
+    },
+    "32 min • 2,4 km" : {
+
+    },
+    "À son rythme. Ensemble." : {
+
+    },
+    "Absent" : {
+
+    },
+    "Accepter" : {
+
+    },
+    "Ajoute ses balades et corrige les siennes." : {
+
+    },
+    "Ajoutée" : {
+
+    },
+    "Ajouter" : {
+
+    },
+    "Ajouter au journal" : {
+
+    },
+    "Ajouter manuellement" : {
+
+    },
+    "Ajouter mon chien" : {
+
+    },
+    "Ajouter un chien" : {
+
+    },
+    "Ajouter une balade passée" : {
+
+    },
+    "Ajouter une photo" : {
+
+    },
+    "Ajouter une photo de %@" : {
+
+    },
+    "Ajoutez votre chien. Chaque sortie s'écrira ici, avec son temps, son tracé et vos notes." : {
+
+    },
+    "Annuler" : {
+
+    },
+    "Annuler cette sortie ?" : {
+
+    },
+    "Annuler la sortie" : {
+
+    },
+    "Aucun chien annoncé pour l'instant. Vous pouvez en ajouter un, ou venir sans chien." : {
+
+    },
+    "Aucun chien associé à cette balade." : {
+
+    },
+    "Aucune sortie à venir dans %@" : {
+
+    },
+    "Aucune zone n'est ouverte pour l'instant." : {
+
+    },
+    "Aucune. Le journal fonctionne sans routine." : {
+
+    },
+    "Aujourd'hui" : {
+
+    },
+    "Avec sa durée, son tracé, et la note que vous voudrez y laisser." : {
+
+    },
+    "Badges & Puces" : {
+
+    },
+    "Balade" : {
+
+    },
+    "balade cette semaine" : {
+
+    },
+    "Balade du foyer" : {
+
+    },
+    "Balade en cours" : {
+
+    },
+    "Balade en pause" : {
+
+    },
+    "Balade interrompue" : {
+
+    },
+    "Balade passée" : {
+
+    },
+    "Balade terminée" : {
+
+    },
+    "balades cette semaine" : {
+
+    },
+    "Bloquer" : {
+
+    },
+    "Bloquer %@" : {
+
+    },
+    "Bloquer %@ ?" : {
+
+    },
+    "Bouton Contour" : {
+
+    },
+    "Bouton Discret" : {
+
+    },
+    "Bouton Principal" : {
+
+    },
+    "Bouton Secondaire" : {
+
+    },
+    "Boutons" : {
+
+    },
+    "Camille" : {
+
+    },
+    "Cartes (TruffloCard)" : {
+
+    },
+    "Ce profil sera supprimé. Les balades déjà enregistrées conservent le nom de votre chien." : {
+
+    },
+    "Ce que les autres voient" : {
+
+    },
+    "Ce qui s'est passé, si vous voulez (500 caractères)" : {
+
+    },
+    "Cette sortie est complète" : {
+
+    },
+    "Cette suppression locale ne peut pas être annulée dans le starter." : {
+
+    },
+    "Cette suppression locale ne peut pas être annulée. Ce que vous avez déjà partagé avec le foyer y reste visible." : {
+
+    },
+    "Champs de texte & Contrôles" : {
+
+    },
+    "Changer l'heure ou le lieu" : {
+
+    },
+    "Changer la photo" : {
+
+    },
+    "Changer son rôle ou le retirer du foyer" : {
+
+    },
+    "Chargement des sorties" : {
+
+    },
+    "Chercher une race" : {
+
+    },
+    "Chien" : {
+
+    },
+    "Choisir une photo" : {
+
+    },
+    "Choisir une routine" : {
+
+    },
+    "Choisissez au moins un chien" : {
+
+    },
+    "Code d'invitation" : {
+
+    },
+    "Code pour « %@ »" : {
+
+    },
+    "Collez le code" : {
+
+    },
+    "Comment s'est passée la balade ?" : {
+
+    },
+    "Consulte le journal du foyer, sans rien ajouter." : {
+
+    },
+    "Contacter l'équipe" : {
+
+    },
+    "Continuer" : {
+
+    },
+    "Copié" : {
+
+    },
+    "Copier" : {
+
+    },
+    "Corps de texte" : {
+
+    },
+    "Corriger la balade" : {
+
+    },
+    "Couleurs" : {
+
+    },
+    "Créer mon profil" : {
+
+    },
+    "Créer un code d'invitation" : {
+
+    },
+    "Date et heure" : {
+
+    },
+    "Débloquer" : {
+
+    },
+    "Demander à venir" : {
+
+    },
+    "Demander à venir sans chien" : {
+
+    },
+    "Démarrer" : {
+
+    },
+    "Démarrer une balade" : {
+
+    },
+    "Dernière balade d'Oslo" : {
+
+    },
+    "Des personnes de votre zone proposent des promenades à une date et un lieu précis. Vous demandez à venir, l'organisateur répond." : {
+
+    },
+    "Des sorties près de chez vous" : {
+
+    },
+    "Design System" : {
+
+    },
+    "Données enregistrées jusqu'au dernier point." : {
+
+    },
+    "Durée déclarée. Aucune distance n'est calculée." : {
+
+    },
+    "Durée en minutes" : {
+
+    },
+    "Écrit par vous" : {
+
+    },
+    "Effacer le journal et les profils de cet appareil ?" : {
+
+    },
+    "Effacer toutes les données" : {
+
+    },
+    "En laisse, chiens sociables" : {
+
+    },
+    "En pause : rien ne s'affiche sur Aujourd'hui." : {
+
+    },
+    "Enregistré" : {
+
+    },
+    "Enregistrement impossible" : {
+
+    },
+    "Enregistrement…" : {
+
+    },
+    "Enregistrer" : {
+
+    },
+    "Enregistrer la correction" : {
+
+    },
+    "Enregistrer la routine" : {
+
+    },
+    "Entrée nord du parc" : {
+
+    },
+    "environ %lld min" : {
+
+    },
+    "Envoyer" : {
+
+    },
+    "Envoyer la demande" : {
+
+    },
+    "Envoyer le signalement" : {
+
+    },
+    "Erreur" : {
+
+    },
+    "Était là" : {
+
+    },
+    "Export impossible" : {
+
+    },
+    "Exporter le journal" : {
+
+    },
+    "Exporter le tracé (GPX)" : {
+
+    },
+    "Fermer" : {
+
+    },
+    "Filtrer" : {
+
+    },
+    "Fin de la balade" : {
+
+    },
+    "Foyer partagé" : {
+
+    },
+    "Grand Titre" : {
+
+    },
+    "J'ai 18 ans ou plus" : {
+
+    },
+    "J'y étais" : {
+
+    },
+    "Jamais : votre position, vos parcours, vos notes, votre journal." : {
+
+    },
+    "Je n'y étais pas" : {
+
+    },
+    "Journal" : {
+
+    },
+    "La balade sera marquée comme corrigée." : {
+
+    },
+    "La balade, les chiens qui y figurent et les points enregistrés sont retirés de cet appareil." : {
+
+    },
+    "La balade, ses participants et ses points enregistrés seront retirés de cet appareil." : {
+
+    },
+    "La durée et le parcours ont été mesurés par GPS : ils ne se corrigent pas. Les chiens présents et la note, si." : {
+
+    },
+    "La modification n'a pas été enregistrée. Les données précédentes ont été conservées." : {
+
+    },
+    "La place est libérée. Vous pourrez redemander tant qu'il en reste." : {
+
+    },
+    "La race et l'âge sont déclaratifs et ne déclenchent aucune prescription vétérinaire automatique." : {
+
+    },
+    "La sortie est annulée." : {
+
+    },
+    "La suppression retire le profil de cet appareil. Vos balades déjà enregistrées gardent le nom de votre chien." : {
+
+    },
+    "Le foyer et ce qui y a été partagé sont effacés du serveur. Votre journal reste sur cet iPhone." : {
+
+    },
+    "Le point de rendez-vous est un lieu public choisi par l'organisateur. Aucune position n'est partagée par l'app." : {
+
+    },
+    "Le tracé et la note restent sur l'iPhone de %@. Seule cette personne peut corriger la balade." : {
+
+    },
+    "Légende / Métadonnée" : {
+
+    },
+    "Les balades enregistrées ne changent pas." : {
+
+    },
+    "Les balades reçues des autres membres disparaissent de cet iPhone. Votre journal reste intact." : {
+
+    },
+    "Les personnes inscrites sont prévenues et peuvent se retirer." : {
+
+    },
+    "Les personnes inscrites verront qu'elle est annulée." : {
+
+    },
+    "Leur première balade s'affichera ici" : {
+
+    },
+    "Me retirer" : {
+
+    },
+    "Mes chiens" : {
+
+    },
+    "Mettre en pause" : {
+
+    },
+    "min" : {
+
+    },
+    "Modification impossible" : {
+
+    },
+    "Modifier" : {
+
+    },
+    "Modifier le chien" : {
+
+    },
+    "Moments de la journée" : {
+
+    },
+    "Ne plus proposer ici" : {
+
+    },
+    "Nom de la race" : {
+
+    },
+    "Nom de votre chien" : {
+
+    },
+    "Note non enregistrée" : {
+
+    },
+    "Nouveau chien" : {
+
+    },
+    "Nouveau rendez-vous : %@" : {
+
+    },
+    "Nouvel horaire : %@" : {
+
+    },
+    "Objectif hebdomadaire atteint !" : {
+
+    },
+    "OK" : {
+
+    },
+    "Ouvre la recherche de race" : {
+
+    },
+    "Ouvrir les réglages" : {
+
+    },
+    "Page %lld sur %lld" : {
+      "localizations" : {
+        "fr" : {
+          "stringUnit" : {
+            "state" : "new",
+            "value" : "Page %1$lld sur %2$lld"
+          }
+        }
+      }
+    },
+    "Par exemple : 3 ans" : {
+
+    },
+    "Par exemple « Maison »" : {
+
+    },
+    "Partager leur journal" : {
+
+    },
+    "Partager son journal" : {
+
+    },
+    "Pas encore de balade cette semaine." : {
+
+    },
+    "Passer" : {
+
+    },
+    "Passer %@" : {
+
+    },
+    "Période" : {
+
+    },
+    "Personnes bloquées" : {
+
+    },
+    "Photo de %@" : {
+
+    },
+    "Plus" : {
+
+    },
+    "Plus tard" : {
+
+    },
+    "Portrait de %@" : {
+
+    },
+    "Pour quitter le foyer, nommez d'abord un autre responsable : touchez un membre et choisissez « Passer responsable »." : {
+
+    },
+    "Prénom" : {
+
+    },
+    "Prévenir les inscrits" : {
+
+    },
+    "Proposer une sortie" : {
+
+    },
+    "Publier la sortie" : {
+
+    },
+    "Quand un organisateur de votre zone en proposera une, elle apparaîtra ici. Rien n'est affiché tant qu'il n'y en a pas." : {
+
+    },
+    "Qui part en balade ?" : {
+
+    },
+    "Qui vient avec vous ?" : {
+
+    },
+    "Quitter « %@ » ?" : {
+
+    },
+    "Quitter le foyer" : {
+
+    },
+    "Race" : {
+
+    },
+    "Race : %@" : {
+
+    },
+    "Refuser" : {
+
+    },
+    "Réglages" : {
+
+    },
+    "Réglages des sorties" : {
+
+    },
+    "Reprendre" : {
+
+    },
+    "Reproposer cette sortie" : {
+
+    },
+    "Résultats" : {
+
+    },
+    "Retirer" : {
+
+    },
+    "Retirer %@ du foyer ?" : {
+
+    },
+    "Retirer du foyer" : {
+
+    },
+    "Retirer ma demande" : {
+
+    },
+    "Retirer votre demande ?" : {
+
+    },
+    "Retour" : {
+
+    },
+    "Revenir à la balade" : {
+
+    },
+    "Revoir l'introduction" : {
+
+    },
+    "Routine choisie" : {
+
+    },
+    "Rythme, rencontres, ce qu'il aime ou évite" : {
+
+    },
+    "Sa première balade s'affichera ici" : {
+
+    },
+    "Se déconnecter" : {
+
+    },
+    "Ses nouvelles balades ne vous parviendront plus, et son iPhone oubliera le foyer à sa prochaine connexion. Ce qu'il a déjà vu reste vu." : {
+
+    },
+    "Seul l'organisateur le voit." : {
+
+    },
+    "Seuls le nom des chiens choisis et votre prénom sont vus des personnes acceptées." : {
+
+    },
+    "Signal GPS : %@" : {
+
+    },
+    "Signalement envoyé" : {
+
+    },
+    "Signaler" : {
+
+    },
+    "Signaler %@" : {
+
+    },
+    "Signaler cette sortie" : {
+
+    },
+    "Sortie annulée" : {
+
+    },
+    "Sorties" : {
+
+    },
+    "Sous-titre" : {
+
+    },
+    "Supprimer" : {
+
+    },
+    "Supprimer « %@ » ?" : {
+
+    },
+    "Supprimer %@" : {
+
+    },
+    "Supprimer ce profil ?" : {
+
+    },
+    "Supprimer cette balade ?" : {
+
+    },
+    "Supprimer définitivement" : {
+
+    },
+    "Supprimer la balade" : {
+
+    },
+    "Supprimer la routine" : {
+
+    },
+    "Supprimer la routine ?" : {
+
+    },
+    "Supprimer le foyer" : {
+
+    },
+    "Supprimer le profil" : {
+
+    },
+    "Supprimer le profil de %@" : {
+
+    },
+    "Synchroniser maintenant" : {
+
+    },
+    "Tant que vous ne créez ni ne rejoignez de foyer, rien ne quitte cet iPhone." : {
+
+    },
+    "Terminé" : {
+
+    },
+    "Titre de Section" : {
+
+    },
+    "Tous les chiens" : {
+
+    },
+    "Tout afficher" : {
+
+    },
+    "Tout effacer" : {
+
+    },
+    "Toutes les races" : {
+
+    },
+    "Trufflo Design System" : {
+
+    },
+    "Typographie (SF Pro Rounded)" : {
+
+    },
+    "Une personne bloquée ne voit plus vos sorties, et vous ne voyez plus les siennes." : {
+
+    },
+    "Une personne de l'équipe le lit. Vous pouvez aussi bloquer la personne concernée pour ne plus la croiser, depuis le menu de la sortie." : {
+
+    },
+    "Utiliser" : {
+
+    },
+    "Valable 7 jours, une seule fois." : {
+
+    },
+    "Vos demandes, vos sorties confirmées et celles que vous organisez seront ici." : {
+
+    },
+    "Vos propres repères pour %@. Le journal fonctionne sans, et rien ne vous sera reproché si une journée s'en écarte." : {
+
+    },
+    "Votre journal reste sur cet iPhone. Ce que vous avez partagé reste visible du foyer." : {
+
+    },
+    "Votre prénom, et les chiens que vous choisissez d'annoncer pour une sortie. Rien d'autre." : {
+
+    },
+    "Vous avez enregistré %lld balades cette semaine" : {
+      "extractionState" : "stale",
+      "localizations" : {
+        "fr" : {
+          "variations" : {
+            "plural" : {
+              "one" : {
+                "stringUnit" : {
+                  "state" : "translated",
+                  "value" : "Vous avez enregistré %lld balade cette semaine"
                 }
               },
-              "other": {
-                "stringUnit": {
-                  "state": "translated",
-                  "value": "%lld balades enregistrées"
+              "other" : {
+                "stringUnit" : {
+                  "state" : "translated",
+                  "value" : "Vous avez enregistré %lld balades cette semaine"
                 }
               }
             }
           }
         }
       }
+    },
+    "Vous avez indiqué ne pas y avoir été." : {
+
+    },
+    "Vous avez indiqué y avoir été." : {
+
+    },
+    "Vous êtes le seul responsable" : {
+
+    },
+    "Vous êtes plusieurs à promener %@ ?" : {
+
+    },
+    "Vous êtes seul dans ce foyer. Le supprimer efface ce qui a été partagé sur le serveur ; votre journal reste sur cet iPhone." : {
+
+    },
+    "Vous n'avez bloqué personne." : {
+
+    },
+    "Vous n'avez pas encore de sortie" : {
+
+    },
+    "Vous ne verrez plus ses sorties et elle ne verra plus les vôtres. Vous pourrez la débloquer depuis la liste des sorties." : {
+
+    },
+    "Vous organisez cette sortie" : {
+
+    },
+    "Vous verrez les chiens du foyer dans le journal." : {
+
+    },
+    "walks_noun_one" : {
+      "comment" : "Noun under the walk count on a dog row; Xcode forbids a plural variant that omits the number.",
+      "localizations" : {
+        "fr" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "balade"
+          }
+        }
+      }
+    },
+    "walks_noun_other" : {
+      "comment" : "Noun under the walk count on a dog row; Xcode forbids a plural variant that omits the number.",
+      "localizations" : {
+        "fr" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "balades"
+          }
+        }
+      }
+    },
+    "Zone" : {
+
     }
   },
-  "version": "1.1"
+  "version" : "1.1"
 }

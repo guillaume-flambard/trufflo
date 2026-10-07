@@ -6,4 +6,11 @@ import Foundation
 /// here and in `Localizable.xcstrings`.
 enum TruffloLocale {
     static let french = Locale(identifier: "fr_FR")
+
+    /// The calendar the week is read in: French, so Monday opens the week.
+    static var calendar: Calendar {
+        var calendar = Calendar(identifier: .gregorian)
+        calendar.locale = french
+        return calendar
+    }
 }

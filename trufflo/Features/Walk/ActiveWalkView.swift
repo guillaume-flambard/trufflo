@@ -194,8 +194,8 @@ public struct ActiveWalkView: View {
     }
 
     /// The one control surface: title and signal, the two measurements, then the
-    /// action row for the current state. Strong tint, because it carries numbers
-    /// over bright streets.
+    /// action row for the current state. Strong sand, because it carries numbers
+    /// over a busy map.
     private var controlSurface: some View {
         VStack(alignment: .leading, spacing: TruffloTheme.Spacing.small) {
             HStack(alignment: .center) {
@@ -206,7 +206,7 @@ public struct ActiveWalkView: View {
                         .font(.system(size: 15, weight: .semibold, design: .rounded))
                         .lineLimit(1)
                 }
-                .foregroundStyle(.white.opacity(0.92))
+                .foregroundStyle(Color.truffloForest)
                 .accessibilityElement(children: .combine)
                 .accessibilityIdentifier("walk.title")
 
@@ -261,8 +261,9 @@ public struct ActiveWalkView: View {
                     viewModel.openSettings()
                 }
                 .font(.system(size: 14, weight: .semibold, design: .rounded))
-                .foregroundStyle(.white.opacity(0.85))
-                .frame(maxWidth: .infinity, minHeight: 36)
+                .foregroundStyle(Color.truffloForest)
+                .frame(maxWidth: .infinity, minHeight: 44)
+                .truffloTap()
                 .accessibilityIdentifier("walk.interrupted.settings")
             }
 
@@ -271,23 +272,23 @@ public struct ActiveWalkView: View {
             // than an action that no longer applies.
             HStack(spacing: TruffloTheme.Spacing.xSmall) {
                 ProgressView()
-                    .tint(.white)
+                    .tint(Color.truffloForest)
                 Text("Enregistrement…")
                     .font(.system(size: 16, weight: .semibold, design: .rounded))
-                    .foregroundStyle(.white)
+                    .foregroundStyle(Color.truffloForest)
             }
             .frame(maxWidth: .infinity)
             .frame(height: 56)
         }
     }
 
-    /// Small circular control, peach when the camera is not following. It states
-    /// its state rather than only showing it.
+    /// Small circular control. The filled arrow means following, the outline one
+    /// means the camera was moved away, and the spoken label states it.
     private var recentreControl: some View {
         TruffloRoundAction(systemImage: isFollowingTrack ? "location.fill" : "location",
                            label: isFollowingTrack ? "Suivi automatique actif" : "Recentrer le parcours",
                            identifier: "walk.map.recentre",
-                           tint: isFollowingTrack ? .white : Color.truffloPeach) {
+                           tint: Color.truffloForest) {
             isFollowingTrack = true
         }
     }
@@ -298,7 +299,7 @@ public struct ActiveWalkView: View {
     private func interruptionToast(_ text: String) -> some View {
         Text(text)
             .font(.system(size: 13, weight: .semibold, design: .rounded))
-            .foregroundStyle(.white)
+            .foregroundStyle(Color.truffloForest)
             .multilineTextAlignment(.center)
             .fixedSize(horizontal: false, vertical: true)
             .padding(.horizontal, TruffloTheme.Spacing.medium)

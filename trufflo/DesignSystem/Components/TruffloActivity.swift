@@ -75,7 +75,9 @@ public struct TruffloRouteSilhouette: View {
 
     public var body: some View {
         GeometryReader { proxy in
-            let projected = Self.project(points, in: proxy.size.insetBy(28))
+            // A margin proportional to the frame: a fixed 28 pt left a 64 pt
+            // thumbnail an 8 pt drawing, which read as a lone dot.
+            let projected = Self.project(points, in: proxy.size.insetBy(min(28, min(proxy.size.width, proxy.size.height) * 0.16)))
             ZStack {
                 Color.truffloMint.opacity(0.28)
                 Path { path in

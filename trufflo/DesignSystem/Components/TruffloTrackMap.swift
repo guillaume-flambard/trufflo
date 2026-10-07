@@ -62,7 +62,12 @@ struct TruffloTrackMap: View {
                 }
             }
         }
-        .mapStyle(.standard(elevation: .realistic, pointsOfInterest: .all))
+        // Muted, parks only: the same quiet map as the route pictures of Today and
+        // the journal (`TruffloRouteMap`, `.mutedStandard`), so the walk screen does
+        // not switch to a different, louder map. Parks stay because that is where a
+        // dog walk goes; shops and restaurants are noise under a leash.
+        .mapStyle(.standard(elevation: .realistic, emphasis: .muted,
+                            pointsOfInterest: .including([.park])))
         .mapControlVisibility(.hidden)
         .accessibilityHidden(true)
         .onChange(of: points.count) { _, _ in followIfNeeded() }

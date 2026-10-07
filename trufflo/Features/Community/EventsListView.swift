@@ -54,7 +54,7 @@ struct EventsListView: View {
                     }
                 }
             }
-            .padding(.horizontal, TruffloTheme.Spacing.large)
+            .padding(.horizontal, TruffloTheme.Spacing.screen)
             .padding(.vertical, TruffloTheme.Spacing.medium)
         }
         .refreshable { await model.refresh() }
