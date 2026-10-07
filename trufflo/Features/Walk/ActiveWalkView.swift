@@ -286,7 +286,7 @@ public struct ActiveWalkView: View {
     /// means the camera was moved away, and the spoken label states it.
     private var recentreControl: some View {
         TruffloRoundAction(systemImage: isFollowingTrack ? "location.fill" : "location",
-                           label: isFollowingTrack ? "Suivi automatique actif" : "Recentrer le parcours",
+                           label: isFollowingTrack ? "Suivi automatique actif" : "Recentrer le tracé",
                            identifier: "walk.map.recentre",
                            tint: Color.truffloForest) {
             isFollowingTrack = true

@@ -25,15 +25,26 @@ struct SharedWalkCard: View {
     }
 
     var body: some View {
-        TimelineRow(time: WalkFormatting.time(date),
-                    title: names.isEmpty ? "Balade" : names,
-                    meta: showsDay ? "\(WalkFormatting.relativeDay(date)), par \(authorName)" : "Par \(authorName)",
-                    figures: figures,
-                    flag: possibleDuplicate ? "Peut-être la même balade qu'une des vôtres" : nil)
-            .accessibilityElement(children: .ignore)
-            .accessibilityLabel(spokenLabel)
-            .accessibilityAddTraits(.isButton)
-            .accessibilityIdentifier("shared.row.\(walk.id.uuidString)")
+        // The same card as my own balades, the author named where the time is.
+        VStack(alignment: .leading, spacing: TruffloTheme.Spacing.small) {
+            TruffloCardHeader(title: names.isEmpty ? "Balade" : names,
+                              subtitle: "\(WalkFormatting.relativeDayAndTime(date).capitalizedFirst), par \(authorName)")
+            TruffloStatGrid(items: figures.enumerated().map { index, value in
+                .init(label: index == 0 ? "Durée" : "Distance", value: value)
+            })
+            if possibleDuplicate {
+                Label("Peut-être la même balade qu'une des vôtres", systemImage: "square.on.square")
+                    .font(.footnote)
+                    .foregroundStyle(Color.truffloSlate)
+            }
+        }
+        .padding(TruffloTheme.Spacing.medium)
+        .frame(maxWidth: .infinity, alignment: .leading)
+        .truffloWidgetSurface()
+        .accessibilityElement(children: .ignore)
+        .accessibilityLabel(spokenLabel)
+        .accessibilityAddTraits(.isButton)
+        .accessibilityIdentifier("shared.row.\(walk.id.uuidString)")
     }
 
     private var spokenLabel: String {

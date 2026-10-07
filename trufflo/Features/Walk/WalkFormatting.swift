@@ -87,3 +87,8 @@ enum WalkFormatting {
         return "\(start.formatted(style)) à \(end.formatted(style))"
     }
 }
+
+extension String {
+    var capitalizedFirst: String { prefix(1).uppercased() + dropFirst() }
+    var lowercasedFirst: String { prefix(1).lowercased() + dropFirst() }
+}

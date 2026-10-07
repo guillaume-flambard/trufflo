@@ -11,7 +11,7 @@ public struct OnboardingStep: Identifiable, Sendable {
         OnboardingStep(
             id: 0,
             title: "Partez. Le chemin s'écrit tout seul.",
-            description: "Lancez une balade : la durée et le parcours s'enregistrent pendant que vous marchez."
+            description: "Lancez une balade : la durée et le tracé s'enregistrent pendant que vous marchez."
         ),
         OnboardingStep(
             id: 1,

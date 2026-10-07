@@ -60,7 +60,7 @@ struct ProfileSetupView: View {
                         .font(.system(.title3, design: .rounded, weight: .bold))
                         .foregroundStyle(Color.truffloForest)
                     Text("Votre prénom, et les chiens que vous choisissez d'annoncer pour une sortie. Rien d'autre.")
-                    Text("Jamais : votre position, vos parcours, vos notes, votre journal.")
+                    Text("Jamais : votre position, vos tracés, vos notes, votre journal.")
                         .foregroundStyle(Color.truffloSlate)
                 }
                 .font(.subheadline)

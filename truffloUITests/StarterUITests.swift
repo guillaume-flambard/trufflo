@@ -26,7 +26,7 @@ final class StarterUITests: XCTestCase {
         minutes.tap()
         minutes.typeText("10")
         app.buttons["walk.save"].tap()
-        let journal = app.tabBars.buttons["Journal"]
+        let journal = app.buttons["tab.journal"]
         XCTAssertTrue(journal.waitForExistence(timeout: 5))
         journal.tap()
         let manualRow = app.descendants(matching: .any).matching(
@@ -41,12 +41,12 @@ final class StarterUITests: XCTestCase {
         let app = XCUIApplication()
         app.launchArguments = ["--uitesting"]
         app.launch()
-        let journal = app.tabBars.buttons["Journal"]
+        let journal = app.buttons["tab.journal"]
         XCTAssertTrue(journal.waitForExistence(timeout: 5))
         journal.tap()
         XCTAssertTrue(app.staticTexts["Aucune balade enregistrée"].waitForExistence(timeout: 5))
 
-        app.tabBars.buttons["Aujourd'hui"].tap()
+        app.buttons["tab.today"].tap()
         app.buttons["dog.add"].tap()
         let name = app.textFields["dog.name"]
         XCTAssertTrue(name.waitForExistence(timeout: 5))
@@ -93,7 +93,7 @@ final class StarterUITests: XCTestCase {
         note.typeText("Balade tranquille au parc.")
         app.buttons["walk.save"].tap()
 
-        app.tabBars.buttons["Journal"].tap()
+        app.buttons["tab.journal"].tap()
         let walkRow = app.descendants(matching: .any).matching(
             NSPredicate(format: "identifier BEGINSWITH %@", "walk.row.")
         ).firstMatch
@@ -159,7 +159,7 @@ final class StarterUITests: XCTestCase {
         confirmWalk.tap()
         XCTAssertTrue(app.staticTexts["Aucune balade enregistrée"].waitForExistence(timeout: 5))
 
-        app.tabBars.buttons["Mes chiens"].tap()
+        app.buttons["tab.dogs"].tap()
         let dogRow = app.descendants(matching: .any).matching(
             NSPredicate(format: "identifier BEGINSWITH %@", "dog.row.")
         ).firstMatch
@@ -192,7 +192,7 @@ final class StarterUITests: XCTestCase {
         name.typeText("Oslo")
         app.buttons["dog.save"].tap()
 
-        let start = app.buttons["Démarrer une balade"]
+        let start = app.buttons["Partir en balade"]
         XCTAssertTrue(start.waitForExistence(timeout: 5))
         start.tap()
 
@@ -277,7 +277,7 @@ final class StarterUITests: XCTestCase {
         summaryNote.typeText("Balade au parc.")
         done.tap()
 
-        let journal = app.tabBars.buttons["Journal"]
+        let journal = app.buttons["tab.journal"]
         XCTAssertTrue(journal.waitForExistence(timeout: 10))
         journal.tap()
         let row = app.descendants(matching: .any).matching(
@@ -330,7 +330,7 @@ final class StarterUITests: XCTestCase {
         name.typeText("Oslo")
         app.buttons["dog.save"].tap()
 
-        let start = app.buttons["Démarrer une balade"]
+        let start = app.buttons["Partir en balade"]
         XCTAssertTrue(start.waitForExistence(timeout: 5))
         start.tap()
         XCTAssertTrue(
@@ -396,7 +396,7 @@ final class StarterUITests: XCTestCase {
             "AC-010 : la fin depuis l'interruption doit retirer la session de l'accueil"
         )
 
-        app.tabBars.buttons["Journal"].tap()
+        app.buttons["tab.journal"].tap()
         let row = app.descendants(matching: .any).matching(
             NSPredicate(format: "identifier BEGINSWITH %@", "walk.row.")
         ).firstMatch
@@ -406,7 +406,7 @@ final class StarterUITests: XCTestCase {
         )
         XCTAssertTrue(row.label.contains("Balade suivie"))
 
-        app.tabBars.buttons["Aujourd'hui"].tap()
+        app.buttons["tab.today"].tap()
         app.navigationBars.buttons["Réglages"].tap()
         app.buttons["Effacer toutes les données"].tap()
         let wipeAgain = app.buttons["Tout effacer"]
@@ -439,7 +439,7 @@ final class StarterUITests: XCTestCase {
         name.typeText("Oslo")
         app.buttons["dog.save"].tap()
 
-        let start = app.buttons["Démarrer une balade"]
+        let start = app.buttons["Partir en balade"]
         XCTAssertTrue(start.waitForExistence(timeout: 5))
         start.tap()
         XCTAssertTrue(
@@ -524,7 +524,7 @@ final class StarterUITests: XCTestCase {
         name.typeText("Oslo")
         app.buttons["dog.save"].tap()
 
-        let start = app.buttons["Démarrer une balade"]
+        let start = app.buttons["Partir en balade"]
         XCTAssertTrue(start.waitForExistence(timeout: 5))
         start.tap()
         XCTAssertTrue(
@@ -613,7 +613,7 @@ final class StarterUITests: XCTestCase {
         name.typeText("Oslo")
         app.buttons["dog.save"].tap()
 
-        let start = app.buttons["Démarrer une balade"]
+        let start = app.buttons["Partir en balade"]
         XCTAssertTrue(start.waitForExistence(timeout: 5))
         start.tap()
 
@@ -650,12 +650,12 @@ final class StarterUITests: XCTestCase {
 
         // Back on Today, with nothing started.
         XCTAssertTrue(
-            app.buttons["Démarrer une balade"].waitForExistence(timeout: 10),
+            app.buttons["Partir en balade"].waitForExistence(timeout: 10),
             "l'accueil doit rester affiché après le refus"
         )
 
         // No phantom session: a refused start must not leave a walk in the log.
-        app.tabBars.buttons["Journal"].tap()
+        app.buttons["tab.journal"].tap()
         XCTAssertTrue(
             app.staticTexts["Aucune balade enregistrée"].waitForExistence(timeout: 5),
             "un refus ne doit créer aucune balade"

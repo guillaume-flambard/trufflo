@@ -41,7 +41,7 @@ public enum LocationBlock: String, Sendable, Equatable {
         case .permissionRestricted:
             return "La localisation est restreinte sur cet appareil."
         case .servicesUnavailable:
-            return "La localisation est désactivée sur cet appareil. Activez-la pour enregistrer un parcours."
+            return "La localisation est désactivée sur cet appareil. Activez-la pour enregistrer un tracé."
         }
     }
 

@@ -86,25 +86,23 @@ struct DogDetailView: View {
                     }
                 }
 
-                VStack(alignment: .leading, spacing: TruffloTheme.Spacing.large) {
-                    if let count = walkCount, count > 0 {
-                        VStack(alignment: .leading, spacing: TruffloTheme.Spacing.xxSmall) {
-                            Text(String(localized: "\(count) balades enregistrées"))
-                                .font(.system(.title3, design: .rounded, weight: .bold))
-                                .foregroundStyle(Color.truffloForest)
-                            Text("\(WalkFormatting.minutes(recordedSeconds)) en tout.")
-                                .font(.subheadline)
-                                .foregroundStyle(Color.truffloSlate)
-                        }
+                VStack(alignment: .leading, spacing: TruffloTheme.Spacing.medium) {
+                    let count = walkCount ?? 0
+                    TruffloWidget(title: "Balades", systemImage: "figure.walk") {
+                        TruffloStatGrid(items: [
+                            .init(label: "Enregistrées", value: "\(count)"),
+                            .init(label: "Temps en tout", value: count == 0 ? "Pas encore" : WalkFormatting.minutes(recordedSeconds)),
+                        ])
                     }
 
-                    routineSection(for: dog)
+                    TruffloWidget(title: "Routine", systemImage: "repeat") {
+                        routineSection(for: dog)
+                    }
 
                     HouseholdPrompt(place: .profile, dogName: dog.name) { showHousehold = true }
 
                     if !dog.preferencesNote.isEmpty {
-                        VStack(alignment: .leading, spacing: TruffloTheme.Spacing.xSmall) {
-                            WalkSectionTitle("Préférences de balade")
+                        TruffloWidget(title: "Préférences de balade", systemImage: "text.quote") {
                             Text(dog.preferencesNote)
                                 .font(.body)
                                 .foregroundStyle(Color.truffloCharcoal)
@@ -169,7 +167,6 @@ struct DogDetailView: View {
     @ViewBuilder
     private func routineSection(for dog: DogRecord) -> some View {
         VStack(alignment: .leading, spacing: TruffloTheme.Spacing.xSmall) {
-            WalkSectionTitle("Routine choisie")
             if let record = routines.first, let routine = record.routine {
                 Text(routine.summary)
                     .font(.body)

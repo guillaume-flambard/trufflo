@@ -54,9 +54,11 @@ struct WalkDetailView: View {
     /// figures, the note, and the facts about the measurement in plain rows.
     @ViewBuilder
     private func content(for walk: WalkRecord) -> some View {
-        let names = participants.map(\.dogNameSnapshot).sorted()
-        let date = walk.endedAt ?? walk.startedAt
-        let hasMap = trackCoordinates.count >= 2
+        let shown = WalkPresentation(walk: walk, participants: participants, dogs: dogs, points: points)
+        let names = shown.names
+        let date = shown.date
+        let trackCoordinates = shown.route() ?? []
+        let hasMap = !trackCoordinates.isEmpty
         ScrollView {
             VStack(alignment: .leading, spacing: 0) {
                 if hasMap {
@@ -68,11 +70,11 @@ struct WalkDetailView: View {
                         .accessibilityIdentifier("walk.detail.map")
                 }
 
-                VStack(alignment: .leading, spacing: TruffloTheme.Spacing.large) {
+                VStack(alignment: .leading, spacing: TruffloTheme.Spacing.medium) {
                     HStack(alignment: .top, spacing: TruffloTheme.Spacing.medium) {
                         VStack(alignment: .leading, spacing: TruffloTheme.Spacing.xxSmall) {
                             // The dogs are the title; the hour is a fact, not a name.
-                            Text(names.isEmpty ? "Balade" : names.formatted(.list(type: .and).locale(TruffloLocale.french)))
+                            Text(shown.title)
                                 .font(.system(.title, design: .rounded, weight: .heavy))
                                 .foregroundStyle(Color.truffloForest)
                                 .fixedSize(horizontal: false, vertical: true)
@@ -89,30 +91,28 @@ struct WalkDetailView: View {
                         }
                         Spacer(minLength: 0)
                         // A face only when there is a photo: no initial on a disc.
-                        if let photo = leadDog?.photoData {
-                            TruffloDogPortrait(name: names.first ?? "", photoData: photo, diameter: 56)
+                        if let photo = shown.leadPhoto {
+                            TruffloDogPortrait(name: shown.leadName ?? "", photoData: photo, diameter: 56)
                         }
                     }
 
                     // An absent distance is not a figure: it is said in the
                     // facts below, never set in large type next to the duration.
-                    TruffloStatRow {
-                        TruffloStat("Durée", value: WalkFormatting.minutes(walk.confirmedSeconds))
-                        if let meters = walk.recordedPathMeters {
-                            TruffloStat("Distance", value: WalkFormatting.distance(meters))
-                        }
+                    TruffloWidget(title: "Chiffres", systemImage: "chart.bar") {
+                        TruffloStatGrid(items: [.init(label: "Durée", value: WalkFormatting.minutes(walk.confirmedSeconds))]
+                            + (walk.recordedPathMeters.map { [.init(label: "Distance", value: WalkFormatting.distance($0))] } ?? []))
                     }
 
                     if !walk.note.isEmpty {
-                        VStack(alignment: .leading, spacing: TruffloTheme.Spacing.xSmall) {
-                            WalkSectionTitle("Note")
+                        TruffloWidget(title: "Note", systemImage: "text.quote") {
                             Text(walk.note)
                                 .font(.body)
                                 .foregroundStyle(Color.truffloCharcoal)
                         }
                     }
 
-                    VStack(alignment: .leading, spacing: 0) {
+                    TruffloWidget(title: "Mesure", systemImage: "location") {
+                        VStack(alignment: .leading, spacing: 0) {
                         WalkFactRow("Mesure", WalkFormatting.quality(walk.quality))
                         if walk.recordedPathMeters == nil {
                             WalkFactRow("Distance", "Non mesurée")
@@ -125,6 +125,7 @@ struct WalkDetailView: View {
                         }
                         if let correctedAt = walk.correctedAt {
                             WalkFactRow("Corrigée", WalkFormatting.relativeDayAndTime(correctedAt))
+                        }
                         }
                     }
 
@@ -141,7 +142,7 @@ struct WalkDetailView: View {
                         .accessibilityIdentifier("walk.correct")
                     }
 
-                    if walk.source != .manual && trackCoordinates.count >= 2 {
+                    if hasMap {
                         Button {
                             exportRoute(of: walk)
                         } label: {
@@ -208,41 +209,7 @@ struct WalkDetailView: View {
         }
     }
 
-    private var leadDog: DogRecord? {
-        let ids = Set(participants.map(\.dogID))
-        return dogs.first { ids.contains($0.id) }
-    }
-
     // MARK: - Formatting
-
-    /// A manual entry has no coordinates at all, so it gets no map section rather
-    /// than an empty one.
-    private var trackCoordinates: [TrackCoordinate] {
-        points.map { TrackCoordinate(segment: $0.segment, latitude: $0.latitude, longitude: $0.longitude) }
-    }
-
-    private func durationText(_ seconds: TimeInterval) -> String {
-        let minutes = (seconds / 60).formatted(.number.precision(.fractionLength(0...1)))
-        return "\(minutes) min"
-    }
-
-    private func distanceText(_ meters: Double) -> String {
-        if meters >= 1000 {
-            let kilometers = (meters / 1000).formatted(.number.precision(.fractionLength(1...2)))
-            return "\(kilometers) km"
-        }
-        let rounded = meters.formatted(.number.precision(.fractionLength(0)))
-        return "\(rounded) m"
-    }
-
-    private func qualityText(_ quality: WalkQuality) -> String {
-        switch quality {
-        case .gpsRecorded: "Mesurée par GPS"
-        case .gpsPartial: "Mesure partielle"
-        case .manual: "Déclarée à la main"
-        case .unavailable: "Non mesurée"
-        }
-    }
 
     private func accessibilityDeleteLabel(for walk: WalkRecord) -> String {
         guard let endedAt = walk.endedAt else { return "Supprimer la balade en cours" }

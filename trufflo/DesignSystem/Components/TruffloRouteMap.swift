@@ -12,6 +12,9 @@ struct TruffloRouteMap: View {
     let points: [TrackCoordinate]
     /// Identifies the walk and what was drawn, so a corrected walk gets a new picture.
     let cacheKey: String
+    /// The full-colour map (parks in green), as on the Today card of the mock-up,
+    /// rather than the muted one.
+    var isVivid = false
 
     @State private var image: UIImage?
     @Environment(\.displayScale) private var displayScale
@@ -42,7 +45,7 @@ struct TruffloRouteMap: View {
     @MainActor
     private func load(size: CGSize) async {
         guard size.width > 1, size.height > 1, points.count > 1 else { return }
-        let key = "\(cacheKey)-\(Int(size.width))x\(Int(size.height))@\(displayScale)" as NSString
+        let key = "\(cacheKey)-\(Int(size.width))x\(Int(size.height))@\(displayScale)-\(isVivid)" as NSString
         if let cached = Self.cache.object(forKey: key) {
             image = cached
             return
@@ -52,8 +55,8 @@ struct TruffloRouteMap: View {
         options.region = region
         options.size = size
         options.scale = displayScale
-        options.mapType = .mutedStandard
-        options.pointOfInterestFilter = .excludingAll
+        options.mapType = isVivid ? .standard : .mutedStandard
+        options.pointOfInterestFilter = isVivid ? MKPointOfInterestFilter(including: [.park]) : .excludingAll
         // The app is light-only; a snapshot must not follow the system into dark.
         options.traitCollection = UITraitCollection(userInterfaceStyle: .light)
         do {
@@ -111,16 +114,16 @@ struct TruffloRouteMap: View {
                 path.stroke()
             }
             if let first = points.first, let last = points.last {
-                for (coordinate, filled) in [(first, false), (last, true)] {
+                // Start in slate blue, end in forest, both ringed in white.
+                let startBlue = UIColor(red: 0.20, green: 0.31, blue: 0.47, alpha: 1)
+                for (coordinate, fill) in [(first, startBlue), (last, forest)] {
                     let center = snapshot.point(for: CLLocationCoordinate2D(latitude: coordinate.latitude,
                                                                             longitude: coordinate.longitude))
-                    let dot = UIBezierPath(arcCenter: center, radius: 6.5 * scale, startAngle: 0, endAngle: .pi * 2, clockwise: true)
-                    (filled ? forest : UIColor.white).setFill()
+                    let dot = UIBezierPath(arcCenter: center, radius: 7 * scale, startAngle: 0, endAngle: .pi * 2, clockwise: true)
+                    fill.setFill()
                     dot.fill()
                     UIColor.white.setStroke()
-                    forest.setStroke()
-                    dot.lineWidth = (filled ? 2.5 : 3) * scale
-                    (filled ? UIColor.white : forest).setStroke()
+                    dot.lineWidth = 2.5 * scale
                     dot.stroke()
                 }
             }

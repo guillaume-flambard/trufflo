@@ -23,7 +23,7 @@ struct StartBlockedSheet: View {
     private var message: String {
         switch block {
         case .permissionDenied:
-            "La localisation est refusée. Sans elle, le parcours ne peut pas s'enregistrer. Vous pouvez l'autoriser dans les réglages, ou noter la balade à la main."
+            "La localisation est refusée. Sans elle, le tracé ne peut pas s'enregistrer. Vous pouvez l'autoriser dans les réglages, ou ajouter la balade à la main."
         case .permissionRestricted:
             "Un réglage de l'appareil l'empêche, et Trufflo ne peut pas le modifier. La balade peut se noter à la main."
         case .servicesUnavailable:

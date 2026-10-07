@@ -34,7 +34,7 @@ enum MatrixDemo {
             try gps(context, oslo, minutes: 42, meters: 2140, endedAt: now.addingTimeInterval(-50 * 3600))
             try gps(context, oslo, minutes: 28, meters: 1480, endedAt: now.addingTimeInterval(-74 * 3600))
         case "gps-last":
-            let oslo = try repository.addDog(try DogInput(name: "Oslo", breedKind: "mixed", photoData: photo))
+            let oslo = try repository.addDog(try DogInput(name: "Oslo", breedKind: "mixed", ageDescription: "3 ans", photoData: photo))
             try manual(repository, oslo, minutes: 35, note: "Tour du parc", endedAt: now.addingTimeInterval(-26 * 3600))
             try gps(context, oslo, minutes: 42, meters: 2140, endedAt: now.addingTimeInterval(-2 * 3600),
                     withTrack: true, note: "Il a croisé le beagle de la rue du Parc.")

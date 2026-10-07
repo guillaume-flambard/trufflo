@@ -14,7 +14,7 @@ struct WalkSummaryView: View {
     @Query private var matches: [WalkRecord]
     @Query private var participants: [WalkDogRecord]
     @Query private var points: [TrackPointRecord]
-    @Query private var dogs: [DogRecord]
+    @Query(sort: \DogRecord.createdAt) private var dogs: [DogRecord]
 
     @State private var note = ""
     @State private var hasLoadedNote = false
@@ -87,7 +87,7 @@ struct WalkSummaryView: View {
                         // Laid out like the walk's own page (WalkDetailView): the dogs
                         // as the title, then when. Closing the summary lands on that page's
                         // twin in the journal, so the two must not look like two apps.
-                        Text(title)
+                        Text(presentation(of: walk).title)
                             .font(.system(.title, design: .rounded, weight: .heavy))
                             .foregroundStyle(Color.truffloForest)
                         if let endedAt = walk.endedAt {
@@ -152,16 +152,16 @@ struct WalkSummaryView: View {
 
     @ViewBuilder
     private func hero(for walk: WalkRecord) -> some View {
-        if trackCoordinates.count >= 2 {
-            TruffloTrackMap(points: trackCoordinates,
+        let shown = presentation(of: walk)
+        if let route = shown.route() {
+            TruffloTrackMap(points: route,
                             isLive: false,
                             showsMarkers: false,
                             isFollowing: $isFollowingTrack)
                 .frame(height: 340)
                 .accessibilityIdentifier("walk.summary.map")
-        } else if let photo = leadDog?.photoData {
-            let name = dogNames.first ?? "Balade"
-            TruffloDogHero(name: name, photoData: photo, height: 340)
+        } else if let photo = shown.leadPhoto {
+            TruffloDogHero(name: shown.leadName ?? shown.title, photoData: photo, height: 340)
         } else {
             // No route and no photo: no stand-in. The page opens on the words, below
             // the bar that carries "Terminé" (the scroll view runs under it), on the
@@ -175,49 +175,17 @@ struct WalkSummaryView: View {
         }
     }
 
-    private var title: String {
-        dogNames.isEmpty
-            ? "Balade"
-            : dogNames.formatted(.list(type: .and).locale(TruffloLocale.french))
-    }
-
-    /// The first participant still on the device. A deleted profile leaves its name
-    /// in the walk and nothing else, so the hero then falls back to the initial.
-    private var leadDog: DogRecord? {
-        let ids = participants.map(\.dogID)
-        return dogs.first { ids.contains($0.id) }
-    }
-
-    private func measurement(value: String, caption: String) -> some View {
-        VStack(alignment: .leading, spacing: 2) {
-            Text(value)
-                .font(.system(.largeTitle, design: .rounded, weight: .bold))
-                .monospacedDigit()
-                .foregroundStyle(Color.truffloForest)
-                .lineLimit(1)
-                .minimumScaleFactor(0.6)
-            Text(caption)
-                .font(.subheadline)
-                .foregroundStyle(Color.truffloSlate)
-                .accessibilityHidden(true)
-        }
-        .accessibilityElement(children: .combine)
+    /// Names, face and tracé of the balade, by the rules every screen shares.
+    private func presentation(of walk: WalkRecord) -> WalkPresentation {
+        WalkPresentation(walk: walk, participants: participants, dogs: dogs, points: points)
     }
 
     // MARK: - Data
 
-    private var trackCoordinates: [TrackCoordinate] {
-        points.map { TrackCoordinate(segment: $0.segment, latitude: $0.latitude, longitude: $0.longitude) }
-    }
-
-    private var dogNames: [String] {
-        participants.map(\.dogNameSnapshot).sorted()
-    }
-
     /// Canonical microcopy: a gap is named as a gap, never papered over.
     private func qualityHint(for quality: WalkQuality) -> String? {
         switch quality {
-        case .gpsPartial: "Une partie du parcours n'a pas été mesurée."
+        case .gpsPartial: "Une partie du tracé n'a pas été mesurée."
         case .unavailable: "Aucun point n'a été accepté. La durée seule est conservée."
         case .gpsRecorded, .manual: nil
         }

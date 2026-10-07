@@ -1,8 +1,7 @@
 import SwiftUI
 
-/// The journal as a timeline: one line per walk, newest first, grouped under
-/// a day heading. No card per walk: the day holds the lines, a hairline
-/// separates them. A descriptive count opens the page; nothing is
+/// The journal as a feed: one card per balade (the same card as Today), newest
+/// first, under a day heading. A descriptive count opens the page; nothing is
 /// summed, no target is shown.
 struct JournalTimelineView: View {
     let walks: [WalkRecord]
@@ -29,18 +28,16 @@ struct JournalTimelineView: View {
                         .foregroundStyle(Color.truffloSlate)
                 }
                 ForEach(days, id: \.start) { day in
-                    VStack(alignment: .leading, spacing: 0) {
+                    VStack(alignment: .leading, spacing: TruffloTheme.Spacing.small) {
                         Text(heading(for: day.start))
-                            .font(.system(.title, design: .rounded, weight: .heavy))
+                            .font(.truffloBodyHeavy)
                             .foregroundStyle(Color.truffloForest)
-                            .padding(.top, TruffloTheme.Spacing.medium)
-                            .padding(.bottom, TruffloTheme.Spacing.xxSmall)
                             .accessibilityAddTraits(.isHeader)
                         ForEach(day.items) { item in
                             switch item {
                             case .own(let walk):
                                 NavigationLink(value: rowDestination(walk.id)) {
-                                    WalkActivityCard(walk: walk, showsDay: false)
+                                    WalkTile(walk: walk)
                                 }
                                 .buttonStyle(.plain)
                                 .matchedTransitionSource(id: walk.id, in: zoom)

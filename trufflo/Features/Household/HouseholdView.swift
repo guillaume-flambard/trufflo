@@ -28,6 +28,8 @@ struct HouseholdView: View {
     @State private var confirmDelete = false
     @State private var memberToRemove: HouseholdMemberRecord?
     @State private var resumable: HouseholdDTO?
+    /// In the Foyer tab there is nothing to close: the sheet's close button hides.
+    var showsCloseButton = true
 
     private enum Choice { case create, join }
     private var household: HouseholdRecord? { households.first }
@@ -51,8 +53,10 @@ struct HouseholdView: View {
             .background(Color.truffloSand.ignoresSafeArea())
             .safeAreaInset(edge: .bottom) { bottomAction }
             .toolbar {
-                ToolbarItem(placement: .topBarTrailing) {
-                    Button("Fermer", systemImage: "xmark") { dismiss() }
+                if showsCloseButton {
+                    ToolbarItem(placement: .topBarTrailing) {
+                        Button("Fermer", systemImage: "xmark") { dismiss() }
+                    }
                 }
                 if path != nil, joining == nil, household == nil {
                     ToolbarItem(placement: .topBarLeading) {

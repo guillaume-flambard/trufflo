@@ -71,7 +71,7 @@ struct WalkCorrectionView: View {
                                 .environment(\.locale, TruffloLocale.french)
                         }
                     } else {
-                        Text("La durée et le parcours ont été mesurés par GPS : ils ne se corrigent pas. Les chiens présents et la note, si.")
+                        Text("La durée et le tracé ont été mesurés par GPS : ils ne se corrigent pas. Les chiens présents et la note, si.")
                             .font(.subheadline)
                             .foregroundStyle(Color.truffloSlate)
                     }
