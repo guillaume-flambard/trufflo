@@ -102,8 +102,8 @@ struct TruffloTodayBackdrop: View {
                     .frame(width: frame.width, height: frame.height, alignment: .topLeading)
                     .clipped()
                     .overlay {
-                        LinearGradient(stops: [.init(color: Color.truffloSand.opacity(0.35), location: 0),
-                                               .init(color: .clear, location: 0.55)],
+                        LinearGradient(stops: [.init(color: Color.truffloSand.opacity(0.12), location: 0),
+                                               .init(color: .clear, location: 0.45)],
                                        startPoint: .leading, endPoint: .trailing)
                     }
                     .overlay {

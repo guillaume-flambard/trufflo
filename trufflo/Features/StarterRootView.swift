@@ -109,6 +109,13 @@ struct StarterRootView: View {
                     if walks.contains(where: { $0.phase == .completed }) || !sharedWalks.isEmpty {
                         ToolbarItem(placement: .topBarTrailing) { journalFilterMenu }
                     }
+                    // A balade ajoutée lives where balades are listed, not on Today.
+                    if !dogs.isEmpty && liveWalk == nil {
+                        ToolbarItem(placement: .topBarTrailing) {
+                            Button("Ajouter une balade", systemImage: "plus") { showWalkForm = true }
+                                .accessibilityIdentifier("walk.manual.add")
+                        }
+                    }
                 }
                 .navigationDestination(for: WalkRoute.self) { WalkDetailView(walkID: $0.id).navigationTransition(.zoom(sourceID: $0.id, in: journalZoom)) }
                 .navigationDestination(for: DogRoute.self) { DogDetailView(dogID: $0.id) }
@@ -473,7 +480,6 @@ struct StarterRootView: View {
                     }
                     householdLatestWalkSection
                     TruffloDailyTip()
-                    if liveWalk == nil { pastWalkButton }
                     if !completedWalks.isEmpty {
                         HouseholdPrompt(place: .today, dogName: dogNames, isSeveral: dogs.count > 1) { selectedTab = 2 }
                     }
@@ -789,19 +795,6 @@ struct StarterRootView: View {
         .accessibilityIdentifier("dog.add")
         .padding(.horizontal, TruffloTheme.Spacing.screen)
         .padding(.bottom, TruffloTheme.Spacing.xSmall)
-    }
-
-    private var pastWalkButton: some View {
-        Button {
-            showWalkForm = true
-        } label: {
-            Label("Ajouter une balade", systemImage: "plus")
-                .font(.truffloBodyHeavy)
-                .foregroundStyle(Color.truffloForest)
-                .frame(minHeight: 44)
-        }
-        .truffloTap()
-        .accessibilityIdentifier("walk.manual.add")
     }
 
     /// Builds the archive (a summary CSV plus one GPX per recorded route) and

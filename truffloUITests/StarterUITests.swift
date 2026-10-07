@@ -18,6 +18,7 @@ final class StarterUITests: XCTestCase {
         name.tap()
         name.typeText("Oslo")
         app.buttons["dog.save"].tap()
+        app.tabBars.buttons["Journal"].tap()
         let addWalk = app.buttons["walk.manual.add"]
         XCTAssertTrue(addWalk.waitForExistence(timeout: 5))
         addWalk.tap()
@@ -80,6 +81,7 @@ final class StarterUITests: XCTestCase {
         name.typeText("Oslo")
         app.buttons["dog.save"].tap()
 
+        app.tabBars.buttons["Journal"].tap()
         let addWalk = app.buttons["walk.manual.add"]
         XCTAssertTrue(addWalk.waitForExistence(timeout: 5))
         addWalk.tap()
