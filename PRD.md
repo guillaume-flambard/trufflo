@@ -30,7 +30,7 @@ Le travail principal à accomplir : « Je retrouve ce qui a été enregistré po
 
 **M0 : socle natif et journal manuel.** Le starter fourni couvre un profil nom/race, une saisie manuelle, un journal et l’effacement global local. C’est une base d’intégration, pas la V1 terminée.
 
-**M1 : alpha individuelle.** Profil enrichi, enregistrement GPS fiable, récupération, bilan, objectifs choisis, export, suppression et interface soignée.
+**M1 : alpha individuelle.** Profil enrichi, enregistrement GPS fiable, récupération, bilan, routines choisies, export, suppression et interface soignée.
 
 **M2 : V1 privée/familiale.** Plusieurs contributeurs autorisés partagent les synthèses, avec synchronisation contrôlée et sans divulgation automatique des trajets précis.
 
@@ -64,11 +64,11 @@ Séparer les états `gpsRecorded`, `gpsPartial`, `manual` et `unavailable`. Aucu
 
 Recette : source de mesure conservée dans la fiche, les agrégats et les exports ; distance absente distinguée d’une vraie distance mesurée nulle.
 
-### F04 — Routine et progression
+### F04 — Routine
 
 Le journal fonctionne sans objectif. Le propriétaire peut définir ses propres repères de durée ou de créneaux, les suspendre et les modifier. Une bibliothèque de prescriptions chiffrées par race n’est pas livrée. Les besoins dépendent de plusieurs caractéristiques du chien ; la race seule ne suffit pas. [S10]
 
-Une future recommandation quantitative nécessite des règles revues par un vétérinaire, versionnées et testées. La V1 compare seulement les sorties enregistrées du même chien entre périodes comparables. Aucune hausse automatique, obligation de rattrapage ou notification culpabilisante.
+Une future recommandation quantitative nécessite des règles revues par un vétérinaire, versionnées et testées. La V1 décrit les balades d’une période, sans les comparer à une autre période ni à un autre chien. Aucune hausse automatique, obligation de rattrapage ou notification culpabilisante.
 
 Recette : suspendre une routine n’altère pas l’historique ; une habitude observée ne devient pas une prescription.
 

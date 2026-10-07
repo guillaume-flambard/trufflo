@@ -66,7 +66,7 @@ struct ManualWalkFormView: View {
                             .foregroundStyle(Color.truffloDanger)
                     }
 
-                    Text("Durée déclarée. Aucune distance n'est calculée.")
+                    Text("Une balade ajoutée garde sa durée, sans distance.")
                         .font(.footnote)
                         .foregroundStyle(Color.truffloSlate)
                 }
@@ -162,7 +162,7 @@ struct ManualWalkFormView: View {
         } catch WalkError.noteTooLong {
             errorMessage = "La note doit contenir au maximum 500 caractères."
         } catch JournalError.profileMissing {
-            errorMessage = "Un profil a changé. Rouvrez ce formulaire."
+            errorMessage = "Un chien a changé. Rouvrez ce formulaire."
         } catch JournalError.persistence {
             errorMessage = "La balade n'a pas été enregistrée. Les valeurs saisies restent disponibles."
         } catch {

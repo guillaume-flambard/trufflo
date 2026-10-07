@@ -77,7 +77,7 @@ struct WalkDetailView: View {
                                 .foregroundStyle(Color.truffloForest)
                                 .fixedSize(horizontal: false, vertical: true)
                             Text(walk.source == .manual
-                                 ? "\(WalkFormatting.relativeDayAndTime(date).capitalizedFirst), saisie manuelle"
+                                 ? "\(WalkFormatting.relativeDayAndTime(date).capitalizedFirst), balade ajoutée"
                                  : WalkFormatting.relativeDayAndTime(date).capitalizedFirst)
                                 .font(.subheadline)
                                 .foregroundStyle(Color.truffloSlate)

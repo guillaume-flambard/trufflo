@@ -10,7 +10,7 @@ enum CommunityBackend {
     static let isOpen = false
 }
 
-/// The community walk events over PostgREST (ADR 0010, « Contrat client »).
+/// The community walk outings over PostgREST (ADR 0010, « Contrat client »).
 ///
 /// The names of tables, views, functions and parameters below are the contract
 /// the server is written against: ADR 0010 lists them, and nothing here has
@@ -82,41 +82,41 @@ struct SupabaseCommunityRemote: CommunityRemote {
         }
     }
 
-    // MARK: Events
+    // MARK: Outings
 
-    func events(zoneID: String) async throws -> [WalkEventDTO] {
+    func outings(zoneID: String) async throws -> [OutingDTO] {
         try await mapped {
-            try await client.from("visible_events").select().eq("zone_id", value: zoneID).order("starts_at")
+            try await client.from("visible_outings").select().eq("zone_id", value: zoneID).order("starts_at")
                 .execute().value
         }
     }
 
-    func myEvents() async throws -> [WalkEventDTO] {
-        try await mapped { try await client.from("my_events").select().order("starts_at", ascending: false).execute().value }
+    func myOutings() async throws -> [OutingDTO] {
+        try await mapped { try await client.from("my_outings").select().order("starts_at", ascending: false).execute().value }
     }
 
-    func participants(eventID: UUID) async throws -> [EventParticipantDTO] {
-        try await rpc("list_participants", EventParams(event_id: eventID))
+    func participants(outingID: UUID) async throws -> [OutingParticipantDTO] {
+        try await rpc("list_participants", OutingParams(outing_id: outingID))
     }
 
-    func updates(eventID: UUID) async throws -> [EventUpdateDTO] {
-        try await rpc("list_event_updates", EventParams(event_id: eventID))
+    func updates(outingID: UUID) async throws -> [OutingUpdateDTO] {
+        try await rpc("list_outing_updates", OutingParams(outing_id: outingID))
     }
 
     // MARK: Taking part
 
-    func requestToJoin(eventID: UUID, dogIDs: [UUID]) async throws {
-        struct Params: Encodable { var event_id: UUID; var dog_ids: [UUID] }
-        try await rpc("request_to_join", Params(event_id: eventID, dog_ids: dogIDs))
+    func requestToJoin(outingID: UUID, dogIDs: [UUID]) async throws {
+        struct Params: Encodable { var outing_id: UUID; var dog_ids: [UUID] }
+        try await rpc("request_to_join", Params(outing_id: outingID, dog_ids: dogIDs))
     }
 
-    func withdraw(eventID: UUID) async throws {
-        try await rpc("withdraw", EventParams(event_id: eventID))
+    func withdraw(outingID: UUID) async throws {
+        try await rpc("withdraw", OutingParams(outing_id: outingID))
     }
 
-    func declareAttendance(eventID: UUID, attended: Bool) async throws {
-        struct Params: Encodable { var event_id: UUID; var attended: Bool }
-        try await rpc("declare_attendance", Params(event_id: eventID, attended: attended))
+    func declareAttendance(outingID: UUID, attended: Bool) async throws {
+        struct Params: Encodable { var outing_id: UUID; var attended: Bool }
+        try await rpc("declare_attendance", Params(outing_id: outingID, attended: attended))
     }
 
     // MARK: Organizing
@@ -131,29 +131,29 @@ struct SupabaseCommunityRemote: CommunityRemote {
         }
     }
 
-    func createEvent(_ draft: WalkEventDraft, zoneID: String) async throws -> UUID {
+    func createOuting(_ draft: OutingDraft, zoneID: String) async throws -> UUID {
         struct Params: Encodable {
             var zone_id: String; var starts_at: Date; var duration_minutes: Int; var meeting_point: String
             var rules: String; var human_capacity: Int; var dog_capacity: Int
         }
-        return try await rpc("create_event", Params(
+        return try await rpc("create_outing", Params(
             zone_id: zoneID, starts_at: draft.startsAt, duration_minutes: draft.durationMinutes,
             meeting_point: draft.meetingPoint, rules: draft.rules,
             human_capacity: draft.humanCapacity, dog_capacity: draft.dogCapacity))
     }
 
-    func decide(eventID: UUID, userID: UUID, accept: Bool) async throws {
-        struct Params: Encodable { var event_id: UUID; var user_id: UUID; var accept: Bool }
-        try await rpc("decide_request", Params(event_id: eventID, user_id: userID, accept: accept))
+    func decide(outingID: UUID, userID: UUID, accept: Bool) async throws {
+        struct Params: Encodable { var outing_id: UUID; var user_id: UUID; var accept: Bool }
+        try await rpc("decide_request", Params(outing_id: outingID, user_id: userID, accept: accept))
     }
 
-    func updateEvent(eventID: UUID, startsAt: Date, meetingPoint: String) async throws {
-        struct Params: Encodable { var event_id: UUID; var starts_at: Date; var meeting_point: String }
-        try await rpc("update_event", Params(event_id: eventID, starts_at: startsAt, meeting_point: meetingPoint))
+    func updateOuting(outingID: UUID, startsAt: Date, meetingPoint: String) async throws {
+        struct Params: Encodable { var outing_id: UUID; var starts_at: Date; var meeting_point: String }
+        try await rpc("update_outing", Params(outing_id: outingID, starts_at: startsAt, meeting_point: meetingPoint))
     }
 
-    func cancelEvent(eventID: UUID) async throws {
-        try await rpc("cancel_event", EventParams(event_id: eventID))
+    func cancelOuting(outingID: UUID) async throws {
+        try await rpc("cancel_outing", OutingParams(outing_id: outingID))
     }
 
     // MARK: Moderation
@@ -172,7 +172,7 @@ struct SupabaseCommunityRemote: CommunityRemote {
 
     // MARK: Plumbing
 
-    private struct EventParams: Encodable { var event_id: UUID }
+    private struct OutingParams: Encodable { var outing_id: UUID }
     private struct UserParams: Encodable { var user_id: UUID }
 
     /// A function that returns nothing.

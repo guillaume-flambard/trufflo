@@ -50,7 +50,7 @@ struct WalkActivityCard: View {
     /// words are kept for a declared walk, where they explain the ring, and
     /// when the row is shown outside the journal's day groups.
     private var origin: String {
-        let how = isGPS ? "suivi GPS" : "saisie manuelle"
+        let how = isGPS ? "balade suivie" : "balade ajoutée"
         if showsDay { return "\(WalkFormatting.relativeDay(date)), \(how)" }
         return isGPS ? "" : how.capitalizedFirst
     }
@@ -80,7 +80,8 @@ struct WalkActivityCard: View {
 
     /// The origin is spoken in words because the row shows it only in passing.
     private var spokenLabel: String {
-        var parts = [names.isEmpty ? "Balade" : "Balade avec \(names)", isGPS ? "Suivi GPS" : "Saisie manuelle"]
+        let kind = isGPS ? "Balade suivie" : "Balade ajoutée"
+        var parts = [names.isEmpty ? kind : "\(kind) avec \(names)"]
         parts.append(WalkFormatting.dayAndTime(date))
         parts.append(contentsOf: figures)
         if !walk.note.isEmpty { parts.append(walk.note) }

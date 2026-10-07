@@ -6,6 +6,13 @@ Statut : **accepté le 2026-10-07** (recommandations retenues par Guillaume, qui
 Exigences du PRD couvertes : F09 (proposer une balade locale), F10 (participation), F11
 (modération), F13 (confidentialité).
 
+## Nom (2026-10-07)
+
+La table et les fonctions disent `outing`, pas `event` ni `walk_event` : « sortie » est le terme
+du glossaire (`CONTEXT.md`), et « walk event » mélangeait la balade et la sortie. Renommé avant
+que le serveur existe, quand cela ne coûtait rien. Le nom de fichier de cet ADR est gardé pour les
+liens existants.
+
 ## Sources lues
 
 - Apple, App Review Guidelines §1.2 (lue le 2026-10-07) : une app à contenus d'utilisateurs doit
@@ -22,7 +29,7 @@ Exigences du PRD couvertes : F09 (proposer une balade locale), F10 (participatio
 
 ## Principes
 
-1. **Une sortie n'est pas une balade.** `walk_events` décrit un rendez-vous futur. Une balade
+1. **Une sortie n'est pas une balade.** `outings` décrit un rendez-vous futur. Une balade
    enregistrée pendant une sortie reste un `WalkRecord` personnel ; la sortie ne fusionne,
    n'expose ni ne lit aucun tracé.
 2. **Rien ne se déduit, tout se choisit.** La zone est choisie par la personne, jamais tirée du
@@ -44,11 +51,11 @@ Exigences du PRD couvertes : F09 (proposer une balade locale), F10 (participatio
 | `community_dogs` | `id uuid`, `owner_id`, `name` 1 à 40, `breed_label` 0 à 80, `public_note` 0 à 200, `deleted_at` | Les chiens que la personne choisit de montrer. Aucun lien avec `dogs` du foyer. |
 | `community_organizers` | `user_id`, `zone_id`, `added_at`, `added_by` | Écrite par un modérateur seulement. Filtre de §1.2 pour les sorties. |
 | `community_moderators` | `user_id`, `added_at` | Écrite à la main en base. Décision D6. |
-| `walk_events` | `id`, `organizer_id`, `zone_id`, `starts_at`, `duration_minutes` 15 à 240, `meeting_point` 1 à 120, `rules` 0 à 500, `human_capacity` 1 à 30, `dog_capacity` 1 à 30, `status` (`published`, `cancelled`, `removed`), `created_at`, `updated_at` | `removed` = retiré par la modération. |
-| `event_participants` | `event_id`, `user_id`, `status` (`requested`, `accepted`, `declined`, `withdrawn`), `requested_at`, `decided_at`, `attended` (booléen ou nul), `attended_declared_at` | Inscription et présence sont deux colonnes distinctes (PRD F10). |
-| `event_dogs` | `event_id`, `user_id`, `dog_id` | Chiens annoncés, pris dans `community_dogs` de la personne. |
-| `event_updates` | `id`, `event_id`, `kind` (`time`, `place`, `cancelled`), `previous`, `current`, `created_at` | Ce que voient les inscrits. Pas de messagerie. |
-| `reports` | `id`, `reporter_id`, `target_kind` (`event`, `profile`, `dog`), `target_id`, `reason`, `detail` 0 à 500, `created_at`, `handled_at`, `handled_by`, `outcome` | Lisible par les seuls modérateurs. |
+| `outings` | `id`, `organizer_id`, `zone_id`, `starts_at`, `duration_minutes` 15 à 240, `meeting_point` 1 à 120, `rules` 0 à 500, `human_capacity` 1 à 30, `dog_capacity` 1 à 30, `status` (`published`, `cancelled`, `removed`), `created_at`, `updated_at` | `removed` = retiré par la modération. |
+| `outing_participants` | `outing_id`, `user_id`, `status` (`requested`, `accepted`, `declined`, `withdrawn`), `requested_at`, `decided_at`, `attended` (booléen ou nul), `attended_declared_at` | Inscription et présence sont deux colonnes distinctes (PRD F10). |
+| `outing_dogs` | `outing_id`, `user_id`, `dog_id` | Chiens annoncés, pris dans `community_dogs` de la personne. |
+| `outing_updates` | `id`, `outing_id`, `kind` (`time`, `place`, `cancelled`), `previous`, `current`, `created_at` | Ce que voient les inscrits. Pas de messagerie. |
+| `reports` | `id`, `reporter_id`, `target_kind` (`outing`, `profile`, `dog`), `target_id`, `reason`, `detail` 0 à 500, `created_at`, `handled_at`, `handled_by`, `outcome` | Lisible par les seuls modérateurs. |
 | `blocks` | `blocker_id`, `blocked_id`, `created_at` | Effet immédiat, dans les deux sens. |
 
 ## Qui voit quoi (RLS)
@@ -57,7 +64,7 @@ Exigences du PRD couvertes : F09 (proposer une balade locale), F10 (participatio
 |---|---|
 | Personne sans profil, ou profil suspendu, ou sans déclaration d'âge | Rien de la communauté. |
 | Profil de la zone | Les sorties `published` de sa zone, à partir d'hier, sauf celles d'une personne avec qui un blocage existe (dans un sens ou l'autre). Les places restantes via une fonction, **pas** la liste des participants. |
-| Participant accepté | En plus : les autres participants acceptés de cette sortie, leur nom public et leurs chiens annoncés, et les `event_updates`. |
+| Participant accepté | En plus : les autres participants acceptés de cette sortie, leur nom public et leurs chiens annoncés, et les `outing_updates`. |
 | Organisateur | En plus : toutes les demandes de ses sorties, et les présences déclarées. |
 | Modérateur | Les signalements, et tout ce qu'il faut pour les traiter. |
 
@@ -71,12 +78,12 @@ pour `auth.uid()`, et une enveloppe `public` en `security invoker`, seule appela
 
 | Fonction | Règle |
 |---|---|
-| `request_to_join(event, dog_ids)` | Profil valide de la zone, sortie publiée et à venir, aucun blocage avec l'organisateur, chiens à soi. Crée ou relance une demande `requested`. |
-| `decide_request(event, user, accept)` | Organisateur seulement. **Verrouille la ligne de la sortie (`FOR UPDATE`)**, recompte les personnes et les chiens acceptés, refuse avec « sortie complète » si une capacité serait dépassée. Deux acceptations simultanées de la dernière place : la seconde attend le verrou puis échoue (C-REQ-06). |
-| `withdraw(event)` | Le participant se retire, quel que soit l'état ; la place se libère. |
-| `update_event(event, starts_at, meeting_point)` | Organisateur. Écrit un `event_updates` ; les inscrits le voient et peuvent se retirer. |
-| `cancel_event(event)` | Organisateur. Statut `cancelled`, un `event_updates` de type `cancelled`. |
-| `declare_attendance(event, attended)` | Participant accepté, après la fin de la sortie. |
+| `request_to_join(outing, dog_ids)` | Profil valide de la zone, sortie publiée et à venir, aucun blocage avec l'organisateur, chiens à soi. Crée ou relance une demande `requested`. |
+| `decide_request(outing, user, accept)` | Organisateur seulement. **Verrouille la ligne de la sortie (`FOR UPDATE`)**, recompte les personnes et les chiens acceptés, refuse avec « sortie complète » si une capacité serait dépassée. Deux acceptations simultanées de la dernière place : la seconde attend le verrou puis échoue (C-REQ-06). |
+| `withdraw(outing)` | Le participant se retire, quel que soit l'état ; la place se libère. |
+| `update_outing(outing, starts_at, meeting_point)` | Organisateur. Écrit un `outing_updates` ; les inscrits le voient et peuvent se retirer. |
+| `cancel_outing(outing)` | Organisateur. Statut `cancelled`, un `outing_updates` de type `cancelled`. |
+| `declare_attendance(outing, attended)` | Participant accepté, après la fin de la sortie. |
 | `report(target_kind, target_id, reason, detail)` | Tout profil valide. |
 | `block(user)` / `unblock(user)` | Tout profil valide. |
 | `moderate(report, outcome)` | Modérateur : retire une sortie (`removed`), suspend un profil, ou classe le signalement. |
@@ -104,7 +111,7 @@ pour `auth.uid()`, et une enveloppe `public` en `security invoker`, seule appela
 
 Coordonnées, carte des personnes, messagerie, fil, likes, abonnés, score de compatibilité,
 recommandations, paiement, notifications push. La conversation liée à une sortie (PRD F10) attend
-qu'un besoin non couvert par `event_updates` soit constaté (spec C, §5).
+qu'un besoin non couvert par `outing_updates` soit constaté (spec C, §5).
 
 ## Décisions à prendre à la relecture
 
@@ -137,14 +144,14 @@ accepte `2026-10-11T10:00:00+00:00` et `2026-10-11 10:00:00.123456+00`.
 | table `community_profiles` | `user_id`, `display_name`, `zone_id`, `adult_declared_at`, `suspended_at` | `user_id = auth.uid()` |
 | table `community_dogs` | `id`, `owner_id`, `name`, `breed_label`, `public_note`, `deleted_at` | `owner_id = auth.uid()`, `deleted_at is null` |
 | table `community_organizers` | `user_id`, `zone_id` | `user_id = auth.uid()`, `zone_id = <zone>` |
-| vue `visible_events` | `id`, `organizer_id`, `organizer_name`, `zone_id`, `starts_at`, `duration_minutes`, `meeting_point`, `rules`, `human_capacity`, `dog_capacity`, `humans_accepted`, `dogs_accepted`, `status`, `my_status`, `my_attended` | `zone_id = <zone>`, tri `starts_at`. La vue applique les règles de visibilité (zone, `published`, depuis hier, blocs dans les deux sens) |
-| vue `my_events` | mêmes colonnes | sorties organisées ou avec une demande de `auth.uid()`, toutes dates, tri `starts_at` décroissant |
+| vue `visible_outings` | `id`, `organizer_id`, `organizer_name`, `zone_id`, `starts_at`, `duration_minutes`, `meeting_point`, `rules`, `human_capacity`, `dog_capacity`, `humans_accepted`, `dogs_accepted`, `status`, `my_status`, `my_attended` | `zone_id = <zone>`, tri `starts_at`. La vue applique les règles de visibilité (zone, `published`, depuis hier, blocs dans les deux sens) |
+| vue `my_outings` | mêmes colonnes | sorties organisées ou avec une demande de `auth.uid()`, toutes dates, tri `starts_at` décroissant |
 | vue `my_blocks` | `user_id`, `display_name` | personnes bloquées par `auth.uid()` |
 
 **À vérifier avant d'écrire les vues** (non relu dans la documentation au moment de la rédaction) :
 une vue PostgreSQL s'exécute avec les droits de son propriétaire, donc elle peut contourner la RLS
 de l'appelant, à moins d'être créée avec l'option `security_invoker` (PostgreSQL 15 et suivants,
-`CREATE VIEW ... WITH (security_invoker = true)`). Pour `visible_events`, `my_events` et
+`CREATE VIEW ... WITH (security_invoker = true)`). Pour `visible_outings`, `my_outings` et
 `my_blocks`, soit l'option est posée et la RLS des tables fait le travail, soit la vue filtre
 elle-même sur `auth.uid()`. Dans les deux cas, le test pgTAP de visibilité (C-AC-01) doit prouver
 qu'un inconnu ne voit rien. Version de Postgres de `trufflo-db` : à lire sur le serveur.
@@ -157,16 +164,16 @@ retour) ; `update community_dogs set deleted_at` pour supprimer un chien.
 | Fonction | Paramètres | Retour |
 |---|---|---|
 | `save_profile` | `display_name text`, `zone_id text`, `adult_declared boolean` | rien. Refuse si `adult_declared` est faux, ne réécrit pas `adult_declared_at` |
-| `list_participants` | `event_id uuid` | tableau de `{user_id, display_name, status, dog_names text[], attended boolean ou nul}`. Organisateur : toutes les lignes avec `attended` ; accepté : les acceptés, `attended` nul ; sinon `not allowed` |
-| `list_event_updates` | `event_id uuid` | tableau de `{id, event_id, kind, previous, current, created_at}`, plus récent d'abord |
-| `request_to_join` | `event_id uuid`, `dog_ids uuid[]` | rien |
-| `withdraw` | `event_id uuid` | rien |
-| `declare_attendance` | `event_id uuid`, `attended boolean` | rien |
-| `create_event` | `zone_id text`, `starts_at timestamptz`, `duration_minutes int`, `meeting_point text`, `rules text`, `human_capacity int`, `dog_capacity int` | l'identifiant `uuid` de la sortie (un JSON scalaire) |
-| `decide_request` | `event_id uuid`, `user_id uuid`, `accept boolean` | rien |
-| `update_event` | `event_id uuid`, `starts_at timestamptz`, `meeting_point text` | rien |
-| `cancel_event` | `event_id uuid` | rien |
-| `report` | `target_kind text` (`event`, `profile`, `dog`), `target_id uuid`, `reason text` (`danger`, `harassment`, `inappropriate`, `spam`, `other`), `detail text` | rien |
+| `list_participants` | `outing_id uuid` | tableau de `{user_id, display_name, status, dog_names text[], attended boolean ou nul}`. Organisateur : toutes les lignes avec `attended` ; accepté : les acceptés, `attended` nul ; sinon `not allowed` |
+| `list_outing_updates` | `outing_id uuid` | tableau de `{id, outing_id, kind, previous, current, created_at}`, plus récent d'abord |
+| `request_to_join` | `outing_id uuid`, `dog_ids uuid[]` | rien |
+| `withdraw` | `outing_id uuid` | rien |
+| `declare_attendance` | `outing_id uuid`, `attended boolean` | rien |
+| `create_outing` | `zone_id text`, `starts_at timestamptz`, `duration_minutes int`, `meeting_point text`, `rules text`, `human_capacity int`, `dog_capacity int` | l'identifiant `uuid` de la sortie (un JSON scalaire) |
+| `decide_request` | `outing_id uuid`, `user_id uuid`, `accept boolean` | rien |
+| `update_outing` | `outing_id uuid`, `starts_at timestamptz`, `meeting_point text` | rien |
+| `cancel_outing` | `outing_id uuid` | rien |
+| `report` | `target_kind text` (`outing`, `profile`, `dog`), `target_id uuid`, `reason text` (`danger`, `harassment`, `inappropriate`, `spam`, `other`), `detail text` | rien |
 | `block`, `unblock` | `user_id uuid` | rien |
 
 **Non couvert par un test d'intégration** : aucun de ces appels n'a été exécuté contre un serveur
@@ -182,8 +189,8 @@ Le client lit le texte de l'exception du serveur (`CommunityError(serverMessage:
 
 | Le message contient | Le client affiche |
 |---|---|
-| `event full` | « La sortie est complète. » |
-| `event gone` | « Cette sortie n'est plus disponible. » |
+| `outing full` | « La sortie est complète. » |
+| `outing gone` | « Cette sortie n'est plus disponible. » |
 | `blocked` | « Vous ne pouvez pas rejoindre cette sortie. » |
 | `no profile` | l'écran de création de profil |
 | `not allowed` | « Action non autorisée. » |

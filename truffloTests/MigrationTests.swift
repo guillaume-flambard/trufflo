@@ -247,7 +247,7 @@ private func seedLegacyV2Store(at storeURL: URL) throws {
         let dog = DogRecord(name: "Oslo", breedKind: "unknown")
         context.insert(dog)
         context.insert(WalkRecord.manual(endedAt: Date(timeIntervalSince1970: 7_000), durationSeconds: 900))
-        context.insert(RoutineRecord(dogID: dog.id, routine: try DogRoutine(outingsPerDay: 2, minutesPerOuting: nil, slots: [])))
+        context.insert(RoutineRecord(dogID: dog.id, routine: try DogRoutine(walksPerDay: 2, minutesPerWalk: nil, slots: [])))
         try context.save()
         writer = nil
     }

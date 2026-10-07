@@ -62,7 +62,7 @@ struct StartBlockedSheet: View {
                     .accessibilityIdentifier("walk.blocked.settings")
 
                     Button(action: addManually) {
-                        Text("Ajouter une balade passée")
+                        Text("Ajouter une balade")
                             .font(.headline)
                             .foregroundStyle(Color.truffloForest)
                             .frame(maxWidth: .infinity, minHeight: 52)
@@ -72,7 +72,7 @@ struct StartBlockedSheet: View {
                     .accessibilityIdentifier("walk.blocked.manual")
                 } else {
                     Button(action: addManually) {
-                        Text("Ajouter une balade passée")
+                        Text("Ajouter une balade")
                             .font(.headline)
                             .frame(maxWidth: .infinity, minHeight: 56)
                     }

@@ -25,10 +25,10 @@ migration.
 | Concept | Rôle | Point d'attention |
 |---|---|---|
 | `community_profiles` | Ce que la personne choisit de montrer : prénom ou pseudo, zone, chiens publiés. | Projection volontaire. Jamais une copie de `DogRecord` ou du foyer. Les notes privées n'y vont pas. |
-| `walk_events` | Une sortie à venir : créneau, durée indicative, point de rendez-vous public, organisateur, capacité humaine et canine, règles. | Distincte d'une balade enregistrée (`WalkRecord`). |
-| `event_participants` | Demande, acceptation, refus, retrait, annulation, présence déclarée. | États distincts (PRD F10). La capacité se vérifie dans une transaction serveur. |
-| `event_dogs` | Les chiens annoncés par un participant. | Choisis parmi les chiens publiés. |
-| `event_updates` | Changement d'heure ou de lieu, annulation. | Structuré, pas une messagerie. Permet de se retirer. |
+| `outings` | Une sortie à venir : créneau, durée indicative, point de rendez-vous public, organisateur, capacité humaine et canine, règles. | Distincte d'une balade enregistrée (`WalkRecord`). |
+| `outing_participants` | Demande, acceptation, refus, retrait, annulation, présence déclarée. | États distincts (PRD F10). La capacité se vérifie dans une transaction serveur. |
+| `outing_dogs` | Les chiens annoncés par un participant. | Choisis parmi les chiens publiés. |
+| `outing_updates` | Changement d'heure ou de lieu, annulation. | Structuré, pas une messagerie. Permet de se retirer. |
 | `reports`, `blocks` | Signalement et blocage. | Effet immédiat côté serveur (PRD F11). |
 
 Une balade enregistrée pendant une sortie reste personnelle : la sortie ne fusionne ni n'expose les

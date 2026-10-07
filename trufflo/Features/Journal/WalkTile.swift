@@ -57,7 +57,7 @@ struct WalkTile: View {
         return parts.joined(separator: ", ")
     }
     private var origin: String {
-        "\(WalkFormatting.relativeDay(date)), \(isGPS ? "suivi GPS" : "saisie manuelle")"
+        "\(WalkFormatting.relativeDay(date)), \(isGPS ? "balade suivie" : "balade ajoutée")"
     }
 
     var body: some View {
@@ -117,7 +117,8 @@ struct WalkTile: View {
     }
 
     private var spokenLabel: String {
-        var parts = [names.isEmpty ? "Balade" : "Balade avec \(names)", isGPS ? "Suivi GPS" : "Saisie manuelle"]
+        let kind = isGPS ? "Balade suivie" : "Balade ajoutée"
+        var parts = [names.isEmpty ? kind : "\(kind) avec \(names)"]
         parts.append(WalkFormatting.dayAndTime(date))
         parts.append(figures)
         if !walk.note.isEmpty { parts.append(walk.note) }

@@ -114,8 +114,8 @@ struct StarterRootView: View {
                     if dogs.isEmpty {
                         TruffloEmptyStateView(
                             imageName: "EmptyDog",
-                            title: "Aucun profil créé",
-                            description: "Ajoutez un profil pour personnaliser le journal de votre compagnon.",
+                            title: "Aucun chien",
+                            description: "Ajoutez votre chien pour commencer son journal.",
                             buttonTitle: "Ajouter un chien",
                             action: { showDogForm = true }
                         )
@@ -261,7 +261,7 @@ struct StarterRootView: View {
             if ProcessInfo.processInfo.arguments.contains("--open-household") { showHousehold = true }
             #endif
         }
-        .confirmationDialog("Effacer le journal et les profils de cet appareil ?",
+        .confirmationDialog("Effacer le journal et les chiens de cet iPhone ?",
                             isPresented: $showEraseConfirmation, titleVisibility: .visible) {
             Button("Tout effacer", role: .destructive, action: eraseAll)
         } message: {
@@ -294,14 +294,14 @@ struct StarterRootView: View {
                 TruffloEmptyStateView(
                     imageName: "EmptyWalk",
                     title: "Aucune balade enregistrée",
-                    description: "Les sorties ajoutées à votre journal apparaîtront ici."
+                    description: "Les balades de votre journal apparaîtront ici."
                 )
                 .listRowBackground(Color.clear)
                 .listRowSeparator(.hidden)
             }
         } else if shown.isEmpty && sharedShown.isEmpty {
             TruffloNotice(title: "Aucune balade pour ce filtre",
-                          message: "Aucune sortie enregistrée ne correspond au chien et à la période choisis.",
+                          message: "Aucune balade ne correspond au chien et à la période choisis.",
                           actionTitle: "Tout afficher") { journalFilter = JournalFilter() }
         } else {
             JournalTimelineView(walks: shown, shared: sharedShown,
@@ -416,7 +416,7 @@ struct StarterRootView: View {
                                 .matchedTransitionSource(id: lastWalk.id, in: todayZoom)
                             }
                         }
-                        householdOutingSection
+                        householdLatestWalkSection
                         if liveWalk == nil { pastWalkButton }
                         if !completedWalks.isEmpty {
                             HouseholdPrompt(place: .today, dogName: dogNames, isSeveral: dogs.count > 1) { showHousehold = true }
@@ -512,20 +512,20 @@ struct StarterRootView: View {
     /// and not the same outing (B-REQ-04, decision D2). Apart from my figures,
     /// and attributed: who, which dogs, when, how long.
     @ViewBuilder
-    private var householdOutingSection: some View {
+    private var householdLatestWalkSection: some View {
         let entries = sharedEntries(own: completedWalks)
-        let latest = HouseholdOuting.latest(
+        let latest = HouseholdLatestWalk.latest(
             entries.map { .init(id: $0.walk.id, endedAt: $0.walk.endedAt, isPossibleDuplicate: $0.possibleDuplicate) },
             myLastEndedAt: completedWalks.compactMap(\.endedAt).max())
         if let id = latest, let entry = entries.first(where: { $0.walk.id == id }) {
             VStack(alignment: .leading, spacing: TruffloTheme.Spacing.small) {
-                sectionTitle("Dernière sortie du foyer")
+                sectionTitle("Dernière balade du foyer")
                 NavigationLink(value: SharedWalkRoute(id: entry.walk.id)) {
                     SharedWalkCard(walk: entry.walk, authorName: entry.authorName, showsDay: true)
                 }
                 .buttonStyle(.plain)
             }
-            .accessibilityIdentifier("today.householdOuting")
+            .accessibilityIdentifier("today.householdLatestWalk")
         }
     }
 
@@ -563,7 +563,7 @@ struct StarterRootView: View {
             Calendar.current.isDateInToday(walk.endedAt ?? walk.startedAt)
                 && links.contains { $0.walkID == walk.id && $0.dogID == dog.id }
         }.count
-        return "Routine choisie : \(routine.summary.prefix(1).lowercased() + routine.summary.dropFirst()). \(routine.today(recordedOutings: today))"
+        return "Routine choisie : \(routine.summary.prefix(1).lowercased() + routine.summary.dropFirst()). \(routine.today(recordedWalks: today))"
     }
 
     private func dogSubtitle(_ lead: DogRecord) -> String {
@@ -742,7 +742,7 @@ struct StarterRootView: View {
         Button {
             showWalkForm = true
         } label: {
-            Label("Ajouter une balade passée", systemImage: "plus")
+            Label("Ajouter une balade", systemImage: "plus")
                 .font(.truffloBodyHeavy)
                 .foregroundStyle(Color.truffloForest)
                 .frame(minHeight: 44)

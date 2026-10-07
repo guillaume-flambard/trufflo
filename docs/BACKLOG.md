@@ -12,7 +12,7 @@ preuve ; « Non vérifié » veut dire que personne n'a regardé, pas que c'est 
 | T10 profil | Fait | Âge, photo, édition, race inconnue : `DogFormView`, `DogDetailView`. Race par recherche : lot A (A-REQ-03). |
 | T11 à T15 moteur de balade | Fait | Chantier 2, `.agent/archive/chantier-2/` ; parcours GPS dans `tools/sim/gps-journeys.sh`. |
 | T16 mesures terrain | Ouvert | Aucune mesure sur appareil réel (risque R-09). Demande une vraie balade. |
-| T17 objectifs choisis | Fait en partie | Routines choisies et suspendables (PRD F04). Bilans de période : phrase des 7 jours sur Aujourd'hui, rien de plus. |
+| T17 routines choisies | Fait en partie | Routines choisies et suspendables (PRD F04). Bilans de période : phrase des 7 jours sur Aujourd'hui, rien de plus. |
 | T18 export et suppressions | Fait | Export CSV/GPX (`ExportArchive`), suppression d'une balade et d'un profil, effacement global. |
 | T19 sauvegardes et audit des flux | Non vérifié | Seule la session du foyer est exclue des sauvegardes (`AuthSession`). Comportement de la sauvegarde iOS du journal non revu. |
 | T20 UX finale et accessibilité | En cours | Lot A : Aujourd'hui, Journal, Profil en variante A ; reste la matrice de captures (A-REQ-06). Mode sombre : décision D4. |
@@ -46,7 +46,7 @@ Porte M0 : un utilisateur retrouve une vraie saisie après fermeture/réouvertur
 | T14 | Récupération après interruption. | Aucun temps/tracé inventé après fermeture forcée. | T13 |
 | T15 | MapKit par segments et bilans de qualité. | Pas de pont entre trous ; distance absente distincte de zéro. | T13 |
 | T16 | Calibrer dérive, précision et batterie. | Mesures terrain avec conditions et défauts documentés. | T14–T15 |
-| T17 | Objectifs choisis et bilans de période. | Suspendables, sans compétition, sans rattrapage automatique. | T10–T15 |
+| T17 | Routines choisies et bilans de période. | Suspendables, sans compétition, sans rattrapage automatique. | T10–T15 |
 | T18 | Export et suppressions ciblées. | Tracés, liens, noms historiques et agrégats traités. | T11 |
 | T19 | Sauvegardes/protection locale et audit des flux. | Limites du local explicites ; pas de coordonnées dans télémétrie. | T16–T18 |
 | T20 | UX finale des trois tabs et accessibilité. | États normaux/vides/erreur + captures clair/sombre/grand texte. | T10–T19 |

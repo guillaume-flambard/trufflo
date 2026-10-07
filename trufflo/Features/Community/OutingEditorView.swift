@@ -1,12 +1,12 @@
 import SwiftUI
 
 /// What an organizer writes: when, how long, where, the rules, the places.
-/// Creating and « reproposing » share this form; changing a coming event only
+/// Creating and « reproposing » share this form; changing a coming outing only
 /// moves its time and place, so the registered are told what changed.
-struct EventEditorView: View {
+struct OutingEditorView: View {
     enum Mode: Equatable {
-        case create(prefill: WalkEventDTO?)
-        case reschedule(WalkEventDTO)
+        case create(prefill: OutingDTO?)
+        case reschedule(OutingDTO)
     }
 
     let mode: Mode
@@ -60,7 +60,7 @@ struct EventEditorView: View {
 
                     if !isReschedule {
                         field("Durée") {
-                            Stepper(EventFormatting.duration(minutes), value: $minutes, in: 15...240, step: 15)
+                            Stepper(OutingFormatting.duration(minutes), value: $minutes, in: 15...240, step: 15)
                                 .accessibilityIdentifier("editor.duration")
                         }
                         field("Règles, si vous en avez") {
@@ -111,8 +111,8 @@ struct EventEditorView: View {
             } else {
                 startsAt = Calendar.current.date(byAdding: .day, value: 1, to: Date()) ?? Date().addingTimeInterval(86400)
             }
-        case .reschedule(let event):
-            startsAt = event.startsAt; point = event.meetingPoint
+        case .reschedule(let outing):
+            startsAt = outing.startsAt; point = outing.meetingPoint
         }
     }
 
@@ -122,19 +122,19 @@ struct EventEditorView: View {
             switch mode {
             case .create:
                 do {
-                    let draft = try WalkEventDraft(startsAt: startsAt, durationMinutes: minutes, meetingPoint: point,
+                    let draft = try OutingDraft(startsAt: startsAt, durationMinutes: minutes, meetingPoint: point,
                                                    rules: rules, humanCapacity: humans, dogCapacity: dogs)
-                    if await model.createEvent(draft) != nil { dismiss() }
+                    if await model.createOuting(draft) != nil { dismiss() }
                 } catch CommunityError.invalid(let text) {
                     problem = text
                 } catch {
                     problem = CommunityModel.message(for: error)
                 }
-            case .reschedule(let event):
+            case .reschedule(let outing):
                 let clean = point.trimmingCharacters(in: .whitespacesAndNewlines)
                 guard !clean.isEmpty, clean.count <= 120 else { problem = "Indiquez un point de rendez-vous public."; return }
                 guard startsAt > Date() else { problem = "La sortie doit être à venir."; return }
-                await model.updateEvent(event.id, startsAt: startsAt, meetingPoint: clean)
+                await model.updateOuting(outing.id, startsAt: startsAt, meetingPoint: clean)
                 if model.errorMessage == nil { dismiss() }
             }
         }

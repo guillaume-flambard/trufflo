@@ -1,17 +1,17 @@
 import SwiftUI
 
-/// The zone's coming events, and this person's own. Days as headings, one line
-/// per event, no card: the same language as the journal.
-struct EventsListView: View {
+/// The zone's coming outings, and this person's own. Days as headings, one line
+/// per outing, no card: the same language as the journal.
+struct OutingsListView: View {
     @Environment(CommunityModel.self) private var model
     @Environment(\.calendar) private var calendar
     @State private var tab = "upcoming"
     @State private var showEditor = false
     @State private var showBlocked = false
 
-    private var shown: [WalkEventDTO] { tab == "upcoming" ? model.events : model.myEvents }
+    private var shown: [OutingDTO] { tab == "upcoming" ? model.outings : model.myOutings }
 
-    private var days: [(start: Date, events: [WalkEventDTO])] {
+    private var days: [(start: Date, outings: [OutingDTO])] {
         let grouped = Dictionary(grouping: shown) { calendar.startOfDay(for: $0.startsAt) }
         let upcoming = tab == "upcoming"
         let starts = grouped.keys.sorted { upcoming ? $0 < $1 : $0 > $1 }
@@ -38,17 +38,17 @@ struct EventsListView: View {
                 } else {
                     ForEach(days, id: \.start) { day in
                         VStack(alignment: .leading, spacing: 0) {
-                            Text(EventFormatting.day(day.start))
+                            Text(OutingFormatting.day(day.start))
                                 .font(.system(.title2, design: .rounded, weight: .heavy))
                                 .foregroundStyle(Color.truffloForest)
                                 .padding(.bottom, TruffloTheme.Spacing.xxSmall)
                                 .accessibilityAddTraits(.isHeader)
-                            ForEach(day.events) { event in
-                                NavigationLink(value: EventRoute(id: event.id)) {
-                                    EventRow(event: event, isMine: event.organizerID == model.userID)
+                            ForEach(day.outings) { outing in
+                                NavigationLink(value: OutingRoute(id: outing.id)) {
+                                    OutingRow(outing: outing, isMine: outing.organizerID == model.userID)
                                 }
                                 .buttonStyle(.plain)
-                                .accessibilityIdentifier("event.row.\(event.id.uuidString)")
+                                .accessibilityIdentifier("outing.row.\(outing.id.uuidString)")
                             }
                         }
                     }
@@ -62,7 +62,7 @@ struct EventsListView: View {
             if model.isOrganizer {
                 ToolbarItem(placement: .topBarTrailing) {
                     Button("Proposer une sortie", systemImage: "plus") { showEditor = true }
-                        .accessibilityIdentifier("event.create")
+                        .accessibilityIdentifier("outing.create")
                 }
             }
             ToolbarItem(placement: .topBarLeading) {
@@ -76,7 +76,7 @@ struct EventsListView: View {
             }
         }
         .navigationDestination(isPresented: $showBlocked) { BlockedPeopleView() }
-        .sheet(isPresented: $showEditor) { EventEditorView(mode: .create(prefill: nil)) }
+        .sheet(isPresented: $showEditor) { OutingEditorView(mode: .create(prefill: nil)) }
         // The page names itself in large type: a bar title would say it twice.
         .navigationTitle("")
         .navigationBarTitleDisplayMode(.inline)
@@ -110,16 +110,16 @@ struct EventsListView: View {
     }
 }
 
-/// One event as a line: the hour in the margin, the meeting point as the title.
-private struct EventRow: View {
-    let event: WalkEventDTO
+/// One outing as a line: the hour in the margin, the meeting point as the title.
+private struct OutingRow: View {
+    let outing: OutingDTO
     let isMine: Bool
     @Environment(\.dynamicTypeSize) private var typeSize
 
     var body: some View {
         HStack(alignment: .top, spacing: TruffloTheme.Spacing.medium) {
             if !typeSize.isAccessibilitySize {
-                Text(event.startsAt.formatted(.dateTime.hour().minute().locale(TruffloLocale.french)))
+                Text(outing.startsAt.formatted(.dateTime.hour().minute().locale(TruffloLocale.french)))
                     .font(.system(.subheadline, design: .rounded, weight: .semibold))
                     .monospacedDigit()
                     .foregroundStyle(Color.truffloSlate)
@@ -127,19 +127,19 @@ private struct EventRow: View {
                     .padding(.top, 3)
             }
             VStack(alignment: .leading, spacing: 2) {
-                Text(event.meetingPoint)
+                Text(outing.meetingPoint)
                     .font(.system(.headline, design: .rounded, weight: .bold))
                     .foregroundStyle(Color.truffloForest)
-                Text("\(typeSize.isAccessibilitySize ? EventFormatting.timeRange(event) + ", " : "")\(event.organizerName) organise, \(EventFormatting.duration(event.durationMinutes))")
+                Text("\(typeSize.isAccessibilitySize ? OutingFormatting.timeRange(outing) + ", " : "")\(outing.organizerName) organise, \(OutingFormatting.duration(outing.durationMinutes))")
                     .font(.footnote)
                     .foregroundStyle(Color.truffloSlate)
-                Text(EventFormatting.places(event))
+                Text(OutingFormatting.places(outing))
                     .font(.subheadline)
                     .foregroundStyle(Color.truffloCharcoal)
-                if let status = EventFormatting.myStatus(event, organizerIsMe: isMine) {
+                if let status = OutingFormatting.myStatus(outing, organizerIsMe: isMine) {
                     Label(status, systemImage: icon)
                         .font(.footnote.weight(.semibold))
-                        .foregroundStyle(event.status == .cancelled ? Color.truffloDanger : Color.truffloForest)
+                        .foregroundStyle(outing.status == .cancelled ? Color.truffloDanger : Color.truffloForest)
                 }
             }
             Spacer(minLength: 0)
@@ -151,9 +151,9 @@ private struct EventRow: View {
     }
 
     private var icon: String {
-        if event.status == .cancelled { return "xmark.circle" }
+        if outing.status == .cancelled { return "xmark.circle" }
         if isMine { return "megaphone" }
-        switch event.myStatus {
+        switch outing.myStatus {
         case .accepted: return "checkmark.circle"
         case .requested: return "hourglass"
         default: return "circle"

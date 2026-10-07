@@ -32,7 +32,7 @@ struct DogDetailView: View {
             if let dog = matches.first {
                 content(for: dog)
             } else {
-                TruffloNotice(title: "Ce profil n'existe plus", message: "Il a été retiré de cet iPhone depuis un autre écran.", actionTitle: "Revenir à la liste") { dismiss() }
+                TruffloNotice(title: "Ce chien n'est plus sur cet iPhone", message: "Il a été retiré depuis un autre écran.", actionTitle: "Revenir à la liste") { dismiss() }
             }
         }
         // The title stays the dog's name, for the back menu, VoiceOver and the
@@ -104,7 +104,7 @@ struct DogDetailView: View {
 
                     if !dog.preferencesNote.isEmpty {
                         VStack(alignment: .leading, spacing: TruffloTheme.Spacing.xSmall) {
-                            WalkSectionTitle("Préférences de sortie")
+                            WalkSectionTitle("Préférences de balade")
                             Text(dog.preferencesNote)
                                 .font(.body)
                                 .foregroundStyle(Color.truffloCharcoal)
@@ -118,15 +118,15 @@ struct DogDetailView: View {
                         Button(role: .destructive) {
                             showDeleteConfirmation = true
                         } label: {
-                            Text("Supprimer le profil")
+                            Text("Supprimer \(dog.name)")
                                 .font(.subheadline.weight(.semibold))
                                 .foregroundStyle(Color.truffloDanger)
                                 .frame(minHeight: 44, alignment: .leading)
                         }
                         .truffloTap(.impact(weight: .medium))
                         .accessibilityIdentifier("dog.delete")
-                        .accessibilityLabel("Supprimer le profil de \(dog.name)")
-                        Text("La suppression retire le profil de cet appareil. Vos balades déjà enregistrées gardent le nom de votre chien.")
+                        .accessibilityLabel("Supprimer \(dog.name)")
+                        Text("\(dog.name) est retiré de cet iPhone. Les balades déjà enregistrées gardent son nom.")
                             .font(.footnote)
                             .foregroundStyle(Color.truffloSlate)
                     }
@@ -144,12 +144,12 @@ struct DogDetailView: View {
         .sheet(isPresented: $showRoutine) {
             RoutineFormView(dogID: dog.id, dogName: dog.name, current: routines.first?.routine)
         }
-        .confirmationDialog("Supprimer ce profil ?", isPresented: $showDeleteConfirmation,
+        .confirmationDialog("Supprimer \(dog.name) ?", isPresented: $showDeleteConfirmation,
                             titleVisibility: .visible) {
             Button("Supprimer \(dog.name)", role: .destructive) { delete(dogID: dog.id) }
             Button("Annuler", role: .cancel) {}
         } message: {
-            Text("Ce profil sera supprimé. Les balades déjà enregistrées conservent le nom de votre chien.")
+            Text("Les balades déjà enregistrées gardent son nom.")
         }
     }
 
@@ -227,9 +227,9 @@ struct DogDetailView: View {
             try JournalRepository(context: context).deleteDog(dogID)
             dismiss()
         } catch JournalError.profileMissing {
-            storageError = "Ce profil n'existe plus."
+            storageError = "Ce chien n'est plus sur cet iPhone."
         } catch {
-            storageError = "Le profil n'a pas été supprimé. Les données précédentes ont été conservées."
+            storageError = "Rien n'a été supprimé. Les données précédentes ont été conservées."
         }
     }
 }

@@ -13,26 +13,26 @@ private func world() async throws -> (InMemoryCommunityServer, UUID) {
     server.addZone(lyon)
     server.makeOrganizer(organizer, in: lyon.id)
     try await server.client(organizer).saveProfile(displayName: "Léa", zoneID: lyon.id, adultDeclared: true)
-    let draft = try WalkEventDraft(startsAt: now.addingTimeInterval(86400), durationMinutes: 60, meetingPoint: "Entrée nord",
+    let draft = try OutingDraft(startsAt: now.addingTimeInterval(86400), durationMinutes: 60, meetingPoint: "Entrée nord",
                                    rules: "", humanCapacity: 1, dogCapacity: 2, now: now)
-    return (server, try await server.client(organizer).createEvent(draft, zoneID: lyon.id))
+    return (server, try await server.client(organizer).createOuting(draft, zoneID: lyon.id))
 }
 
 @MainActor
 @Test("Without a profile the model asks for one, and nothing of the zone is loaded")
-func noProfileMeansNoEvents() async throws {
+func noProfileMeansNoOutings() async throws {
     let (server, _) = try await world()
     let model = CommunityModel(remote: server.client(camille))
     await model.refresh()
     #expect(model.phase == .needsProfile)
-    #expect(model.events.isEmpty)
+    #expect(model.outings.isEmpty)
     #expect(model.zones.map(\.name) == ["Lyon 6e"])
 }
 
 @MainActor
-@Test("Creating the profile loads the zone's events; the adult declaration is required")
+@Test("Creating the profile loads the zone's outings; the adult declaration is required")
 func theProfileOpensTheZone() async throws {
-    let (server, eventID) = try await world()
+    let (server, outingID) = try await world()
     let model = CommunityModel(remote: server.client(camille))
     await model.refresh()
 
@@ -42,34 +42,34 @@ func theProfileOpensTheZone() async throws {
 
     await model.saveProfile(displayName: "Camille", zoneID: lyon.id, adultDeclared: true)
     #expect(model.phase == .ready)
-    #expect(model.events.map(\.id) == [eventID])
+    #expect(model.outings.map(\.id) == [outingID])
     #expect(model.zoneName == "Lyon 6e")
     #expect(model.isOrganizer == false)
 }
 
 @MainActor
-@Test("A request shows as pending, then a refusal for a full event is said in words")
+@Test("A request shows as pending, then a refusal for a full outing is said in words")
 func requestingAndTheFullMessage() async throws {
-    let (server, eventID) = try await world()
+    let (server, outingID) = try await world()
     let model = CommunityModel(remote: server.client(camille))
     await model.saveProfile(displayName: "Camille", zoneID: lyon.id, adultDeclared: true)
-    await model.requestToJoin(eventID, dogIDs: [])
-    #expect(model.event(eventID)?.myStatus == .requested)
-    #expect(model.myEvents.map(\.id) == [eventID])
+    await model.requestToJoin(outingID, dogIDs: [])
+    #expect(model.outing(outingID)?.myStatus == .requested)
+    #expect(model.myOutings.map(\.id) == [outingID])
 
     // The organizer fills the only place; a later acceptance is refused.
     let sam = UUID()
     try await server.client(sam).saveProfile(displayName: "Sam", zoneID: lyon.id, adultDeclared: true)
-    try await server.client(sam).requestToJoin(eventID: eventID, dogIDs: [])
-    try await server.client(organizer).decide(eventID: eventID, userID: sam, accept: true)
+    try await server.client(sam).requestToJoin(outingID: outingID, dogIDs: [])
+    try await server.client(organizer).decide(outingID: outingID, userID: sam, accept: true)
     let boss = CommunityModel(remote: server.client(organizer))
     await boss.refresh()
-    await boss.decide(eventID, userID: camille, accept: true)
+    await boss.decide(outingID, userID: camille, accept: true)
     #expect(boss.errorMessage == "La sortie est complète.")
 }
 
 @MainActor
-@Test("A suspended profile falls back to the profile step, without leaking the events")
+@Test("A suspended profile falls back to the profile step, without leaking the outings")
 func suspendedMeansNoProfile() async throws {
     let (server, _) = try await world()
     let model = CommunityModel(remote: server.client(organizer))
@@ -92,8 +92,8 @@ func aFailureIsReadable() async throws {
 
 @Test("The server's own messages map to the client's errors")
 func serverMessagesMap() {
-    #expect(CommunityError(serverMessage: "event full") == .eventFull)
-    #expect(CommunityError(serverMessage: "ERROR: event gone") == .eventGone)
+    #expect(CommunityError(serverMessage: "outing full") == .outingFull)
+    #expect(CommunityError(serverMessage: "ERROR: outing gone") == .outingGone)
     #expect(CommunityError(serverMessage: "you are blocked") == .blocked)
     #expect(CommunityError(serverMessage: "no profile") == .noProfile)
     #expect(CommunityError(serverMessage: "not allowed") == .notAllowed)
@@ -101,50 +101,50 @@ func serverMessagesMap() {
 }
 
 @MainActor
-@Test("An accepted request moves the revision, so an open event reloads its participants")
+@Test("An accepted request moves the revision, so an open outing reloads its participants")
 func decidingMovesTheRevision() async throws {
-    let (server, eventID) = try await world()
+    let (server, outingID) = try await world()
     try await server.client(camille).saveProfile(displayName: "Camille", zoneID: lyon.id, adultDeclared: true)
-    try await server.client(camille).requestToJoin(eventID: eventID, dogIDs: [])
+    try await server.client(camille).requestToJoin(outingID: outingID, dogIDs: [])
     let boss = CommunityModel(remote: server.client(organizer))
     await boss.refresh()
-    #expect(await boss.participants(of: eventID).map(\.status) == [.requested])
+    #expect(await boss.participants(of: outingID).map(\.status) == [.requested])
 
     let before = boss.revision
-    await boss.decide(eventID, userID: camille, accept: true)
+    await boss.decide(outingID, userID: camille, accept: true)
     #expect(boss.revision > before)
-    #expect(await boss.participants(of: eventID).map(\.status) == [.accepted])
+    #expect(await boss.participants(of: outingID).map(\.status) == [.accepted])
 }
 
 @MainActor
 @Test("An organizer creates, reschedules and cancels; the registered see each change")
 func theOrganizerFlow() async throws {
-    let (server, eventID) = try await world()
+    let (server, outingID) = try await world()
     let boss = CommunityModel(remote: server.client(organizer))
     await boss.refresh()
     #expect(boss.isOrganizer)
 
-    let draft = try WalkEventDraft(startsAt: now.addingTimeInterval(3 * 86400), durationMinutes: 90, meetingPoint: "Quai nord",
+    let draft = try OutingDraft(startsAt: now.addingTimeInterval(3 * 86400), durationMinutes: 90, meetingPoint: "Quai nord",
                                    rules: "En laisse", humanCapacity: 5, dogCapacity: 5, now: now)
-    let created = try #require(await boss.createEvent(draft))
-    #expect(boss.event(created)?.meetingPoint == "Quai nord")
-    #expect(boss.myEvents.contains { $0.id == created })
+    let created = try #require(await boss.createOuting(draft))
+    #expect(boss.outing(created)?.meetingPoint == "Quai nord")
+    #expect(boss.myOutings.contains { $0.id == created })
 
-    // Someone registers on the first event, then the place changes.
+    // Someone registers on the first outing, then the place changes.
     let guest = CommunityModel(remote: server.client(camille))
     await guest.saveProfile(displayName: "Camille", zoneID: lyon.id, adultDeclared: true)
-    await guest.requestToJoin(eventID, dogIDs: [])
-    await boss.decide(eventID, userID: camille, accept: true)
-    await boss.updateEvent(eventID, startsAt: now.addingTimeInterval(86400), meetingPoint: "  Sortie ouest  ")
-    #expect(boss.event(eventID)?.meetingPoint == "Sortie ouest", "le lieu est nettoyé")
-    #expect(await guest.updates(of: eventID).map(\.kind) == [.place])
+    await guest.requestToJoin(outingID, dogIDs: [])
+    await boss.decide(outingID, userID: camille, accept: true)
+    await boss.updateOuting(outingID, startsAt: now.addingTimeInterval(86400), meetingPoint: "  Sortie ouest  ")
+    #expect(boss.outing(outingID)?.meetingPoint == "Sortie ouest", "le lieu est nettoyé")
+    #expect(await guest.updates(of: outingID).map(\.kind) == [.place])
 
-    await boss.cancelEvent(eventID)
-    #expect(boss.event(eventID)?.status == .cancelled)
-    #expect(await guest.updates(of: eventID).map(\.kind).contains(.cancelled))
+    await boss.cancelOuting(outingID)
+    #expect(boss.outing(outingID)?.status == .cancelled)
+    #expect(await guest.updates(of: outingID).map(\.kind).contains(.cancelled))
     await guest.refresh()
-    #expect(guest.events.contains { $0.id == eventID } == false, "une sortie annulée quitte la liste « à venir »")
-    #expect(EventFormatting.myStatus(try #require(guest.event(eventID))) == "Annulée")
+    #expect(guest.outings.contains { $0.id == outingID } == false, "une sortie annulée quitte la liste « à venir »")
+    #expect(OutingFormatting.myStatus(try #require(guest.outing(outingID))) == "Annulée")
 }
 
 @MainActor
@@ -154,64 +154,64 @@ func aGuestCannotOrganize() async throws {
     let guest = CommunityModel(remote: server.client(camille))
     await guest.saveProfile(displayName: "Camille", zoneID: lyon.id, adultDeclared: true)
     #expect(guest.isOrganizer == false)
-    let draft = try WalkEventDraft(startsAt: now.addingTimeInterval(86400), durationMinutes: 60, meetingPoint: "Parc",
+    let draft = try OutingDraft(startsAt: now.addingTimeInterval(86400), durationMinutes: 60, meetingPoint: "Parc",
                                    rules: "", humanCapacity: 3, dogCapacity: 3, now: now)
-    #expect(await guest.createEvent(draft) == nil)
+    #expect(await guest.createOuting(draft) == nil)
     #expect(guest.errorMessage == "Action non autorisée.")
 }
 
 @MainActor
 @Test("After the walk, a registered person says whether they were there; the organizer sees it")
 func attendanceIsDeclaredAfterTheWalk() async throws {
-    let (server, eventID) = try await world()
+    let (server, outingID) = try await world()
     let guest = CommunityModel(remote: server.client(camille))
     await guest.saveProfile(displayName: "Camille", zoneID: lyon.id, adultDeclared: true)
-    await guest.requestToJoin(eventID, dogIDs: [])
-    try await server.client(organizer).decide(eventID: eventID, userID: camille, accept: true)
+    await guest.requestToJoin(outingID, dogIDs: [])
+    try await server.client(organizer).decide(outingID: outingID, userID: camille, accept: true)
     await guest.refresh()
-    #expect(guest.event(eventID)?.myAttended == nil)
+    #expect(guest.outing(outingID)?.myAttended == nil)
 
     // Too early: refused, said in words, nothing recorded.
-    await guest.declareAttendance(eventID, attended: true)
+    await guest.declareAttendance(outingID, attended: true)
     #expect(guest.errorMessage == "Action non autorisée.")
 
     server.clock = { now.addingTimeInterval(86400 + 3 * 3600) }
-    await guest.declareAttendance(eventID, attended: true)
-    #expect(guest.event(eventID)?.myAttended == true)
-    let seen = try await server.client(organizer).participants(eventID: eventID).first
+    await guest.declareAttendance(outingID, attended: true)
+    #expect(guest.outing(outingID)?.myAttended == true)
+    let seen = try await server.client(organizer).participants(outingID: outingID).first
     #expect(seen?.attended == true)
     #expect(seen?.status == .accepted)
 }
 
 @MainActor
-@Test("Blocking the organizer hides their events; the blocked list can undo it")
+@Test("Blocking the organizer hides their outings; the blocked list can undo it")
 func blockingIsUndoable() async throws {
-    let (server, eventID) = try await world()
+    let (server, outingID) = try await world()
     let guest = CommunityModel(remote: server.client(camille))
     await guest.saveProfile(displayName: "Camille", zoneID: lyon.id, adultDeclared: true)
-    #expect(guest.events.map(\.id) == [eventID])
+    #expect(guest.outings.map(\.id) == [outingID])
 
     await guest.block(organizer)
-    #expect(guest.events.isEmpty)
+    #expect(guest.outings.isEmpty)
     #expect(guest.blocked.map(\.displayName) == ["Léa"])
 
     await guest.unblock(organizer)
     #expect(guest.blocked.isEmpty)
-    #expect(guest.events.map(\.id) == [eventID])
+    #expect(guest.outings.map(\.id) == [outingID])
 }
 
 @MainActor
 @Test("A report is filed once and the person is told it went through")
 func reportingReturnsTrue() async throws {
-    let (server, eventID) = try await world()
+    let (server, outingID) = try await world()
     let guest = CommunityModel(remote: server.client(camille))
     await guest.saveProfile(displayName: "Camille", zoneID: lyon.id, adultDeclared: true)
-    #expect(await guest.report(.event, id: eventID, reason: .danger, detail: "Point de rendez-vous isolé"))
+    #expect(await guest.report(.outing, id: outingID, reason: .danger, detail: "Point de rendez-vous isolé"))
     #expect(server.reports.count == 1)
     #expect(server.reports.first?.reason == .danger)
     // Without a profile the report is refused and says so.
     let nobody = CommunityModel(remote: server.client(UUID()))
-    #expect(await nobody.report(.event, id: eventID, reason: .spam, detail: "") == false)
+    #expect(await nobody.report(.outing, id: outingID, reason: .spam, detail: "") == false)
 }
 
 @Test("The public contact is not configured yet, and the pilot says so")

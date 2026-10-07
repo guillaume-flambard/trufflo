@@ -1,6 +1,6 @@
 import SwiftUI
 
-/// Report an event or a person (Apple 1.2: a way to report, and a timely
+/// Report an outing or a person (Apple 1.2: a way to report, and a timely
 /// answer). The reason is chosen, the detail is optional and short.
 struct ReportSheet: View {
     let target: ReportTarget

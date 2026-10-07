@@ -6,7 +6,7 @@ import Foundation
 /// latest outing a member recorded, if it is more recent than the person's
 /// own last walk: that is the news. A walk flagged as possibly the same outing
 /// as one of the person's is not news, it is already counted on their side.
-public enum HouseholdOuting {
+public enum HouseholdLatestWalk {
     public struct Candidate: Equatable, Sendable {
         public let id: UUID
         public let endedAt: Date

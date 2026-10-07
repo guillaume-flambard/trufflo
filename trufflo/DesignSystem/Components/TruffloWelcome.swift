@@ -39,7 +39,7 @@ struct TruffloWelcome: View {
                     .font(.truffloTitleHeavy)
                     .foregroundStyle(Color.truffloForest)
                     .fixedSize(horizontal: false, vertical: true)
-                Text("Ajoutez votre chien. Chaque sortie s'écrira ici, avec son temps, son tracé et vos notes.")
+                Text("Ajoutez votre chien. Chaque balade s'écrira ici, avec son temps, son tracé et vos notes.")
                     .font(.truffloBodyRegular)
                     .foregroundStyle(Color.truffloSlate)
                     .fixedSize(horizontal: false, vertical: true)

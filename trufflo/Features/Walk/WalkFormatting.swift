@@ -33,10 +33,10 @@ enum WalkFormatting {
 
     static func quality(_ quality: WalkQuality) -> String {
         switch quality {
-        case .gpsRecorded: "Parcours complet par GPS"
-        case .gpsPartial: "Parcours en partie mesuré"
-        case .manual: "Durée déclarée à la main"
-        case .unavailable: "Aucun point de parcours retenu"
+        case .gpsRecorded: "Tracé complet"
+        case .gpsPartial: "Tracé en partie mesuré"
+        case .manual: "Balade ajoutée, sans mesure"
+        case .unavailable: "Aucun point de tracé retenu"
         }
     }
 

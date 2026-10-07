@@ -119,6 +119,12 @@ journey.
 A milestone is not verified until `TruffloFast` and this script have both
 been run.
 
+The script runs `test-without-building`: it uses whatever UI test runner was
+last built. After changing `truffloUITests` or any string a journey reads, run
+`xcodebuild build-for-testing -scheme trufflo -testPlan TruffloFull` first,
+or the journeys check the new app against the old expectations (2026-10-07:
+four false failures this way).
+
 #### The household journey needs a local Supabase
 
 `twoPeopleShareAHouseholdOverRealHTTP` runs the production household client

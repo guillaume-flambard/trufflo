@@ -33,7 +33,7 @@ final class StarterUITests: XCTestCase {
             NSPredicate(format: "identifier BEGINSWITH %@", "walk.row.")
         ).firstMatch
         XCTAssertTrue(manualRow.waitForExistence(timeout: 5))
-        XCTAssertTrue(manualRow.label.contains("Saisie manuelle"))
+        XCTAssertTrue(manualRow.label.contains("Balade ajoutée"))
     }
 
     @MainActor
@@ -104,18 +104,18 @@ final class StarterUITests: XCTestCase {
         // distance as "0". Both strings are matched as substrings because a
         // LabeledContent row is exposed as one label, not two static texts.
         let origin = app.staticTexts.matching(
-            NSPredicate(format: "label CONTAINS[c] %@", "Saisie manuelle")
+            NSPredicate(format: "label CONTAINS[c] %@", "Balade ajoutée")
         ).firstMatch
         XCTAssertTrue(
             origin.waitForExistence(timeout: 5),
-            "le détail n'affiche pas l'origine « Saisie manuelle »"
+            "le détail n'affiche pas l'origine « Balade ajoutée »"
         )
         let manualQuality = app.staticTexts.matching(
-            NSPredicate(format: "label CONTAINS[c] %@", "Déclarée à la main")
+            NSPredicate(format: "label CONTAINS[c] %@", "sans mesure")
         ).firstMatch
         XCTAssertTrue(
             manualQuality.waitForExistence(timeout: 5),
-            "AC-014 : la fiche doit afficher la qualité « Déclarée à la main » stockée"
+            "AC-014 : la fiche doit afficher la qualité « Balade ajoutée, sans mesure » stockée"
         )
         let unmeasured = app.staticTexts.matching(
             NSPredicate(format: "label CONTAINS[c] %@", "Non mesurée")
@@ -285,8 +285,8 @@ final class StarterUITests: XCTestCase {
         ).firstMatch
         XCTAssertTrue(row.waitForExistence(timeout: 5), "la balade terminée doit apparaître au journal")
         XCTAssertTrue(
-            row.label.contains("Suivi GPS"),
-            "l'origine de la balade doit être « Suivi GPS »"
+            row.label.contains("Balade suivie"),
+            "l'origine de la balade doit être « Balade suivie »"
         )
 
         row.tap()
@@ -404,7 +404,7 @@ final class StarterUITests: XCTestCase {
             row.waitForExistence(timeout: 5),
             "AC-010 : la balade interrompue puis terminée doit figer au journal"
         )
-        XCTAssertTrue(row.label.contains("Suivi GPS"))
+        XCTAssertTrue(row.label.contains("Balade suivie"))
 
         app.tabBars.buttons["Aujourd'hui"].tap()
         app.navigationBars.buttons["Réglages"].tap()

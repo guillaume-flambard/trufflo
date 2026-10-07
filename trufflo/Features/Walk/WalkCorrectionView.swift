@@ -178,7 +178,7 @@ struct WalkCorrectionView: View {
         } catch WalkError.noteTooLong {
             errorMessage = "La note doit contenir au maximum 500 caractères."
         } catch JournalError.profileMissing {
-            errorMessage = "Un profil a changé. Rouvrez la correction."
+            errorMessage = "Un chien a changé. Rouvrez la correction."
         } catch {
             errorMessage = "La correction n'a pas été enregistrée. La balade est inchangée."
         }

@@ -12,8 +12,8 @@ struct RoutineFormView: View {
     private let dogName: String
     private let isNew: Bool
 
-    @State private var choosesOutings: Bool
-    @State private var outings: Int
+    @State private var choosesWalks: Bool
+    @State private var walks: Int
     @State private var choosesMinutes: Bool
     @State private var minutes: Int
     @State private var slots: Set<DogRoutine.Slot>
@@ -24,10 +24,10 @@ struct RoutineFormView: View {
         self.dogID = dogID
         self.dogName = dogName
         isNew = current == nil
-        _choosesOutings = State(initialValue: current?.outingsPerDay != nil)
-        _outings = State(initialValue: current?.outingsPerDay ?? 2)
-        _choosesMinutes = State(initialValue: current?.minutesPerOuting != nil)
-        _minutes = State(initialValue: current?.minutesPerOuting ?? 30)
+        _choosesWalks = State(initialValue: current?.walksPerDay != nil)
+        _walks = State(initialValue: current?.walksPerDay ?? 2)
+        _choosesMinutes = State(initialValue: current?.minutesPerWalk != nil)
+        _minutes = State(initialValue: current?.minutesPerWalk ?? 30)
         _slots = State(initialValue: current?.slots ?? [])
     }
 
@@ -39,16 +39,16 @@ struct RoutineFormView: View {
                         .font(.subheadline)
                         .foregroundStyle(Color.truffloSlate)
 
-                    reference(title: "Nombre de sorties par jour", isOn: $choosesOutings) {
-                        Stepper(value: $outings, in: 1...8) {
-                            Text(outings == 1 ? "1 sortie" : "\(outings) sorties")
+                    reference(title: "Nombre de balades par jour", isOn: $choosesWalks) {
+                        Stepper(value: $walks, in: 1...8) {
+                            Text(walks == 1 ? "1 balade" : "\(walks) balades")
                                 .font(.truffloFigure(.title2))
                                 .foregroundStyle(Color.truffloForest)
                         }
-                        .accessibilityIdentifier("routine.outings")
+                        .accessibilityIdentifier("routine.walks")
                     }
 
-                    reference(title: "Durée d'une sortie", isOn: $choosesMinutes) {
+                    reference(title: "Durée d'une balade", isOn: $choosesMinutes) {
                         Stepper(value: $minutes, in: 5...240, step: 5) {
                             Text("environ \(minutes) min")
                                 .font(.truffloFigure(.title2))
@@ -153,8 +153,8 @@ struct RoutineFormView: View {
 
     private func save() {
         do {
-            let routine = try DogRoutine(outingsPerDay: choosesOutings ? outings : nil,
-                                         minutesPerOuting: choosesMinutes ? minutes : nil,
+            let routine = try DogRoutine(walksPerDay: choosesWalks ? walks : nil,
+                                         minutesPerWalk: choosesMinutes ? minutes : nil,
                                          slots: slots)
             try JournalRepository(context: context).saveRoutine(routine, for: dogID)
             dismiss()

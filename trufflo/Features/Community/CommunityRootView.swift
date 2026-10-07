@@ -1,6 +1,6 @@
 import SwiftUI
 
-struct EventRoute: Hashable { let id: UUID }
+struct OutingRoute: Hashable { let id: UUID }
 
 /// The « Sorties » tab (lot C). It exists only when the app has a community
 /// server to talk to, and shows what that server said and nothing else.
@@ -26,11 +26,11 @@ struct CommunityRootView: View {
                 TruffloNotice(systemImage: "wifi.exclamationmark", title: "Les sorties ne se chargent pas",
                               message: message, actionTitle: "Réessayer") { Task { await model.refresh() } }
             case .ready:
-                EventsListView()
+                OutingsListView()
             }
         }
         .background(Color.truffloSand.ignoresSafeArea())
-        .navigationDestination(for: EventRoute.self) { EventDetailView(eventID: $0.id) }
+        .navigationDestination(for: OutingRoute.self) { OutingDetailView(outingID: $0.id) }
         .task { await model.refresh() }
         // The sign-in is the household's: same account, same session.
         .sheet(isPresented: $showSignIn, onDismiss: { Task { await model.refresh() } }) { HouseholdView() }

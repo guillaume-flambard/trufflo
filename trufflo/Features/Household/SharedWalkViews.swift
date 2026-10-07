@@ -29,7 +29,7 @@ struct SharedWalkCard: View {
                     title: names.isEmpty ? "Balade" : names,
                     meta: showsDay ? "\(WalkFormatting.relativeDay(date)), par \(authorName)" : "Par \(authorName)",
                     figures: figures,
-                    flag: possibleDuplicate ? "Peut-être la même sortie qu'une des vôtres" : nil)
+                    flag: possibleDuplicate ? "Peut-être la même balade qu'une des vôtres" : nil)
             .accessibilityElement(children: .ignore)
             .accessibilityLabel(spokenLabel)
             .accessibilityAddTraits(.isButton)
@@ -40,7 +40,7 @@ struct SharedWalkCard: View {
         var parts = [names.isEmpty ? "Balade" : "Balade avec \(names)", "enregistrée par \(authorName)"]
         parts.append(WalkFormatting.dayAndTime(date))
         parts.append(contentsOf: figures)
-        if possibleDuplicate { parts.append("peut-être la même sortie qu'une des vôtres") }
+        if possibleDuplicate { parts.append("peut-être la même balade qu'une des vôtres") }
         return parts.joined(separator: ", ")
     }
 }

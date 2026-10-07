@@ -33,30 +33,30 @@ public struct DogRoutine: Equatable, Sendable {
     }
 
     /// Nil when the person did not choose a number of outings.
-    public let outingsPerDay: Int?
+    public let walksPerDay: Int?
     /// Nil when the person did not choose a duration.
-    public let minutesPerOuting: Int?
+    public let minutesPerWalk: Int?
     public let slots: Set<Slot>
 
-    public init(outingsPerDay: Int?, minutesPerOuting: Int?, slots: Set<Slot>) throws {
-        guard outingsPerDay != nil || minutesPerOuting != nil || !slots.isEmpty else {
+    public init(walksPerDay: Int?, minutesPerWalk: Int?, slots: Set<Slot>) throws {
+        guard walksPerDay != nil || minutesPerWalk != nil || !slots.isEmpty else {
             throw Invalid.empty
         }
         // Input sanity limits, not recommendations.
-        if let outingsPerDay, !(1...8).contains(outingsPerDay) { throw Invalid.outOfRange }
-        if let minutesPerOuting, !(5...240).contains(minutesPerOuting) { throw Invalid.outOfRange }
-        self.outingsPerDay = outingsPerDay
-        self.minutesPerOuting = minutesPerOuting
+        if let walksPerDay, !(1...8).contains(walksPerDay) { throw Invalid.outOfRange }
+        if let minutesPerWalk, !(5...240).contains(minutesPerWalk) { throw Invalid.outOfRange }
+        self.walksPerDay = walksPerDay
+        self.minutesPerWalk = minutesPerWalk
         self.slots = slots
     }
 
-    /// "2 sorties par jour, environ 30 min, matin et soir".
+    /// "2 balades par jour, environ 30 min, matin et soir".
     public var summary: String {
         var parts: [String] = []
-        if let outingsPerDay {
-            parts.append(outingsPerDay == 1 ? "1 sortie par jour" : "\(outingsPerDay) sorties par jour")
+        if let walksPerDay {
+            parts.append(walksPerDay == 1 ? "1 balade par jour" : "\(walksPerDay) balades par jour")
         }
-        if let minutesPerOuting { parts.append("environ \(minutesPerOuting) min") }
+        if let minutesPerWalk { parts.append("environ \(minutesPerWalk) min") }
         if !slots.isEmpty {
             let names = slots.sorted().map(\.label)
             parts.append(names.formatted(.list(type: .and).locale(TruffloLocale.french)))
@@ -69,12 +69,12 @@ public struct DogRoutine: Equatable, Sendable {
     /// shortfall: "Aujourd'hui, 1 enregistrée" and not "il en manque 1". With no
     /// chosen number there is nothing to set the count against, so it says only
     /// how many were recorded.
-    public func today(recordedOutings: Int) -> String {
+    public func today(recordedWalks: Int) -> String {
         let recorded: String
-        switch recordedOutings {
-        case 0: recorded = "aucune sortie enregistrée pour l'instant"
-        case 1: recorded = "1 sortie enregistrée"
-        default: recorded = "\(recordedOutings) sorties enregistrées"
+        switch recordedWalks {
+        case 0: recorded = "aucune balade enregistrée pour l'instant"
+        case 1: recorded = "1 balade enregistrée"
+        default: recorded = "\(recordedWalks) balades enregistrées"
         }
         return "Aujourd'hui, \(recorded)."
     }

@@ -62,7 +62,7 @@ public struct WeekSummary: Equatable, Sendable {
         guard !isEmpty else { return "Pas encore de balade cette semaine." }
         let noun = walkCount == 1 ? "balade" : "balades"
         let walked = days.filter(\.hasWalk).map(name).formatted(.list(type: .and).locale(TruffloLocale.french))
-        var sentence = "\(walkCount) \(noun) cette semaine. Sorties : \(walked)."
+        var sentence = "\(walkCount) \(noun) cette semaine. Jours de balade : \(walked)."
         if let today = days.first(where: \.isToday), !today.hasWalk {
             sentence += " Aujourd'hui, \(name(today)), pas encore de balade."
         }

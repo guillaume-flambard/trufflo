@@ -340,7 +340,7 @@ public struct ActiveWalkView: View {
     private var finishMessage: String {
         isInterrupted
             ? "Aucune durée n'a été ajoutée depuis l'interruption. La balade est conservée jusqu'au dernier point enregistré."
-            : "La durée et le tracé GPS de votre sortie seront ajoutés à votre journal."
+            : "La durée et le tracé GPS de votre balade seront ajoutés à votre journal."
     }
 
     private func showInterruptionNotice() {

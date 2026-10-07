@@ -10,7 +10,7 @@ qui ne l'ont pas été sont marqués « non vérifié ».
 **dans quel ordre** et **comment on sait que c'est fini**. Une spec ne crée jamais une exigence
 absente du PRD : si un lot en a besoin, le PRD est modifié d'abord.
 
-`docs/ART-DIRECTION.md` reste la source visuelle. `docs/decisions/` garde les ADR.
+`docs/ART-DIRECTION.md` reste la source visuelle. `docs/decisions/` garde les ADR. `CONTEXT.md` (racine) fixe le vocabulaire.
 
 ## Les quatre lots
 
@@ -46,12 +46,12 @@ décision ouverte ne passe pas en implémentation sur ce point.
 | D1 | Source du catalogue de races | Liste écrite par nous (noms français usuels, alias), pas un import FCI : la nomenclature FCI ne couvre pas les races non reconnues et ses conditions de réutilisation ne sont pas vérifiées. | Guillaume | Tranchée le 2026-10-06 : liste écrite par nous |
 | D2 | Aujourd'hui montre-t-il mes balades seules, ou aussi celles du foyer ? | Mes balades pour les chiffres ; la dernière contribution du foyer dans un bloc séparé et attribué. | Guillaume | Tranchée le 2026-10-07 : chiffres à moi, bloc foyer séparé |
 | D3 | Texte de l'introduction sur la confidentialité (ADR 0008, point ouvert 5) | « Votre carnet reste sur cet iPhone. Si vous créez ou rejoignez un foyer, seuls les résumés de balade sont partagés. » | Guillaume | Tranchée le 2026-10-06 : texte recommandé |
-| D4 | Mode sombre en V1 | Non : clair seul, l'app le force déjà. À rouvrir avec le lot D. | Guillaume | Ouverte |
-| D5 | Zone du pilote communautaire | Une seule ville, choisie là où un organisateur réel existe. | Guillaume | Principe retenu le 2026-10-07 ; nom de la zone à fournir |
-| D6 | Responsable de modération nommé (PRD F11) | Sans nom, le lot C ne s'ouvre pas au public. | Guillaume | Principe retenu le 2026-10-07 ; nom et délai à fournir |
+| D4 | Mode sombre en V1 | Non : clair seul, l'app le force déjà. À rouvrir avec le lot D. | Guillaume | Tranchée le 2026-10-07 : non en V1, rouverte seulement si les tests d'usage le demandent |
+| D5 | Zone du pilote communautaire | Une seule ville, choisie là où un organisateur réel existe. | Guillaume | Tranchée le 2026-10-07 : Paris. Aucune sortie n'ouvre sans un organisateur sur place (Guillaume part de Paris) ; nom à fournir |
+| D6 | Responsable de modération nommé (PRD F11) | Sans nom, le lot C ne s'ouvre pas au public. | Guillaume | Tranchée le 2026-10-07 : Guillaume, seul pour l'instant. Engagement : action sous 24 h ; passé ce délai, une sortie signalée est masquée en attendant la décision |
 | D7 | Répartition avec Natha | Natha prend une tranche autonome serveur (événements, invitations, CI SQL) ; pas Android, backend et modération en même temps. | Guillaume et Natha | Tranchée le 2026-10-07 : Guillaume écrit le serveur, l'agent le client |
-| D8 | Plusieurs chiens sur Aujourd'hui (ART-DIRECTION §8.2) | Portrait du premier chien, noms joints ; choix de qui part au démarrage, comme aujourd'hui. | Guillaume | Ouverte |
-| D9 | Espèces | Chiens seulement au lancement. Aucun sélecteur d'espèce, aucun renommage `Dog` vers `Pet`. | Guillaume | Ouverte |
+| D8 | Plusieurs chiens sur Aujourd'hui (ART-DIRECTION §8.2) | Portrait du premier chien, noms joints ; choix de qui part au démarrage, comme aujourd'hui. | Guillaume | Tranchée le 2026-10-07 : recommandation retenue |
+| D9 | Espèces | Chiens seulement au lancement. Aucun sélecteur d'espèce, aucun renommage `Dog` vers `Pet`. | Guillaume | Tranchée le 2026-10-07 : chiens seulement |
 
 ## Ce qui est déjà fait et ne doit pas être refait
 

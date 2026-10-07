@@ -86,7 +86,7 @@ struct DogFormView: View {
                         }
                     }
 
-                    field("Préférences de sortie") {
+                    field("Préférences de balade") {
                         TextField("Rythme, rencontres, ce qu'il aime ou évite", text: $preferencesNote, axis: .vertical)
                             .lineLimit(3...6)
                             .accessibilityIdentifier("dog.preferences")
@@ -246,9 +246,9 @@ struct DogFormView: View {
         } catch DogError.preferencesNoteTooLong {
             announce("La note de comportement doit contenir 500 caractères maximum.")
         } catch JournalError.profileMissing {
-            announce("Ce profil n'existe plus. Fermez ce formulaire.")
+            announce("Ce chien n'est plus sur cet iPhone. Fermez ce formulaire.")
         } catch {
-            announce("Le profil n'a pas été enregistré. Réessayez sans fermer ce formulaire.")
+            announce("Les changements n'ont pas été enregistrés. Réessayez sans fermer ce formulaire.")
         }
     }
 

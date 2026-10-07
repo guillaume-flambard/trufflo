@@ -1,6 +1,6 @@
 import Foundation
 
-// The community walk events, as the app asks for them (ADR 0010, lot C).
+// The community walk outings, as the app asks for them (ADR 0010, lot C).
 // The server is written separately against the same contract; the names in
 // CodingKeys and the function names in ADR 0010 « Contrat client » are that
 // contract. Nothing here carries a coordinate, a track or a private note.
@@ -58,13 +58,13 @@ public struct CommunityDogDTO: Codable, Equatable, Hashable, Sendable, Identifia
     }
 }
 
-public enum WalkEventStatus: String, Codable, Sendable { case published, cancelled, removed }
+public enum OutingStatus: String, Codable, Sendable { case published, cancelled, removed }
 
 public enum ParticipationStatus: String, Codable, Sendable { case requested, accepted, declined, withdrawn }
 
-/// One walk event as a member of the zone sees it. Places are counted by the
+/// One walk outing as a member of the zone sees it. Places are counted by the
 /// server; the list of participants is not part of this row.
-public struct WalkEventDTO: Codable, Equatable, Sendable, Identifiable {
+public struct OutingDTO: Codable, Equatable, Sendable, Identifiable {
     public var id: UUID
     public var organizerID: UUID
     public var organizerName: String
@@ -77,7 +77,7 @@ public struct WalkEventDTO: Codable, Equatable, Sendable, Identifiable {
     public var dogCapacity: Int
     public var humansAccepted: Int
     public var dogsAccepted: Int
-    public var status: WalkEventStatus
+    public var status: OutingStatus
     /// This person's own request, if any.
     public var myStatus: ParticipationStatus?
     /// What this person declared about having been there, once it is over.
@@ -98,7 +98,7 @@ public struct WalkEventDTO: Codable, Equatable, Sendable, Identifiable {
 }
 
 /// What an organizer writes. Validated here and again by the server.
-public struct WalkEventDraft: Codable, Equatable, Sendable {
+public struct OutingDraft: Codable, Equatable, Sendable {
     public var startsAt: Date
     public var durationMinutes: Int
     public var meetingPoint: String
@@ -133,7 +133,7 @@ public struct WalkEventDraft: Codable, Equatable, Sendable {
 }
 
 /// A participant as the organizer, or another accepted participant, sees them.
-public struct EventParticipantDTO: Codable, Equatable, Sendable, Identifiable {
+public struct OutingParticipantDTO: Codable, Equatable, Sendable, Identifiable {
     public var userID: UUID
     public var displayName: String
     public var status: ParticipationStatus
@@ -148,19 +148,19 @@ public struct EventParticipantDTO: Codable, Equatable, Sendable, Identifiable {
     }
 }
 
-public enum EventUpdateKind: String, Codable, Sendable { case time, place, cancelled }
+public enum OutingUpdateKind: String, Codable, Sendable { case time, place, cancelled }
 
-public struct EventUpdateDTO: Codable, Equatable, Sendable, Identifiable {
+public struct OutingUpdateDTO: Codable, Equatable, Sendable, Identifiable {
     public var id: UUID
-    public var eventID: UUID
-    public var kind: EventUpdateKind
+    public var outingID: UUID
+    public var kind: OutingUpdateKind
     public var previous: String
     public var current: String
     public var createdAt: Date
 
     enum CodingKeys: String, CodingKey {
         case id, kind, previous, current
-        case eventID = "event_id", createdAt = "created_at"
+        case outingID = "outing_id", createdAt = "created_at"
     }
 }
 
@@ -186,7 +186,7 @@ public enum CommunityContact {
     public static var isConfigured: Bool { url != nil }
 }
 
-public enum ReportTarget: String, Codable, Sendable { case event, profile, dog }
+public enum ReportTarget: String, Codable, Sendable { case outing, profile, dog }
 public enum ReportReason: String, Codable, Sendable, CaseIterable { case danger, harassment, inappropriate, spam, other }
 
 /// Failures the person can act on. The server's refusals are mapped from the
@@ -195,8 +195,8 @@ public enum CommunityError: Error, Equatable, Sendable {
     case invalid(String)
     case noProfile
     case notAllowed
-    case eventFull
-    case eventGone
+    case outingFull
+    case outingGone
     case blocked
     /// No session, or one the server refused: the person must sign in again.
     case signedOut
@@ -205,8 +205,8 @@ public enum CommunityError: Error, Equatable, Sendable {
     case network(String)
 
     public init(serverMessage message: String) {
-        if message.contains("event full") { self = .eventFull }
-        else if message.contains("event gone") { self = .eventGone }
+        if message.contains("outing full") { self = .outingFull }
+        else if message.contains("outing gone") { self = .outingGone }
         else if message.contains("blocked") { self = .blocked }
         else if message.contains("no profile") { self = .noProfile }
         else if message.contains("not allowed") { self = .notAllowed }
@@ -227,24 +227,24 @@ public protocol CommunityRemote: Sendable {
     func saveDog(_ dog: CommunityDogDTO) async throws
     func deleteDog(id: UUID) async throws
 
-    /// Published events of the zone from yesterday on, blocks applied.
-    func events(zoneID: String) async throws -> [WalkEventDTO]
-    /// Events this person organizes or has a request in, whatever their date.
-    func myEvents() async throws -> [WalkEventDTO]
-    func participants(eventID: UUID) async throws -> [EventParticipantDTO]
-    func updates(eventID: UUID) async throws -> [EventUpdateDTO]
+    /// Published outings of the zone from yesterday on, blocks applied.
+    func outings(zoneID: String) async throws -> [OutingDTO]
+    /// Outings this person organizes or has a request in, whatever their date.
+    func myOutings() async throws -> [OutingDTO]
+    func participants(outingID: UUID) async throws -> [OutingParticipantDTO]
+    func updates(outingID: UUID) async throws -> [OutingUpdateDTO]
 
-    func requestToJoin(eventID: UUID, dogIDs: [UUID]) async throws
-    func withdraw(eventID: UUID) async throws
-    func declareAttendance(eventID: UUID, attended: Bool) async throws
+    func requestToJoin(outingID: UUID, dogIDs: [UUID]) async throws
+    func withdraw(outingID: UUID) async throws
+    func declareAttendance(outingID: UUID, attended: Bool) async throws
 
     /// True when this person was registered as an organizer of the zone, by hand.
     func isOrganizer(zoneID: String) async throws -> Bool
-    /// Organizers of the zone only. Returns the new event's identifier.
-    func createEvent(_ draft: WalkEventDraft, zoneID: String) async throws -> UUID
-    func decide(eventID: UUID, userID: UUID, accept: Bool) async throws
-    func updateEvent(eventID: UUID, startsAt: Date, meetingPoint: String) async throws
-    func cancelEvent(eventID: UUID) async throws
+    /// Organizers of the zone only. Returns the new outing's identifier.
+    func createOuting(_ draft: OutingDraft, zoneID: String) async throws -> UUID
+    func decide(outingID: UUID, userID: UUID, accept: Bool) async throws
+    func updateOuting(outingID: UUID, startsAt: Date, meetingPoint: String) async throws
+    func cancelOuting(outingID: UUID) async throws
 
     func report(_ target: ReportTarget, id: UUID, reason: ReportReason, detail: String) async throws
     func block(userID: UUID) async throws
