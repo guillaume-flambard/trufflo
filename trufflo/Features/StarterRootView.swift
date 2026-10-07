@@ -436,22 +436,38 @@ struct StarterRootView: View {
         let facts = [dog.breedKind != "unknown" ? dog.breedDescription : "", dog.ageDescription]
             .filter { !$0.isEmpty }.joined(separator: ", ")
         let count = walkCount(for: dog)
-        return HStack(spacing: TruffloTheme.Spacing.medium) {
-            if let photo = dog.photoData {
-                TruffloDogPortrait(name: dog.name, photoData: photo, diameter: 56)
+        let noun = count == 1 ? String(localized: "walks_noun_one") : String(localized: "walks_noun_other")
+        let portrait = dog.photoData.map { TruffloDogPortrait(name: dog.name, photoData: $0, diameter: 56) }
+        let nameAndFacts = VStack(alignment: .leading, spacing: 2) {
+            Text(dog.name)
+                .font(.system(.title2, design: .rounded, weight: .heavy))
+                .foregroundStyle(Color.truffloForest)
+            if !facts.isEmpty {
+                Text(facts).font(.subheadline).foregroundStyle(Color.truffloSlate)
             }
-            VStack(alignment: .leading, spacing: 2) {
-                Text(dog.name)
-                    .font(.system(.title2, design: .rounded, weight: .heavy))
-                    .foregroundStyle(Color.truffloForest)
-                if !facts.isEmpty {
-                    Text(facts).font(.subheadline).foregroundStyle(Color.truffloSlate)
+        }
+        return Group {
+            if typeSize.isAccessibilitySize {
+                // Side by side, a name and a count at accessibility sizes leave each
+                // other a few letters of width: stack them, the count as one phrase.
+                VStack(alignment: .leading, spacing: TruffloTheme.Spacing.xSmall) {
+                    if let portrait { portrait }
+                    nameAndFacts
+                    Text("\(count) \(noun)").font(.subheadline.weight(.semibold)).foregroundStyle(Color.truffloForest)
                 }
-            }
-            Spacer(minLength: 0)
-            VStack(alignment: .trailing, spacing: 0) {
-                Text("\(count)").font(.truffloFigure(.title2)).monospacedDigit().foregroundStyle(Color.truffloForest)
-                Text(count == 1 ? String(localized: "walks_noun_one") : String(localized: "walks_noun_other")).font(.footnote).foregroundStyle(Color.truffloSlate)
+                .frame(maxWidth: .infinity, alignment: .leading)
+            } else {
+                HStack(spacing: TruffloTheme.Spacing.medium) {
+                    // Without a photo the name keeps the column of the dogs that have one,
+                    // so a list of three reads as one list, not as three alignments.
+                    if let portrait { portrait } else { Color.clear.frame(width: 56, height: 56) }
+                    nameAndFacts
+                    Spacer(minLength: 0)
+                    VStack(alignment: .trailing, spacing: 0) {
+                        Text("\(count)").font(.truffloFigure(.title2)).monospacedDigit().foregroundStyle(Color.truffloForest)
+                        Text(noun).font(.footnote).foregroundStyle(Color.truffloSlate)
+                    }
+                }
             }
         }
         .contentShape(Rectangle())
@@ -676,9 +692,15 @@ struct StarterRootView: View {
     /// The one action of the screen, anchored where the thumb rests.
     private var startButton: some View {
         Button(action: startWalk) {
+            // At accessibility sizes the icon and the title size would wrap the label
+            // to three lines and swallow the screen: the words alone, one size down.
             Label("Démarrer une balade", systemImage: "location.fill")
-                .font(.system(.title3, design: .rounded, weight: .bold))
+                .labelStyle(StartLabelStyle(compact: typeSize.isAccessibilitySize))
+                .font(typeSize.isAccessibilitySize
+                      ? .system(.headline, design: .rounded, weight: .bold)
+                      : .system(.title3, design: .rounded, weight: .bold))
                 .multilineTextAlignment(.center)
+                .lineLimit(2)
                 .frame(maxWidth: .infinity, minHeight: 56)
         }
         .buttonStyle(.glassProminent)
@@ -723,4 +745,18 @@ struct StarterRootView: View {
 
 extension LocationBlock: Identifiable {
     public var id: String { rawValue }
+}
+
+/// The start button label: icon and title, or the title alone when the text size is
+/// an accessibility one and the icon would only cost a line.
+private struct StartLabelStyle: LabelStyle {
+    let compact: Bool
+
+    func makeBody(configuration: Configuration) -> some View {
+        if compact {
+            configuration.title
+        } else {
+            Label(configuration)
+        }
+    }
 }

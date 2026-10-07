@@ -77,6 +77,15 @@ struct TruffloDogPortraitHero<Footer: View>: View {
                                        .init(color: Color.black.opacity(0.62), location: 1)],
                                startPoint: .top, endPoint: .bottom)
             }
+            // The system clock stays dark (the app is light-only), so it needs a light
+            // field whatever the photo: a blur that fades out under the status bar.
+            .overlay(alignment: .top) {
+                Rectangle()
+                    .fill(.thinMaterial)
+                    .frame(height: 110)
+                    .mask(LinearGradient(colors: [.black, .clear], startPoint: .top, endPoint: .bottom))
+                    .allowsHitTesting(false)
+            }
         } else {
             Color(red: 0.83, green: 0.92, blue: 0.88)
                 .overlay(alignment: .center) {
