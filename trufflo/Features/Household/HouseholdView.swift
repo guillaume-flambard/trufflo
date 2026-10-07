@@ -354,10 +354,10 @@ struct HouseholdView: View {
                     .foregroundStyle(Color.truffloSlate)
             }
             .padding(.horizontal, TruffloTheme.Spacing.screen)
-            .padding(.top, TruffloTheme.Spacing.xLarge)
+            .padding(.top, 48)
 
             facesRow(household)
-                .padding(.top, TruffloTheme.Spacing.large)
+                .padding(.top, 20)
 
             VStack(alignment: .leading, spacing: TruffloTheme.Spacing.large) {
                 sereneCard(household)
@@ -404,7 +404,7 @@ struct HouseholdView: View {
     /// invite. The owner manages a member from their face.
     private func facesRow(_ household: HouseholdRecord) -> some View {
         ScrollView(.horizontal, showsIndicators: false) {
-            HStack(alignment: .top, spacing: TruffloTheme.Spacing.small) {
+            HStack(alignment: .top, spacing: 8) {
                 ForEach(dogs) { dog in
                     VStack(spacing: 4) {
                         TruffloDogPortrait(name: dog.name, photoData: dog.photoData, diameter: 56, aimsAtAnimal: true)
@@ -419,9 +419,13 @@ struct HouseholdView: View {
                             }
                         Text(dog.name).font(.system(size: 13, weight: .semibold)).foregroundStyle(Color.truffloCharcoal)
                     }
-                    .frame(width: 66)
+                    .frame(width: 60)
                 }
-                ForEach(Array(members.enumerated()), id: \.element.userID) { index, member in
+                // Me first, then the others in name order.
+                let ordered = members.sorted { a, b in
+                    (a.userID == household.myUserID ? 0 : 1, a.displayName) < (b.userID == household.myUserID ? 0 : 1, b.displayName)
+                }
+                ForEach(Array(ordered.enumerated()), id: \.element.userID) { index, member in
                     let isMe = member.userID == household.myUserID
                     let face = VStack(spacing: 4) {
                         PersonDisc(name: member.displayName, diameter: 52, tintIndex: index)
@@ -432,7 +436,7 @@ struct HouseholdView: View {
                         Text(member.role.label).font(.system(size: 11)).foregroundStyle(Color.truffloSlate)
                             .lineLimit(1).minimumScaleFactor(0.8)
                     }
-                    .frame(width: 70)
+                    .frame(width: 62)
                     if household.myRole == .owner && !isMe {
                         Menu {
                             ForEach(HouseholdRole.allCases.filter { $0 != member.role }, id: \.self) { role in
@@ -465,7 +469,7 @@ struct HouseholdView: View {
                                 .foregroundStyle(Color.truffloCharcoal)
                                 .multilineTextAlignment(.center)
                         }
-                        .frame(width: 70)
+                        .frame(width: 64)
                     }
                     .buttonStyle(.plain)
                 }
@@ -539,7 +543,10 @@ struct HouseholdView: View {
 
     @ViewBuilder
     private func recentActivity(_ household: HouseholdRecord) -> some View {
-        let all = shared.map(Activity.walk) + myPhotos.prefix(3).map(Activity.photo)
+        // One line per day I added photos, the latest photo of that day.
+        let photoDays = Dictionary(grouping: myPhotos) { Calendar.current.startOfDay(for: $0.createdAt) }
+            .values.compactMap { $0.max { $0.createdAt < $1.createdAt } }
+        let all = shared.map(Activity.walk) + photoDays.map(Activity.photo)
         let recent = Array(all.sorted { $0.date > $1.date }.prefix(3))
         if !recent.isEmpty {
             VStack(alignment: .leading, spacing: TruffloTheme.Spacing.small) {
@@ -561,7 +568,7 @@ struct HouseholdView: View {
                 VStack(spacing: 0) {
                     ForEach(Array(recent.enumerated()), id: \.element.id) { index, item in
                         activityRow(item, household: household)
-                            .padding(.vertical, TruffloTheme.Spacing.small)
+                            .padding(.vertical, 6)
                         if index < recent.count - 1 {
                             Rectangle().fill(Color.truffloForest.opacity(0.08)).frame(height: 1)
                         }
@@ -584,10 +591,10 @@ struct HouseholdView: View {
             let author = members.first { $0.userID == walk.authorID }
             let tint = members.firstIndex { $0.userID == walk.authorID } ?? 0
             HStack(alignment: .top, spacing: TruffloTheme.Spacing.small) {
-                PersonDisc(name: author?.displayName ?? "?", diameter: 36, tintIndex: tint)
+                PersonDisc(name: author?.displayName ?? "?", diameter: 34, tintIndex: tint)
                 VStack(alignment: .leading, spacing: 3) {
                     (Text(author?.displayName ?? "Un membre").bold() + Text(" a enregistré une balade"))
-                        .font(.system(size: 13))
+                        .font(.system(size: 12))
                         .foregroundStyle(Color.truffloCharcoal)
                     Text("\(WalkFormatting.relativeDay(walk.endedAt).capitalizedFirst) · \(WalkFormatting.time(walk.endedAt))")
                         .font(.system(size: 12))
@@ -598,28 +605,28 @@ struct HouseholdView: View {
                             Label(WalkFormatting.distance(meters), systemImage: "point.topleft.down.to.point.bottomright.curvepath")
                         }
                     }
-                    .font(.system(size: 12))
+                    .font(.system(size: 11))
                     .foregroundStyle(Color.truffloCharcoal)
                 }
                 Spacer(minLength: 0)
                 if let dogPhoto {
-                    TruffloDogThumbnail(name: dogs.first?.name ?? "", photoData: dogPhoto, side: 52, bordered: false)
+                    TruffloDogThumbnail(name: dogs.first?.name ?? "", photoData: dogPhoto, side: 46, bordered: false)
                 }
             }
         case .photo(let photo):
             let meIndex = members.firstIndex { $0.userID == household.myUserID } ?? 0
             HStack(alignment: .top, spacing: TruffloTheme.Spacing.small) {
-                PersonDisc(name: household.myDisplayName, diameter: 36, tintIndex: meIndex)
+                PersonDisc(name: household.myDisplayName, diameter: 34, tintIndex: meIndex)
                 VStack(alignment: .leading, spacing: 3) {
                     (Text("Vous").bold() + Text(" avez ajouté une photo"))
-                        .font(.system(size: 13))
+                        .font(.system(size: 12))
                         .foregroundStyle(Color.truffloCharcoal)
                     Text("\(WalkFormatting.relativeDay(photo.createdAt).capitalizedFirst) · \(WalkFormatting.time(photo.createdAt))")
                         .font(.system(size: 12))
                         .foregroundStyle(Color.truffloSlate)
                 }
                 Spacer(minLength: 0)
-                TruffloDogThumbnail(name: "", photoData: photo.data, side: 52, bordered: false)
+                TruffloDogThumbnail(name: "", photoData: photo.data, side: 46, bordered: false)
             }
         }
     }

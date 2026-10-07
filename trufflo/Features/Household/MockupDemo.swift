@@ -35,6 +35,7 @@ enum MockupDemo {
         // Five photos, on its page; its card shows the tracé, which comes first.
         if let photo { for _ in 0..<5 { try repository.addWalkPhoto(quartier.id, data: photo) } }
 
+
         // Yesterday 08:15: recorded, 1,87 km measured, but no tracé kept (a
         // partial measure), so its card shows its photo, as in the mock-up.
         let parc = WalkRecord(startedAt: today(7, 40, daysAgo: 1), endedAt: today(8, 15, daysAgo: 1),
@@ -44,6 +45,10 @@ enum MockupDemo {
         context.insert(WalkDogRecord(walkID: parc.id, dogID: oslo.id, dogNameSnapshot: oslo.name))
         try repository.updateWalkDetails(parc.id, title: "Tour du parc", mood: .calm, note: "Matin calme et ensoleillé ☀️")
         if let photo { try repository.addWalkPhoto(parc.id, data: photo) }
+        // Every demo photo was added yesterday at 17:48, as the foyer's activity says.
+        for added in try context.fetch(FetchDescriptor<WalkPhotoRecord>()) {
+            added.createdAt = today(17, 48, daysAgo: 1)
+        }
 
         // Two days before, along the river.
         let riviere = gps(context, oslo, minutes: 52, meters: 3400, endedAt: today(16, 2, daysAgo: 3),
@@ -66,7 +71,7 @@ enum MockupDemo {
             correctedAt: nil, updatedAt: .now, deletedAt: nil, dogs: [.init(dogID: oslo.id, dogNameSnapshot: "Oslo")])))
         context.insert(SharedWalkRecord(RemoteWalkDTO(
             id: UUID(), authorID: natha, revision: 1, source: "gps", quality: "gpsRecorded",
-            startedAt: today(15, 10, daysAgo: 2), endedAt: today(16, 2, daysAgo: 2), confirmedSeconds: 52 * 60,
+            startedAt: today(15, 10, daysAgo: 3), endedAt: today(16, 2, daysAgo: 3), confirmedSeconds: 52 * 60,
             recordedPathMeters: 3400, correctedAt: nil, updatedAt: .now, deletedAt: nil,
             dogs: [.init(dogID: oslo.id, dogNameSnapshot: "Oslo")])))
         try context.save()
