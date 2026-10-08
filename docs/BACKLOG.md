@@ -1,5 +1,32 @@
 # Backlog et portes de livraison
 
+## État au 2026-10-08
+
+Mise à jour après les chantiers 8 (maquettes du 2026-10-07) et 9 (plus de statique, front et
+back). Détail : `.agent/project/chantier-8-maquettes.md` (local), ADR 0007 et 0010, migrations
+`20261007210000` à `20261008100000`.
+
+| Sujet | Statut | Preuve ou manque |
+|---|---|---|
+| Écrans de la planche (Accueil, live, guidage, proximité, célébration, résumé) | Fait | Captures dans `docs/design-captures/`, 8 parcours UI verts. |
+| Cohérence et peaufinage (en-têtes, cartes, Réglages en feuille, micro-animations) | Fait | `TruffloScreenHeader`, `TruffloMotion`, commit du 2026-10-08. |
+| Serveur Sorties (M3, T40 à T44 côté serveur) | Fait, en production | 110 contrôles pgTAP dont course réelle sur la dernière place. Onglet fermé tant qu'aucun modérateur n'est inscrit. |
+| Détails partagés, balades prévues, conseils en base | Fait, en production | `household_details_test.sql`, test HTTP à deux comptes. |
+| Suppression de compte | Fait, en production | `delete_my_account`, réglages. `anon` n'exécute aucune fonction (vérifié en prod). |
+| Chiens du foyer à proximité | Fait, en production | Sur accord, foyer seulement, arrondi 10 m, expiration 2 min (décision du 2026-10-08, DATA-CONTRACTS §7). |
+| Météo (WeatherKit) | Code fait, service non actif | Le jeton WeatherKit est refusé : cocher WeatherKit dans App Services de l'App ID, puis tester sur iPhone. |
+| T16 mesures terrain | Ouvert | Toujours aucune balade sur appareil réel. |
+| Ouverture de l'onglet Sorties | Bloqué | Aucun compte en production : Guillaume se connecte une fois, puis inscription comme modérateur (requête en tête de `20261007210000`). |
+| Lien de confidentialité et contact, push d'annulation, StoreKit, mode sombre, fichier AASA | Non commencé | Hors des chantiers 8 et 9. |
+| Écran Foyer non connecté, introduction pages 2 et 3 | Non revus | Pas capturés pendant le peaufinage. |
+
+Pièges relevés le 2026-10-08 :
+- V7 n'est pas livrée et a changé plusieurs fois : un store de simulateur écrit par une version
+  intermédiaire ne s'ouvre plus (« unknown model version »). Désinstaller l'app du simulateur
+  avant `gps-journeys.sh`. Les journaux V6 réels sont couverts par `MigrationTests`.
+- `tools/backend/apply-migration.sh` refuse toute migration qui contient `delete from`, même dans
+  le corps d'une fonction : une telle migration s'applique à la main.
+
 ## État au 2026-10-06
 
 Le paragraphe « Statuts initiaux » plus bas date du démarrage. Ce tableau le remplace pour l'état.
